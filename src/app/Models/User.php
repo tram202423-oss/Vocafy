@@ -2,25 +2,48 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory;
+    use Notifiable;
+    use HasApiTokens;
+    use HasUuids;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Không auto increment vì dùng UUID
+     */
+    public $incrementing = false;
+
+    /**
+     * Key type là string (UUID)
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Mass assignable fields
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
+
+    /**
+     * Hidden fields khi serialize JSON
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Casts
      */
     protected function casts(): array
     {
@@ -28,5 +51,40 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Pivot: user_vocabularies
+     */
+    public function vocabularies()
+    {
+        return $this->belongsToMany(
+            Vocabulary::class,
+            'user_vocabularies',
+            'user_id',
+            'vocabulary_id'
+        )
+        ->withPivot([
+            'mastery_level',
+            'correct_count',
+            'wrong_count',
+            'last_reviewed_at',
+            'next_review_at',
+        ])
+        ->withTimestamps();
+    }
+
+    /**
+     * Direct relation tới bảng pivot (nếu cần quản lý chi tiết)
+     */
+    public function userVocabularies()
+    {
+        return $this->hasMany(UserVocabulary::class);
     }
 }
