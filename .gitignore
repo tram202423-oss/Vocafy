@@ -1,0 +1,46 @@
+# Logs
+*.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# Env files (Laravel trong src)
+src/.env
+src/.env.backup
+src/.env.production
+
+# PHP / tools
+src/.phpactor.json
+src/.phpunit.result.cache
+src/.phpunit.cache
+src/_ide_helper.php
+src/auth.json
+
+# IDE
+.idea
+.vscode
+.zed
+.nova
+.codex
+.cursor/
+
+# Laravel vendor
+src/vendor
+
+# Node
+src/node_modules
+
+# Build output
+src/public/build
+src/public/hot
+src/public/fonts-manifest.dev.json
+src/public/storage
+
+# Storage
+src/storage/*.key
+src/storage/pail
+
+# Homestead
+Homestead.json
+Homestead.yaml
