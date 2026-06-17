@@ -2,25 +2,36 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Lesson extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'topic_id',
         'title',
         'description',
-        'order',
-        'is_active',
     ];
 
-    public function topic()
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function topics()
     {
-        return $this->belongsTo(Topic::class);
+        return $this->hasMany(Topic::class);
     }
 
     public function vocabularies()
     {
-        return $this->hasMany(Vocabulary::class);
+        return $this->belongsToMany(
+            Vocabulary::class,
+            'lesson_vocabularies',
+            'lesson_id',
+            'vocabulary_id'
+        );
     }
 }

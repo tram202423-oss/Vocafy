@@ -2,20 +2,33 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Topic extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'title',
+        'category_id',
+        'name',
         'slug',
         'description',
-        'thumbnail',
-        'is_active',
     ];
 
-    public function lessons()
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function category()
     {
-        return $this->hasMany(Lesson::class);
+        return $this->belongsTo(Category::class);
+    }
+
+    public function vocabularies()
+    {
+        return $this->hasMany(Vocabulary::class);
     }
 }

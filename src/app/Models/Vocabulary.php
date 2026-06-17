@@ -2,33 +2,47 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Vocabulary extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'lesson_id',
+        'topic_id',
         'word',
-        'slug',
-        'phonetic',
+        'pronunciation',
         'meaning',
-        'meaning_en',
         'example',
-        'example_vi',
-        'audio',
         'image',
-        'difficulty',
-        'view_count',
-        'is_active',
+        'audio',
+        'level',
     ];
 
-    public function lesson()
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function topic()
     {
-        return $this->belongsTo(Lesson::class);
+        return $this->belongsTo(Topic::class);
     }
 
-    public function examples()
+    public function lessons()
     {
-        return $this->hasMany(VocabularyExample::class);
+        return $this->belongsToMany(
+            Lesson::class,
+            'lesson_vocabularies',
+            'vocabulary_id',
+            'lesson_id'
+        );
+    }
+
+    public function userVocabularies()
+    {
+        return $this->hasMany(UserVocabulary::class);
     }
 }

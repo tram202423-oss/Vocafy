@@ -34,6 +34,9 @@ Tiếp theo, truy cập vào container của ứng dụng Laravel:
 
 docker exec -it vocafy_app bash
 
+chmod -R 777 storage
+chmod -R 777 bootstrap/cache
+
 Bên trong container, tiến hành cài đặt các package PHP:
 
 composer install
@@ -60,9 +63,6 @@ Khi hoàn tất tất cả các bước trên, bạn có thể truy cập projec
 http://localhost
 
 Nếu gặp lỗi hoặc cần chạy lại toàn bộ hệ thống, có thể dùng:
-
-docker compose down
-docker compose up -d --build
 
 Một số lệnh Laravel hữu ích khi debug:
 

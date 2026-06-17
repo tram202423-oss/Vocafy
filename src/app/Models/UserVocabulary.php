@@ -2,30 +2,33 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserVocabulary extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'vocabulary_id',
-        'mastery_level',
-        'correct_count',
-        'wrong_count',
-        'last_reviewed_at',
-        'next_review_at',
+        'status',
+        'review_count',
+        'last_review_at',
+        'mastered_at',
     ];
 
-    protected $casts = [
-        'last_reviewed_at' => 'datetime',
-        'next_review_at' => 'datetime',
-    ];
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
-
+    
     public function vocabulary()
     {
         return $this->belongsTo(Vocabulary::class);
