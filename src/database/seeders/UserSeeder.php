@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\RoleEnum;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -14,11 +15,11 @@ class UserSeeder extends Seeder
                 'email' => 'admin@vocafy.com',
             ],
             [
-                'name' => 'Admin',
+                'name' => 'SuperAdmin',
                 'password' => bcrypt('12345678'),
             ]
         );
 
-        $admin->assignRole('admin');
+        $admin->assignRole(RoleEnum::SUPER_ADMIN->value);
     }
 }

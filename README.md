@@ -73,3 +73,6 @@ php artisan route:clear
 Nếu gặp lỗi không kết nối database, hãy kiểm tra lại file .env và đảm bảo container database đang chạy bằng lệnh docker ps.
 
 Sau khi hoàn tất, project đã sẵn sàng để sử dụng và phát triển.
+
+
+wsl : sudo chown -R tram:tram /home/tram/Study/Vocafy

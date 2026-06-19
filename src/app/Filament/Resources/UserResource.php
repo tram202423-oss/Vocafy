@@ -2,28 +2,63 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\RoleEnum;
 use App\Filament\Resources\UserResource\Pages;
-use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
-use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\Eloquent\Model;
+
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+
+    protected static ?string $navigationLabel = 'Users';
+
+    protected static ?string $modelLabel = 'User';
+
+    protected static ?string $pluralModelLabel = 'Users';
+
+    protected static ?int $navigationSort = 100;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                //
+
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(255),
+
+                TextInput::make('email')
+                    ->email()
+                    ->required()
+                    ->unique(ignoreRecord: true),
+
+                TextInput::make('password')
+                    ->password()
+                    ->dehydrateStateUsing(fn ($state) => filled($state)
+                        ? Hash::make($state)
+                        : null)
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->required(fn (string $operation) => $operation === 'create'),
+
+                Select::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable(),
             ]);
     }
 
@@ -31,13 +66,38 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                //
+
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('email')
+                    ->searchable()
+                    ->sortable(),
+
+                BadgeColumn::make('roles.name')
+                    ->label('Role')
+                    ->separator(',')
+                    ->colors([
+                        'danger' => RoleEnum::SUPER_ADMIN->value,
+                        'warning' => RoleEnum::ADMIN,
+                        'success' => RoleEnum::EDITOR,
+                        'info' => RoleEnum::MODERATOR,
+                        'gray' => RoleEnum::USER,
+                    ]),
+
+                TextColumn::make('created_at')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
             ])
             ->filters([
-                //
+                SelectFilter::make('roles')
+                    ->relationship('roles', 'name'),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -60,5 +120,28 @@ class UserResource extends Resource
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->hasAnyRole([
+            RoleEnum::SUPER_ADMIN->value,
+            RoleEnum::ADMIN,
+        ]);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasRole(RoleEnum::SUPER_ADMIN->value);
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()->hasRole(RoleEnum::SUPER_ADMIN->value);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()->hasRole(RoleEnum::SUPER_ADMIN->value);
     }
 }
