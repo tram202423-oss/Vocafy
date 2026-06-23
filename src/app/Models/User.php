@@ -76,4 +76,9 @@ class User extends Authenticatable implements FilamentUser
             RoleEnum::ADMIN,
         ]);
     }
+    
+    public function isCurrentUser(): bool
+    {
+        return auth()->id() === $this->id;
+    }
 }

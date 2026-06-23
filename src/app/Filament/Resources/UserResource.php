@@ -36,15 +36,16 @@ class UserResource extends Resource
     {
         return $form
             ->schema([
-
                 TextInput::make('name')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
                 TextInput::make('email')
                     ->email()
                     ->required()
-                    ->unique(ignoreRecord: true),
+                    ->unique(ignoreRecord: true)
+                    ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
                 TextInput::make('password')
                     ->password()
@@ -52,13 +53,15 @@ class UserResource extends Resource
                         ? Hash::make($state)
                         : null)
                     ->dehydrated(fn ($state) => filled($state))
-                    ->required(fn (string $operation) => $operation === 'create'),
+                    ->required(fn (string $operation): bool => $operation === 'create')
+                    ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
                 Select::make('roles')
-                    ->relationship('roles', 'name')
                     ->multiple()
+                    ->relationship('roles', 'name')
                     ->preload()
-                    ->searchable(),
+                    ->searchable()
+                    ->disabled(fn (?User $record) => auth()->id() === $record?->id),
             ]);
     }
 
@@ -95,9 +98,12 @@ class UserResource extends Resource
                     ->relationship('roles', 'name'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (User $record): bool =>
+                        auth()->user()->hasRole(RoleEnum::SUPER_ADMIN->value)
+                        && auth()->id() !== $record->id
+                    ),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -117,8 +123,6 @@ class UserResource extends Resource
     {
         return [
             'index' => Pages\ListUsers::route('/'),
-            'create' => Pages\CreateUser::route('/create'),
-            'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 
@@ -137,11 +141,18 @@ class UserResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return auth()->user()->hasRole(RoleEnum::SUPER_ADMIN->value);
+        $user = auth()->user();
+
+        if ($user->hasRole(RoleEnum::SUPER_ADMIN->value)) {
+            return true;
+        }
+
+        return false;
     }
 
     public static function canDelete(Model $record): bool
     {
-        return auth()->user()->hasRole(RoleEnum::SUPER_ADMIN->value);
+        return auth()->user()->isSuperAdmin()
+            && ! $record->isCurrentUser();
     }
 }

@@ -13,4 +13,16 @@ enum RoleEnum: string
     case MODERATOR = 'moderator';
 
     case USER = 'user';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::SUPER_ADMIN => 'Super Admin',
+            self::ADMIN => 'Admin',
+            self::EDITOR => 'Editor',
+            self::MODERATOR => 'Moderator',
+            self::USER => 'User',
+        };
+    }
+    
 }

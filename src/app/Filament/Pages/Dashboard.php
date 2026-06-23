@@ -9,6 +9,7 @@ use App\Models\Topic;
 use App\Models\User;
 use App\Models\Vocabulary;
 use Filament\Pages\Page;
+use App\Filament\Widgets\BlogPostsChart;
 
 class Dashboard extends Page
 {
@@ -32,7 +33,6 @@ class Dashboard extends Page
 
     public function mount(): void
     {
-        $this->users['all'] = User::all();
         $this->users['count'] = User::count();
 
         $this->categories = Category::count();
@@ -44,5 +44,12 @@ class Dashboard extends Page
         $this->lessons = Lesson::count();
 
         $this->quizzes = Quiz::count();
+    }
+
+    public function getWidgets(): array
+    {
+        return [
+            BlogPostsChart::class,
+        ];
     }
 }

@@ -45,4 +45,22 @@ class Vocabulary extends Model
     {
         return $this->hasMany(UserVocabulary::class);
     }
+
+    protected function getData(): array
+    {
+        return [
+            'datasets' => [
+                [
+                    'label' => 'Vocabulary',
+                    'data' => [
+                        Vocabulary::whereMonth('created_at', 1)->count(),
+                        Vocabulary::whereMonth('created_at', 2)->count(),
+                        Vocabulary::whereMonth('created_at', 3)->count(),
+                        Vocabulary::whereMonth('created_at', 4)->count(),
+                    ],
+                ],
+            ],
+            'labels' => ['Jan', 'Feb', 'Mar', 'Apr'],
+        ];
+    }
 }

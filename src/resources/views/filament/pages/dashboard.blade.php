@@ -11,71 +11,12 @@
                 Manage your English learning platform.
             </p>
         </div>
-
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-
-            <div class="rounded-xl bg-white p-6 shadow">
-                <div class="text-sm text-gray-500">
-                    Users
-                </div>
-
-                <div class="mt-2 text-4xl font-bold">
-                    {{ $this->users['count'] }}
-                </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-6 shadow">
-                <div class="text-sm text-gray-500">
-                    Categories
-                </div>
-
-                <div class="mt-2 text-4xl font-bold">
-                    {{ $this->categories }}
-                </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-6 shadow">
-                <div class="text-sm text-gray-500">
-                    Topics
-                </div>
-
-                <div class="mt-2 text-4xl font-bold">
-                    {{ $this->topics }}
-                </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-6 shadow">
-                <div class="text-sm text-gray-500">
-                    Vocabularies
-                </div>
-
-                <div class="mt-2 text-4xl font-bold">
-                    {{ $this->vocabularies }}
-                </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-6 shadow">
-                <div class="text-sm text-gray-500">
-                    Lessons
-                </div>
-
-                <div class="mt-2 text-4xl font-bold">
-                    {{ $this->lessons }}
-                </div>
-            </div>
-
-            <div class="rounded-xl bg-white p-6 shadow">
-                <div class="text-sm text-gray-500">
-                    Quizzes
-                </div>
-
-                <div class="mt-2 text-4xl font-bold">
-                    {{ $this->quizzes }}
-                </div>
-            </div>
-
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 mt-2">
+            @livewire(\App\Filament\Widgets\StatsOverview::class)
+            @livewire(\App\Filament\Widgets\UserChart::class)
         </div>
 
     </div>
 
 </x-filament-panels::page>
+

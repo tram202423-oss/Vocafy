@@ -3,9 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\VocabularyResource\Pages;
-use App\Filament\Resources\VocabularyResource\RelationManagers;
 use App\Models\Vocabulary;
-use Filament\Forms;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -13,8 +11,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Columns\TextColumn;
 
 class VocabularyResource extends Resource
@@ -29,15 +25,15 @@ class VocabularyResource extends Resource
             ->schema([
                 Select::make('topic_id')
                     ->relationship('topic', 'name')
-                    ->searchable()
                     ->required(),
 
                 TextInput::make('word')
                     ->required(),
 
-                TextInput::make('pronunciation'),
+                TextInput::make('pronunciation')
+                    ->required(),
 
-                Textarea::make('meaning')
+                TextInput::make('meaning')
                     ->required(),
 
                 Textarea::make('example'),
@@ -71,6 +67,8 @@ class VocabularyResource extends Resource
                 TextColumn::make('meaning')
                     ->limit(50),
 
+                TextColumn::make('example'),
+
                 TextColumn::make('level')
                     ->badge(),
 
@@ -82,6 +80,7 @@ class VocabularyResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -101,8 +100,6 @@ class VocabularyResource extends Resource
     {
         return [
             'index' => Pages\ListVocabularies::route('/'),
-            'create' => Pages\CreateVocabulary::route('/create'),
-            'edit' => Pages\EditVocabulary::route('/{record}/edit'),
         ];
     }
 }
