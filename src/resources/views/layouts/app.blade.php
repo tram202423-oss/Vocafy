@@ -7,9 +7,7 @@
 
     @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
-<style>
-    [x-cloak] { display: none !important; }
-</style>
+
 <body class="bg-gray-50">
 
     @include('components.navbar')
