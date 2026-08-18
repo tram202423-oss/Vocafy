@@ -9,7 +9,8 @@ class TopicController extends Controller
 {
     public function index(Category $category, Topic $topic)
     {
-        return view('topics.index', compact(
+        $topic->load('vocabularies');
+        return view('user.topics.index', compact(
             'category',
             'topic'
         ));

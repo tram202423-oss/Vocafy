@@ -43,17 +43,17 @@
                     </p>
                 @endif
             </div>
-
-            <!-- Khối tiến độ (Có thể ẩn/hiện hoặc tùy biến sau) -->
-            <div class="bg-white border border-gray-150 p-5 rounded-2xl shadow-sm min-w-[240px]">
-                <div class="flex justify-between items-center text-sm mb-2">
-                    <span class="text-gray-500 font-medium">Tiến độ bài học</span>
-                    <span class="text-blue-600 font-bold">25% Hoàn thành</span>
+            @auth
+                <div class="bg-white border border-gray-150 p-5 rounded-2xl shadow-sm min-w-[240px]">
+                    <div class="flex justify-between items-center text-sm mb-2">
+                        <span class="text-gray-500 font-medium">Tiến độ bài học</span>
+                        <span class="text-blue-600 font-bold">25% Hoàn thành</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2.5">
+                        <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full" style="width: 25%"></div>
+                    </div>
                 </div>
-                <div class="w-full bg-gray-100 rounded-full h-2.5">
-                    <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full" style="width: 25%"></div>
-                </div>
-            </div>
+            @endauth
         </div>
 
     </div>

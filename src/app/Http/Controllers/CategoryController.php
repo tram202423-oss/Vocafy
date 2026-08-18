@@ -12,7 +12,7 @@ class CategoryController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('categories.index', compact('categories'));
+        return view('user.categories.index', compact('categories'));
     }
 
     public function show(string $slug)
@@ -25,6 +25,6 @@ class CategoryController extends Controller
             ])
             ->firstOrFail();
 
-        return view('categories.show', compact('category'));
+        return view('user.categories.show', compact('category'));
     }
 }

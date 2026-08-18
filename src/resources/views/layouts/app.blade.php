@@ -6,6 +6,7 @@
     <title>{{ config('app.name', 'Laravel') }}</title>
 
     @vite(['resources/css/app.css','resources/js/app.js'])
+    <link rel="icon" href="{{ asset('vocafy.ico') }}" type="image/x-icon">
 </head>
 
 <body class="bg-gray-50">

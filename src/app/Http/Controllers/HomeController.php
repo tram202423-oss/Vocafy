@@ -18,7 +18,7 @@ class HomeController extends Controller
             ->take(8)
             ->get();
 
-        return view('home.index', [
+        return view('user.home.index', [
             'categories' => $categories,
             'popularTopics' => $popularTopics,
         ]);
