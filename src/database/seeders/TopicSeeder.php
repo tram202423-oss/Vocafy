@@ -127,13 +127,16 @@ class TopicSeeder extends Seeder
             }
 
             foreach ($topics as $topic) {
+                $baseSlug = Str::slug($topic);
+                $existingWithDifferentCat = Topic::where('slug', $baseSlug)->where('category_id', '!=', $category->id)->exists();
+                $slug = $existingWithDifferentCat ? Str::slug($categorySlug . '-' . $topic) : $baseSlug;
 
                 Topic::firstOrCreate(
                     [
-                        'slug' => Str::slug($topic),
+                        'category_id' => $category->id,
+                        'slug' => $slug,
                     ],
                     [
-                        'category_id' => $category->id,
                         'name' => $topic,
                     ]
                 );

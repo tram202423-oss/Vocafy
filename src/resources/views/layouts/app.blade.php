@@ -9,11 +9,14 @@
     <link rel="icon" href="{{ asset('vocafy.ico') }}" type="image/x-icon">
 </head>
 
-<body class="bg-gray-50">
+<body class="bg-gray-50 flex flex-col min-h-screen">
 
     @include('components.navbar')
 
-    @yield('content')
+    <main class="flex-grow">
+        {{ $slot ?? '' }}
+        @yield('content')
+    </main>
 
     @include('components.footer')
 

@@ -18,10 +18,10 @@ class RolePermissionSeeder extends Seeder
         */
 
         Role::firstOrCreate(['name' => RoleEnum::SUPER_ADMIN->value]);
-        Role::firstOrCreate(['name' => RoleEnum::ADMIN]);
-        Role::firstOrCreate(['name' => 'editor']);
-        Role::firstOrCreate(['name' => 'moderator']);
-        Role::firstOrCreate(['name' => 'user']);
+        Role::firstOrCreate(['name' => RoleEnum::ADMIN->value]);
+        Role::firstOrCreate(['name' => RoleEnum::EDITOR->value]);
+        Role::firstOrCreate(['name' => RoleEnum::MODERATOR->value]);
+        Role::firstOrCreate(['name' => RoleEnum::USER->value]);
 
         /*
         |--------------------------------------------------------------------------

@@ -9,8 +9,6 @@ use App\Models\Topic;
 use App\Models\User;
 use App\Models\Vocabulary;
 use Filament\Pages\Page;
-use App\Filament\Widgets\BlogPostsChart;
-
 class Dashboard extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-home';
@@ -18,38 +16,4 @@ class Dashboard extends Page
     protected static ?string $title = 'Dashboard';
 
     protected static string $view = 'filament.pages.dashboard';
-
-    public array $users;
-
-    public int $categories;
-
-    public int $topics;
-
-    public int $vocabularies;
-
-    public int $lessons;
-
-    public int $quizzes;
-
-    public function mount(): void
-    {
-        $this->users['count'] = User::count();
-
-        $this->categories = Category::count();
-
-        $this->topics = Topic::count();
-
-        $this->vocabularies = Vocabulary::count();
-
-        $this->lessons = Lesson::count();
-
-        $this->quizzes = Quiz::count();
-    }
-
-    public function getWidgets(): array
-    {
-        return [
-            BlogPostsChart::class,
-        ];
-    }
 }

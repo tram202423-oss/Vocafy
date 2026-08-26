@@ -15,15 +15,13 @@ class CategoryController extends Controller
         return view('user.categories.index', compact('categories'));
     }
 
-    public function show(string $slug)
+    public function show(Category $category)
     {
-        $category = Category::where('slug', $slug)
-            ->with([
-                'topics' => function ($query) {
-                    $query->withCount('vocabularies');
-                }
-            ])
-            ->firstOrFail();
+        $category->load([
+            'topics' => function ($query) {
+                $query->withCount('vocabularies');
+            }
+        ]);
 
         return view('user.categories.show', compact('category'));
     }

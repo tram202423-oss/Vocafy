@@ -13,9 +13,10 @@ class HomeController extends Controller
             ->take(4)
             ->get();
 
-        $popularTopics = Topic::withCount('vocabularies')
+        $popularTopics = Topic::with('category')
+            ->withCount('vocabularies')
             ->orderByDesc('vocabularies_count')
-            ->take(8)
+            ->take(6)
             ->get();
 
         return view('user.home.index', [

@@ -10,8 +10,41 @@
                 <li>
                     <a href="/" class="hover:text-blue-600 transition-colors {{ request()->is('/') ? 'text-blue-600 font-semibold' : '' }}">Home</a>
                 </li>
-                <li>
-                    <a href="/categories" class="hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold' : '' }}">Categories</a>
+                <li x-data="{ catDropdown: false }" class="relative" @mouseleave="catDropdown = false">
+                    <div class="flex items-center gap-1">
+                        <a href="{{ route('categories.index') }}" class="hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold' : '' }}">
+                            Categories
+                        </a>
+                        @if(isset($categories) && $categories->isNotEmpty())
+                            <button @click="catDropdown = !catDropdown" @mouseenter="catDropdown = true" class="text-gray-400 hover:text-blue-600 focus:outline-none p-0.5">
+                                <svg class="w-3.5 h-3.5 transition-transform" :class="catDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        @endif
+                    </div>
+
+                    @if(isset($categories) && $categories->isNotEmpty())
+                        <div x-show="catDropdown" 
+                             x-cloak
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 translate-y-1 scale-95"
+                             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                             x-transition:leave="transition ease-in duration-100"
+                             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                             x-transition:leave-end="opacity-0 translate-y-1 scale-95"
+                             class="absolute left-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50">
+                            @foreach($categories as $cat)
+                                <a href="{{ route('categories.show', $cat) }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                    {{ $cat->name }}
+                                </a>
+                            @endforeach
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <a href="{{ route('categories.index') }}" class="block px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50">
+                                Xem tất cả &rarr;
+                            </a>
+                        </div>
+                    @endif
                 </li>
 
                 @guest
@@ -26,6 +59,9 @@
                 @endguest
 
                 @auth
+                    <li>
+                        <a href="{{ route('dashboard') }}" class="hover:text-blue-600 transition-colors {{ request()->routeIs('dashboard') ? 'text-blue-600 font-semibold' : '' }}">Dashboard</a>
+                    </li>
                     <div class="flex items-center">
                         <x-dropdown align="right" width="48">
                             <x-slot name="trigger">
@@ -40,6 +76,17 @@
                             </x-slot>
 
                             <x-slot name="content">
+                                @if(Auth::user()->hasAnyRole(['super-admin', 'admin', 'editor', 'moderator']))
+                                    <x-dropdown-link href="/admin" class="font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100">
+                                        ⚡ {{ __('Trang Quản Trị Admin') }}
+                                    </x-dropdown-link>
+                                    <div class="border-t border-gray-100 my-1"></div>
+                                @endif
+
+                                <x-dropdown-link :href="route('dashboard')">
+                                    {{ __('Dashboard') }}
+                                </x-dropdown-link>
+
                                 <x-dropdown-link :href="route('profile.edit')">
                                     {{ __('Profile') }}
                                 </x-dropdown-link>
@@ -101,6 +148,14 @@
                     </div>
                     
                     <div class="space-y-1">
+                        @if(Auth::user()->hasAnyRole(['super-admin', 'admin', 'editor', 'moderator']))
+                            <a href="/admin" class="block py-2 px-3 text-sm font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100 rounded-lg">
+                                ⚡ Trang Quản Trị Admin
+                            </a>
+                        @endif
+                        <a href="{{ route('dashboard') }}" class="block py-2 px-3 text-sm font-medium text-gray-600 hover:text-blue-600 rounded-lg hover:bg-gray-50">
+                            📊 Dashboard
+                        </a>
                         <a href="{{ route('profile.edit') }}" class="block py-2 px-3 text-sm font-medium text-gray-600 hover:text-blue-600 rounded-lg hover:bg-gray-50">
                             👤 Profile Setting
                         </a>

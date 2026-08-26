@@ -58,9 +58,9 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasAnyRole([
             RoleEnum::SUPER_ADMIN->value,
-            RoleEnum::ADMIN,
-            'editor',
-            'moderator',
+            RoleEnum::ADMIN->value,
+            RoleEnum::EDITOR->value,
+            RoleEnum::MODERATOR->value,
         ]);
     }
 
@@ -73,7 +73,7 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasAnyRole([
             RoleEnum::SUPER_ADMIN->value,
-            RoleEnum::ADMIN,
+            RoleEnum::ADMIN->value,
         ]);
     }
     

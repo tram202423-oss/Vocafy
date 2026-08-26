@@ -2,7 +2,9 @@
 
 namespace App\Observers;
 
+use App\Enums\RoleEnum;
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 class UserObserver
 {
@@ -11,7 +13,8 @@ class UserObserver
      */
     public function created(User $user): void
     {
-        $user->assignRole('user');
+        $role = Role::findOrCreate(RoleEnum::USER->value, 'web');
+        $user->assignRole($role);
     }
 
     /**

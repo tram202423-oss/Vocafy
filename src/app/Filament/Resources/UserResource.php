@@ -12,11 +12,10 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\Builder;
 
 class UserResource extends Resource
 {
@@ -31,6 +30,11 @@ class UserResource extends Resource
     protected static ?string $pluralModelLabel = 'Users';
 
     protected static ?int $navigationSort = 100;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with('roles');
+    }
 
     public static function form(Form $form): Form
     {
@@ -69,7 +73,6 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -78,16 +81,17 @@ class UserResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                BadgeColumn::make('roles.name')
+                TextColumn::make('roles.name')
                     ->label('Role')
+                    ->badge()
                     ->separator(',')
-                    ->colors([
-                        'danger' => RoleEnum::SUPER_ADMIN->value,
-                        'warning' => RoleEnum::ADMIN,
-                        'success' => RoleEnum::EDITOR,
-                        'info' => RoleEnum::MODERATOR,
-                        'gray' => RoleEnum::USER,
-                    ]),
+                    ->color(fn (string $state): string => match ($state) {
+                        RoleEnum::SUPER_ADMIN->value => 'danger',
+                        RoleEnum::ADMIN->value => 'warning',
+                        RoleEnum::EDITOR->value => 'success',
+                        RoleEnum::MODERATOR->value => 'info',
+                        default => 'gray',
+                    }),
 
                 TextColumn::make('created_at')
                     ->dateTime('d/m/Y H:i')
@@ -130,7 +134,7 @@ class UserResource extends Resource
     {
         return auth()->user()->hasAnyRole([
             RoleEnum::SUPER_ADMIN->value,
-            RoleEnum::ADMIN,
+            RoleEnum::ADMIN->value,
         ]);
     }
 
