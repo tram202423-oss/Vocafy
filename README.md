@@ -36,7 +36,7 @@ docker exec -it vocafy_app bash
 
 chmod -R 777 storage
 chmod -R 777 bootstrap/cache
-
+sudo chown -R tram:tram /home/tram/Study/Vocafy
 Bên trong container, tiến hành cài đặt các package PHP:
 
 composer install
