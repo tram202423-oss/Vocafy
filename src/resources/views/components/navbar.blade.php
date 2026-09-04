@@ -33,7 +33,7 @@
                              x-transition:leave="transition ease-in duration-100"
                              x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                              x-transition:leave-end="opacity-0 translate-y-1 scale-95"
-                             class="absolute left-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50">
+                             class="absolute left-0 top-full w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50">
                             @foreach($categories as $cat)
                                 <a href="{{ route('categories.show', $cat) }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                                     {{ $cat->name }}
@@ -45,6 +45,9 @@
                             </a>
                         </div>
                     @endif
+                </li>
+                <li>
+                    <a href="/writing-ai" class="hover:text-blue-600 transition-colors {{ request()->is('writing-ai*') ? 'text-blue-600 font-semibold' : '' }}">Writing AI</a>
                 </li>
 
                 @guest
