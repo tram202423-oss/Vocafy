@@ -16,11 +16,25 @@ class WritingAiController extends Controller
     public function evaluate(Request $request)
     {
         $request->validate([
-            'topic' => 'required|string|min:10',
+            'topic' => 'nullable|string',
             'essay' => 'required|string|min:15',
             'exam_category' => 'nullable|string',
             'essay_type' => 'nullable|string',
+            'image' => 'nullable|array',
+            'image.data' => 'nullable|string',
+            'image.mime_type' => 'nullable|string',
         ]);
+
+        $topic = $request->input('topic', '');
+        $essay = $request->input('essay');
+        $imageInput = $request->input('image');
+
+        if (empty($topic) && empty($imageInput['data'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vui lòng nhập đề bài hoặc tải lên ảnh biểu đồ / sơ đồ đề bài!'
+            ], 422);
+        }
 
         $geminiKey = config('services.gemini.api_key') ?: env('GEMINI_API_KEY');
 
@@ -31,28 +45,44 @@ class WritingAiController extends Controller
             ], 422);
         }
 
-        $topic = $request->input('topic');
-        $essay = $request->input('essay');
         $examCategory = $request->input('exam_category', 'ielts_academic');
         $essayType = $request->input('essay_type', 'ielts_academic_task2');
 
-        $systemPrompt = $this->buildSystemPrompt($examCategory, $essayType);
-        $userPrompt = "Đề bài (Prompt):\n{$topic}\n\nBài làm của học viên (Student Essay):\n{$essay}";
+        $hasImage = !empty($imageInput['data']) && !empty($imageInput['mime_type']);
+        $systemPrompt = $this->buildSystemPrompt($examCategory, $essayType, $hasImage);
+
+        $parts = [];
+        if ($hasImage) {
+            $parts[] = [
+                'inline_data' => [
+                    'mime_type' => $imageInput['mime_type'],
+                    'data' => $imageInput['data']
+                ]
+            ];
+            $userPrompt = "Topic Prompt: " . ($topic ?: "See attached chart/diagram image") . "\n[Note: An image of the chart/diagram/table has been provided above. Analyze both the image and the prompt when scoring standard and accuracy.]\n\nStudent Essay Submission:\n{$essay}";
+        } else {
+            $userPrompt = "Topic Prompt: {$topic}\n\nStudent Essay Submission:\n{$essay}";
+        }
+
+        $parts[] = ['text' => $userPrompt];
 
         try {
             $response = Http::timeout(60)
                 ->retry(2, 500)
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={$geminiKey}", [
+                    'system_instruction' => [
+                        'parts' => [
+                            ['text' => $systemPrompt]
+                        ]
+                    ],
                     'contents' => [
                         [
-                            'parts' => [
-                                ['text' => $systemPrompt . "\n\n" . $userPrompt]
-                            ]
+                            'parts' => $parts
                         ]
                     ],
                     'generationConfig' => [
                         'response_mime_type' => 'application/json',
-                        'temperature' => 0.3,
+                        'temperature' => 0.2,
                     ]
                 ]);
 
@@ -90,106 +120,75 @@ class WritingAiController extends Controller
     }
 
     /**
-     * Build customized System Prompt based on specific exam category & format
+     * Build customized System Prompt based on specific exam category & format (Token Optimized)
      */
-    private function buildSystemPrompt(string $examCategory, string $essayType): string
+    private function buildSystemPrompt(string $examCategory, string $essayType, bool $hasImage = false): string
     {
-        $examSpecificRules = "";
+        $task1Or2 = str_contains($essayType, 'task1') ? 'Task Achievement' : 'Task Response';
 
-        if ($examCategory === 'toeic') {
-            $examSpecificRules = "EXAM TYPE: TOEIC Writing (Format: {$essayType}).
-SCORING RULES & SCALE:
-- overallScore: Set total TOEIC Writing score out of 200 (e.g., 140, 160, 170, 180, 190).
-- maxScore: 200.
-- bandLevel: E.g., 'Level 7 (170/200 điểm) - B2 High Professional'.
-- CRITERIA (Provide 4 criteria with maxScore 5.0):
-  If format is 'toeic_email' (Trả lời Email):
-    1. 'Quality & Relevance of Response' (Trả lời đủ yêu cầu)
-    2. 'Grammatical Accuracy & Sentence Variety' (Cấu trúc & Ngữ pháp)
-    3. 'Business Vocabulary & Professional Tone' (Từ vựng công sở & Văn phong)
-    4. 'Organization & Clarity' (Bố cục & Rõ ràng)
-  If format is 'toeic_essay' (Opinion Essay):
-    1. 'Support for Opinion & Argumentation' (Luận điểm & Thuyết phục)
-    2. 'Organization & Paragraphing' (Bố cục & Mạch lạc)
-    3. 'Grammatical Range & Accuracy' (Cấu trúc & Chính tả)
-    4. 'Business & General Diction' (Từ vựng xã hội & Công sở)";
-        } elseif ($examCategory === 'toefl') {
-            $examSpecificRules = "EXAM TYPE: TOEFL iBT Writing (Format: {$essayType}).
-SCORING RULES & SCALE:
-- overallScore: Set overall scaled score out of 30 (e.g., 22, 25, 27, 28).
-- maxScore: 30.
-- bandLevel: E.g., '25 / 30 điểm - High Performance (C1 Academic)'.
-- CRITERIA (Provide 4 criteria with maxScore 5.0):
-  1. 'Content & Task Completion' (Nội dung & Đủ ý bài học thuật)
-  2. 'Organization & Coherence' (Tổ chức ý & Tính mạch lạc)
-  3. 'Language Use & Academic Grammar' (Sử dụng ngữ pháp học thuật)
-  4. 'Mechanics & Lexical Precision' (Chính tả, dấu câu & Từ vựng)";
-        } elseif ($examCategory === 'ielts_general') {
-            $task1Or2 = ($essayType === 'ielts_general_task1') ? 'Task Achievement' : 'Task Response';
-            $examSpecificRules = "EXAM TYPE: IELTS General Training (Format: {$essayType}).
-SCORING RULES & SCALE:
-- overallScore: Set IELTS Band Score from 1.0 to 9.0 with 0.5 increments (e.g., 6.0, 6.5, 7.0, 7.5, 8.0).
-- maxScore: 9.0.
-- bandLevel: E.g., 'Band 7.5 - Good User (C1)'.
-- CRITERIA (Provide 4 official IELTS criteria with maxScore 9.0):
-  1. '{$task1Or2}' (Đánh giá trả lời đề bài)
-  2. 'Coherence & Cohesion' (Mạch lạc & Liên kết)
-  3. 'Lexical Resource' (Vốn từ vựng)
-  4. 'Grammatical Range & Accuracy' (Đa dạng & Chính xác ngữ pháp)";
-        } else {
-            // ielts_academic
-            $task1Or2 = ($essayType === 'ielts_academic_task1') ? 'Task Achievement' : 'Task Response';
-            $examSpecificRules = "EXAM TYPE: IELTS Academic (Format: {$essayType}).
-SCORING RULES & SCALE:
-- overallScore: Set IELTS Band Score from 1.0 to 9.0 with 0.5 increments (e.g., 6.0, 6.5, 7.0, 7.5, 8.0).
-- maxScore: 9.0.
-- bandLevel: E.g., 'Band 7.5 - Good User (C1)'.
-- CRITERIA (Provide 4 official IELTS criteria with maxScore 9.0):
-  1. '{$task1Or2}' (Đánh giá trả lời đề bài)
-  2. 'Coherence & Cohesion' (Mạch lạc & Liên kết)
-  3. 'Lexical Resource' (Vốn từ vựng)
-  4. 'Grammatical Range & Accuracy' (Đa dạng & Chính xác ngữ pháp)";
-        }
+        $config = match ($examCategory) {
+            'toeic' => [
+                'exam' => "TOEIC Writing ({$essayType})",
+                'max' => 200,
+                'band' => 'Level X (Score/200) - Level Name',
+                'critMax' => 5.0,
+                'criteria' => ($essayType === 'toeic_email')
+                    ? ['Quality & Relevance of Response', 'Grammatical Accuracy & Sentence Variety', 'Business Vocabulary & Professional Tone', 'Organization & Clarity']
+                    : ['Support for Opinion & Argumentation', 'Organization & Paragraphing', 'Grammatical Range & Accuracy', 'Business & General Diction']
+            ],
+            'toefl' => [
+                'exam' => "TOEFL iBT Writing ({$essayType})",
+                'max' => 30,
+                'band' => 'Score/30 - Performance Level (CEFR)',
+                'critMax' => 5.0,
+                'criteria' => ['Content & Task Completion', 'Organization & Coherence', 'Language Use & Academic Grammar', 'Mechanics & Lexical Precision']
+            ],
+            'ielts_general' => [
+                'exam' => "IELTS General Writing ({$essayType})",
+                'max' => 9.0,
+                'band' => 'Band X.X - Level Name (CEFR)',
+                'critMax' => 9.0,
+                'criteria' => [$task1Or2, 'Coherence & Cohesion', 'Lexical Resource', 'Grammatical Range & Accuracy']
+            ],
+            default => [
+                'exam' => "IELTS Academic Writing ({$essayType})",
+                'max' => 9.0,
+                'band' => 'Band X.X - Level Name (CEFR)',
+                'critMax' => 9.0,
+                'criteria' => [$task1Or2, 'Coherence & Cohesion', 'Lexical Resource', 'Grammatical Range & Accuracy']
+            ],
+        };
 
-        return "You are an expert English writing examiner for international tests (IELTS, TOEIC, TOEFL).
+        $criteriaSchema = implode(',', array_map(
+            fn($c) => "{\"name\":\"{$c}\",\"score\":0.0,\"maxScore\":{$config['critMax']},\"comment\":\"\"}",
+            $config['criteria']
+        ));
 
-{$examSpecificRules}
+        $imageInstruction = $hasImage ? "\nNote: A chart/diagram image is attached. Check if the essay accurately describes key trends, data points, or steps shown in the image." : "";
 
-TASK INSTRUCTION: Evaluate the student submission based STRICTLY on the prompt/topic and the specific exam criteria above.
-Output valid JSON ONLY.
-CRITICAL LANGUAGE REQUIREMENT: All comments in criteria, reason in corrections, list items in strengths, and list items in improvements MUST be written in fluent, helpful Vietnamese.
+        return "Act as an official examiner for {$config['exam']} (Max score: {$config['max']}).
+Evaluate the student submission strictly against the topic and exam criteria. Output valid JSON ONLY.{$imageInstruction}
+Language: comments, reasons, strengths, improvements in concise Vietnamese; original, suggestion, sampleEssay in English.
 
-Return a JSON object with this EXACT structure:
+Constraints:
+- strengths: 2-3 concise points.
+- improvements: 2-3 actionable points.
+- corrections: 3-5 high-impact errors (type: grammar|vocab|style, badge: Ngữ pháp|Từ vựng|Văn phong, concise reason ≤2 sentences).
+- sampleEssay: high-scoring model rewrite tailored to topic.
+
+JSON schema:
 {
-  \"overallScore\": 7.5,
-  \"maxScore\": 9.0,
-  \"bandLevel\": \"Band 7.5 - Good User (C1)\",
+  \"overallScore\": 0.0,
+  \"maxScore\": {$config['max']},
+  \"bandLevel\": \"{$config['band']}\",
   \"complexity\": \"B2 - C1 Advanced\",
-  \"criteria\": [
-    { \"name\": \"Criteria 1\", \"score\": 8.0, \"maxScore\": 9.0, \"comment\": \"Nhận xét bằng tiếng Việt...\" },
-    { \"name\": \"Criteria 2\", \"score\": 7.5, \"maxScore\": 9.0, \"comment\": \"Nhận xét bằng tiếng Việt...\" },
-    { \"name\": \"Criteria 3\", \"score\": 7.0, \"maxScore\": 9.0, \"comment\": \"Nhận xét bằng tiếng Việt...\" },
-    { \"name\": \"Criteria 4\", \"score\": 7.5, \"maxScore\": 9.0, \"comment\": \"Nhận xét bằng tiếng Việt...\" }
-  ],
-  \"strengths\": [
-    \"Điểm mạnh 1 bằng tiếng Việt...\",
-    \"Điểm mạnh 2 bằng tiếng Việt...\"
-  ],
-  \"improvements\": [
-    \"Gợi ý cải thiện 1 bằng tiếng Việt...\",
-    \"Gợi ý cải thiện 2 bằng tiếng Việt...\"
-  ],
+  \"criteria\": [{$criteriaSchema}],
+  \"strengths\": [\"\"],
+  \"improvements\": [\"\"],
   \"corrections\": [
-    {
-      \"paragraph\": 1,
-      \"type\": \"grammar\",
-      \"badge\": \"Ngữ pháp\",
-      \"original\": \"Original sentence from essay with error\",
-      \"suggestion\": \"Corrected or upgraded sentence\",
-      \"reason\": \"Giải thích chi tiết lỗi bằng tiếng Việt...\"
-    }
+    {\"paragraph\": 1, \"type\": \"grammar\", \"badge\": \"Ngữ pháp\", \"original\": \"\", \"suggestion\": \"\", \"reason\": \"\"}
   ],
-  \"sampleEssay\": \"A polished, high-scoring rewritten model essay in English tailored to this exact prompt and exam format.\"
+  \"sampleEssay\": \"\"
 }";
     }
 }

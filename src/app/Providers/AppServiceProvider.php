@@ -8,6 +8,7 @@ use App\Observers\UserObserver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (request()->isSecure() || request()->header('x-forwarded-proto') === 'https' || str_starts_with(config('app.url', ''), 'https://')) {
+            URL::forceScheme('https');
+        }
         User::observe(UserObserver::class);
 
         View::composer('components.navbar', function ($view) {

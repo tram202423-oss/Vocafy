@@ -233,8 +233,8 @@
                                 <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">2</div>
                                 <span>Nhập Đề bài / Yêu cầu bài viết</span>
                             </label>
-                            <button type="button" @click="topic = ''" x-show="topic.length > 0" class="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                                Xóa đề
+                            <button type="button" @click="topic = ''; removeImage();" x-show="topic.length > 0 || imagePreview !== null" class="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                                Xóa đề & ảnh
                             </button>
                         </div>
                         <div>
@@ -244,8 +244,43 @@
                                       placeholder="Ví dụ: Some people believe that technology has made the world a better place, while others argue it has caused more harm than good. Discuss both views and give your opinion."
                                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none resize-y placeholder:text-slate-400"></textarea>
                         </div>
+
+                        {{-- Image Upload Area for Charts / Diagrams --}}
+                        <div class="pt-1">
+                            <input type="file" id="chart-image-input" @change="handleImageUpload($event)" accept="image/*" class="hidden">
+                            
+                            <template x-if="!imagePreview">
+                                <label for="chart-image-input" class="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl cursor-pointer bg-slate-50/60 hover:bg-blue-50/40 transition-all text-slate-600 text-xs font-medium group">
+                                    <svg class="w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span>Đính kèm ảnh biểu đồ / sơ đồ đề bài (Tùy chọn - PNG, JPG)</span>
+                                </label>
+                            </template>
+
+                            <template x-if="imagePreview">
+                                <div class="relative group inline-block rounded-xl overflow-hidden border border-slate-200 shadow-sm max-h-52 bg-slate-50 p-2">
+                                    <img :src="imagePreview" alt="Biểu đồ đề bài" class="max-h-48 rounded-lg object-contain" />
+                                    <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-xl">
+                                        <button type="button" @click="removeImage()" class="px-3 py-1.5 bg-red-600 text-white font-medium rounded-lg text-xs hover:bg-red-700 transition-colors flex items-center gap-1 shadow">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                            Xóa ảnh
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
                         <div class="flex items-center justify-between text-xs text-slate-400">
                             <span x-text="topic.length + ' ký tự'"></span>
+                            <span x-show="imagePreview !== null" class="text-blue-600 font-semibold flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Đã đính kèm ảnh
+                            </span>
                         </div>
                     </div>
 

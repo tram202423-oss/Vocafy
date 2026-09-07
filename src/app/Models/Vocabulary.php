@@ -63,7 +63,7 @@ class Vocabulary extends Model
 
         return preg_replace(
             '/(' . $escapedWord . ')/i',
-            '<strong class="text-gray-900 not-italic font-bold">$1</strong>',
+            '<strong class="vocab-target-word text-gray-900 not-italic font-bold">$1</strong>',
             $escapedExample
         );
     }

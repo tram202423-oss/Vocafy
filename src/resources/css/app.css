@@ -1,7 +1,28 @@
+@import './home.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 [x-cloak] { display: none !important; }
 
-@import './home.css';
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* Che mờ từ tiếng Anh khi user đang tập trung gõ nhập từ */
+.is-blur-word .vocab-main-word,
+.is-blur-word .vocab-target-word {
+  filter: blur(7px);
+  opacity: 0.3;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+  transition: filter 0.25s ease-in-out, opacity 0.25s ease-in-out;
+  display: inline-block;
+}

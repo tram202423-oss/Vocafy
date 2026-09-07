@@ -14,6 +14,11 @@ export default function writingAiApp() {
         currentStep: 0,
         progressPercent: 0,
 
+        // Image upload state for charts / diagrams
+        imagePreview: null,
+        imageBase64: null,
+        imageMimeType: null,
+
         // Sample topics presets for all 4 exam formats
         presets: [
             {
@@ -110,10 +115,43 @@ export default function writingAiApp() {
         },
 
         get isValidSubmission() {
-            return this.topic.trim().length >= 10 && this.wordCount >= 15;
+            return (this.topic.trim().length >= 10 || this.imagePreview !== null) && this.wordCount >= 15;
         },
 
-        // Methods
+        // Image methods
+        handleImageUpload(event) {
+            const file = event.target.files ? event.target.files[0] : null;
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Vui lòng chọn file hình ảnh hợp lệ (PNG, JPG, WEBP,...)');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Dung lượng ảnh tối đa là 5MB');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.imagePreview = e.target.result;
+                this.imageMimeType = file.type;
+                const parts = e.target.result.split(',');
+                this.imageBase64 = parts.length > 1 ? parts[1] : parts[0];
+            };
+            reader.readAsDataURL(file);
+        },
+
+        removeImage() {
+            this.imagePreview = null;
+            this.imageBase64 = null;
+            this.imageMimeType = null;
+            const fileInput = document.getElementById('chart-image-input');
+            if (fileInput) fileInput.value = '';
+        },
+
+        // Form Methods
         selectExamCategory(category) {
             this.examCategory = category;
             switch(category) {
@@ -178,7 +216,11 @@ In conclusion, I think AI is a good thing for everyone if we use it wisely.`;
                         topic: this.topic,
                         essay: this.essay,
                         exam_category: this.examCategory,
-                        essay_type: this.essayType
+                        essay_type: this.essayType,
+                        image: this.imageBase64 ? {
+                            data: this.imageBase64,
+                            mime_type: this.imageMimeType
+                        } : null
                     })
                 });
 
@@ -221,6 +263,7 @@ In conclusion, I think AI is a good thing for everyone if we use it wisely.`;
             this.stage = 'input';
             this.topic = '';
             this.essay = '';
+            this.removeImage();
             this.currentStep = 0;
             this.progressPercent = 0;
         }

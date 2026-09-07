@@ -6,6 +6,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\WritingAiController;
+use App\Http\Controllers\VocabularyProgressController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -23,6 +24,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // API: Tiến độ học từ vựng
+    Route::post('/vocabulary/{vocabulary}/review', [VocabularyProgressController::class, 'review'])->name('vocabulary.review');
+    Route::post('/vocabulary/{vocabulary}/master', [VocabularyProgressController::class, 'master'])->name('vocabulary.master');
+    Route::post('/vocabulary/{vocabulary}/reset', [VocabularyProgressController::class, 'reset'])->name('vocabulary.reset');
+    Route::get('/progress/topic/{topicId}', [VocabularyProgressController::class, 'topicProgress'])->name('progress.topic');
 });
 
 require __DIR__.'/auth.php';
+
