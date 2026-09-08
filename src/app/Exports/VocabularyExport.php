@@ -11,7 +11,7 @@ class VocabularyExport implements FromQuery, WithHeadings, WithMapping
 {
     public function query()
     {
-        return Vocabulary::query()->with('topic');
+        return Vocabulary::query()->with('topic.category');
     }
 
     public function headings(): array
@@ -23,6 +23,7 @@ class VocabularyExport implements FromQuery, WithHeadings, WithMapping
             'example',
             'level',
             'topic_slug',
+            'category_slug',
         ];
     }
 
@@ -35,6 +36,7 @@ class VocabularyExport implements FromQuery, WithHeadings, WithMapping
             $vocabulary->example,
             $vocabulary->level,
             $vocabulary->topic?->slug,
+            $vocabulary->topic?->category?->slug,
         ];
     }
 }

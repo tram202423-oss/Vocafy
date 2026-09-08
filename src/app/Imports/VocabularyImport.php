@@ -17,11 +17,26 @@ class VocabularyImport implements ToModel, WithHeadingRow, WithValidation, WithS
      */
     public function model(array $row): ?Vocabulary
     {
-        $topicId = Topic::where('slug', $row['topic_slug'] ?? '')->value('id');
+        $topicSlug    = $row['topic_slug'] ?? '';
+        $categorySlug = $row['category_slug'] ?? null;
+
+        $topic = Topic::where('slug', $topicSlug)
+            ->with('category')
+            ->first();
+
+        // Nếu không tìm thấy topic, bỏ qua row
+        if (! $topic) {
+            return null;
+        }
+
+        // Nếu có category_slug, kiểm tra topic có thuộc đúng category không
+        if ($categorySlug && $topic->category?->slug !== $categorySlug) {
+            return null;
+        }
 
         // Kiểm tra từ đã tồn tại chưa (cùng word + topic_id)
         $exists = Vocabulary::where('word', $row['word'])
-            ->where('topic_id', $topicId)
+            ->where('topic_id', $topic->id)
             ->exists();
 
         if ($exists) {
@@ -34,15 +49,16 @@ class VocabularyImport implements ToModel, WithHeadingRow, WithValidation, WithS
             'meaning'       => $row['meaning'] ?? null,
             'example'       => $row['example'] ?? null,
             'level'         => $row['level'] ?? 'easy',
-            'topic_id'      => $topicId,
+            'topic_id'      => $topic->id,
         ]);
     }
 
     public function rules(): array
     {
         return [
-            'word'  => 'required|string|max:255',
-            'level' => 'nullable|in:easy,medium,hard',
+            'word'          => 'required|string|max:255',
+            'level'         => 'nullable|in:easy,medium,hard',
+            'category_slug' => 'nullable|string|max:255',
         ];
     }
 }
