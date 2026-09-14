@@ -1,0 +1,151 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Category;
+use App\Models\Topic;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+
+class TopicSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $topicGroups = [
+
+            'toeic' => [
+                'Contracts',
+                'Marketing',
+                'Warranties',
+                'Business Planning',
+                'Conferences',
+                'Computers',
+                'Office Technology',
+                'Office procedures',
+                'Electronics',
+                'Correspondence',
+                'Job Advertising',
+                'Apply and Interviewing',
+                'Hiring and Training',
+                'Salaries and Benefits',
+                'Promotion and Awards',
+                'Shopping',
+                'Ordering Supplies',
+                'Shipping',
+                'Invoices',
+                'Inventory',
+                'Banking',
+                'Accounting',
+                'Investments',
+                'Taxes',
+                'Property and Departments',
+                'Board meetings and Committees',
+                'Product Development',
+                'Quality Control',
+                'Renting and Leasing',
+                'Restaurants',
+                'Eating out',
+                'Ordering Lunch',
+                'Entertainment',
+                'General Travel',
+                'Hotels',
+            ],
+
+            'ielts' => [
+                'Education',
+                'Environment',
+                'Technology',
+                'Health',
+                'Culture',
+                'Media',
+                'Tourism',
+                'Science',
+                'Crime and Punishment',
+                'Work and Career',
+                'Social Issues',
+                'Space Exploration',
+                'Traditional culture',
+                'Skill',
+                'Society',
+                'Banking and Finance',
+                'Law',
+            ],
+
+            'toefl' => [
+                'Biology',
+                'Chemistry',
+                'Physics',
+                'Astronomy',
+                'Geography',
+                'Geology',
+                'History',
+                'Psychology',
+                'Sociology',
+                'Anthropology',
+                'Economics',
+                'Political Science',
+                'Environmental Science',
+                'Art History',
+                'Literature',
+                'Architecture',
+                'Music',
+                'Education',
+                'Medicine',
+                'Business',
+            ],
+
+            'daily-english' => [
+                'Greetings',
+                'Family',
+                'Friends',
+                'Daily Routine',
+                'Food and Drinks',
+                'Restaurant',
+                'Shopping',
+                'Clothes',
+                'Weather',
+                'Transportation',
+                'Travel',
+                'Hotel',
+                'Airport',
+                'Health',
+                'Sports',
+                'Hobbies',
+                'Movies',
+                'Music',
+                'Technology',
+                'Work',
+                'School',
+                'Home',
+                'Pets',
+                'Social Media',
+                'Money',
+            ],
+        ];
+
+        foreach ($topicGroups as $categorySlug => $topics) {
+
+            $category = Category::where('slug', $categorySlug)->first();
+
+            if (! $category) {
+                continue;
+            }
+
+            foreach ($topics as $topic) {
+                $baseSlug = Str::slug($topic);
+                $existingWithDifferentCat = Topic::where('slug', $baseSlug)->where('category_id', '!=', $category->id)->exists();
+                $slug = $existingWithDifferentCat ? Str::slug($categorySlug . '-' . $topic) : $baseSlug;
+
+                Topic::firstOrCreate(
+                    [
+                        'category_id' => $category->id,
+                        'slug' => $slug,
+                    ],
+                    [
+                        'name' => $topic,
+                    ]
+                );
+            }
+        }
+    }
+}
