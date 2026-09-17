@@ -83,4 +83,15 @@ class User extends Authenticatable implements FilamentUser
     {
         return auth()->id() === $this->id;
     }
+
+    /**
+     * Send the password reset notification via queue.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\QueuedResetPasswordNotification($token));
+    }
 }

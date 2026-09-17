@@ -26,6 +26,18 @@ services:
     depends_on:
       - app
 
+  queue:
+    image: vocafy-app:latest
+    container_name: vocafy_queue
+    working_dir: /var/www
+    command: php artisan queue:work --tries=3 --timeout=90
+    volumes:
+      - ./src:/var/www
+    depends_on:
+      - db
+      - app
+    restart: unless-stopped
+
   db:
     image: mysql:8.0
     container_name: vocafy_db
