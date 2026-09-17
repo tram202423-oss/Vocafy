@@ -7,10 +7,13 @@ import { speakText } from '../utils/speech';
 export default function vocabularyPlayer() {
     return {
         speakingWord: null,
+        speakingLang: null,
 
-        speak(text) {
+        speak(text, lang = 'en-US') {
+            const standardLang = (lang === 'uk' || lang === 'en-UK' || lang === 'en-GB') ? 'en-GB' : 'en-US';
             this.speakingWord = text;
-            const success = speakText(text);
+            this.speakingLang = standardLang;
+            const success = speakText(text, standardLang);
 
             if (!success && !('speechSynthesis' in window)) {
                 alert('Trình duyệt của bạn không hỗ trợ phát âm tự động.');
@@ -18,11 +21,18 @@ export default function vocabularyPlayer() {
 
             // Tự động reset trạng thái sau khi đọc xong
             setTimeout(() => {
-                this.speakingWord = null;
+                if (this.speakingWord === text && this.speakingLang === standardLang) {
+                    this.speakingWord = null;
+                    this.speakingLang = null;
+                }
             }, 1200);
         },
 
-        isSpeaking(text) {
+        isSpeaking(text, lang = null) {
+            if (lang) {
+                const standardLang = (lang === 'uk' || lang === 'en-UK' || lang === 'en-GB') ? 'en-GB' : 'en-US';
+                return this.speakingWord === text && this.speakingLang === standardLang;
+            }
             return this.speakingWord === text;
         }
     };

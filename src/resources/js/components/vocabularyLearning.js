@@ -13,10 +13,11 @@ export default function vocabularyLearning(initialProgressMap = {}, initialSumma
     return {
         // ─── State ───────────────────────────────────────────────────────────
         speakingWord: null,
+        speakingLang: null,
         isAuthenticated: !!isAuthenticated,
         statusMap: initialProgressMap,     // { vocab_id: 'new'|'learning'|'mastered' }
         summary: {
-            total:    initialSummary.total    ?? 0,
+            total: initialSummary.total ?? 0,
             learning: initialSummary.learning ?? 0,
             mastered: initialSummary.mastered ?? 0,
         },
@@ -53,18 +54,29 @@ export default function vocabularyLearning(initialProgressMap = {}, initialSumma
         },
 
         // ─── Speech ──────────────────────────────────────────────────────────
-        speak(text) {
+        speak(text, lang = 'en-US') {
+            const standardLang = (lang === 'uk' || lang === 'en-UK' || lang === 'en-GB') ? 'en-GB' : 'en-US';
             this.speakingWord = text;
-            const success = speakText(text);
+            this.speakingLang = standardLang;
+            const success = speakText(text, standardLang);
 
             if (!success && !('speechSynthesis' in window)) {
                 alert('Trình duyệt của bạn không hỗ trợ phát âm tự động.');
             }
 
-            setTimeout(() => { this.speakingWord = null; }, 1200);
+            setTimeout(() => {
+                if (this.speakingWord === text && this.speakingLang === standardLang) {
+                    this.speakingWord = null;
+                    this.speakingLang = null;
+                }
+            }, 1200);
         },
 
-        isSpeaking(text) {
+        isSpeaking(text, lang = null) {
+            if (lang) {
+                const standardLang = (lang === 'uk' || lang === 'en-UK' || lang === 'en-GB') ? 'en-GB' : 'en-US';
+                return this.speakingWord === text && this.speakingLang === standardLang;
+            }
             return this.speakingWord === text;
         },
 
@@ -129,9 +141,9 @@ export default function vocabularyLearning(initialProgressMap = {}, initialSumma
                 return { success: true };
             }
 
-            return { 
-                success: false, 
-                message: 'Chưa chính xác, hãy thử lại nhé!' 
+            return {
+                success: false,
+                message: 'Chưa chính xác, hãy thử lại nhé!'
             };
         },
 
