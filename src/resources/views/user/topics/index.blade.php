@@ -8,9 +8,9 @@
     badge="Chủ đề bài học"
     :description="$topic->description ?? 'Học và làm chủ toàn bộ từ vựng cốt lõi của chủ đề này.'"
     :breadcrumbs="[
-        $category->name => route('categories.show', $category->slug), 
+        $category->name => route('categories.show', $category->slug),
         $topic->name => ''
-    ]" 
+    ]"
 />
 
 @php
@@ -48,7 +48,7 @@
         <div class="flex items-center justify-between mb-3">
             <div>
                 <h2 class="text-xl font-bold text-gray-900">Danh sách từ vựng</h2>
-                <p class="text-sm text-gray-500 mt-1">Bấm 🔊 để nghe phát âm, gõ lại từ tiếng Anh vào ô bên dưới để xác nhận đã thuộc</p>
+                <p class="text-sm text-gray-500 mt-1">Bấm US hoặc UK để nghe phát âm, gõ lại từ tiếng Anh vào ô bên dưới để xác nhận đã thuộc</p>
             </div>
             <span class="px-3.5 py-1.5 bg-blue-50 text-blue-700 text-sm font-semibold rounded-full border border-blue-100">
                 {{ $totalVocabs }} Từ vựng
@@ -113,9 +113,10 @@
                     {{-- Header: Từ + Level badge + Status badge --}}
                     <div class="flex items-start justify-between gap-4 mb-3">
                         <button 
-                            @click="speak('{{ addslashes($vocab->word) }}'); markReview({{ $vocab->id }})" 
+                            type="button"
+                            @click="speak('{{ addslashes($vocab->word) }}', 'en-US'); markReview({{ $vocab->id }})" 
                             class="text-left text-2xl font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors focus:outline-none hover:underline flex items-center gap-2"
-                            title="Bấm để nghe phát âm"
+                            title="Bấm để nghe phát âm (US)"
                         >
                             <span class="vocab-main-word">{{ $vocab->word }}</span>
                         </button>
@@ -145,21 +146,45 @@
                         </div>
                     </div>
 
-                    {{-- Pronunciation + Speaker --}}
-                    <div class="flex items-center gap-2 text-sm text-gray-500 font-mono mb-4">
+                    {{-- Pronunciation + UK/US Audio Buttons --}}
+                    <div class="flex items-center gap-2 text-sm text-gray-500 mb-4 flex-wrap">
                         @if($vocab->pronunciation)
-                            <span>{{ $vocab->pronunciation }}</span>
+                            <span class="bg-gray-100/90 text-gray-700 px-2 py-0.5 rounded-md font-mono text-xs font-medium border border-gray-200/80">{{ $vocab->pronunciation }}</span>
                         @endif
-                        
-                        <button 
-                            @click="speak('{{ addslashes($vocab->word) }}'); markReview({{ $vocab->id }})"
-                            class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition-colors focus:outline-none active:scale-95" 
-                            title="Nghe phát âm"
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C12.923 3.663 14 4.109 14 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
-                            </svg>
-                        </button>
+
+                        <div class="flex items-center gap-1.5">
+                            {{-- US Accent (Anh - Mỹ) --}}
+                            <button 
+                                type="button"
+                                @click="speak('{{ addslashes($vocab->word) }}', 'en-US'); markReview({{ $vocab->id }})"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all duration-150 focus:outline-none active:scale-95" 
+                                :class="isSpeaking('{{ addslashes($vocab->word) }}', 'en-US') 
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-200' 
+                                    : 'bg-blue-50 text-blue-700 border-blue-200/80 hover:bg-blue-100 hover:border-blue-300'"
+                                title="Nghe phát âm giọng Anh - Mỹ (US)"
+                            >
+                                <span>US</span>
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C12.923 3.663 14 4.109 14 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                                </svg>
+                            </button>
+
+                            {{-- UK Accent (Anh - Anh) --}}
+                            <button 
+                                type="button"
+                                @click="speak('{{ addslashes($vocab->word) }}', 'en-GB'); markReview({{ $vocab->id }})"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all duration-150 focus:outline-none active:scale-95" 
+                                :class="isSpeaking('{{ addslashes($vocab->word) }}', 'en-GB') 
+                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm ring-2 ring-indigo-200' 
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200/80 hover:bg-indigo-100 hover:border-indigo-300'"
+                                title="Nghe phát âm giọng Anh - Anh (UK)"
+                            >
+                                <span>UK</span>
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C12.923 3.663 14 4.109 14 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     {{-- Meaning --}}
@@ -174,13 +199,25 @@
                         <div class="pt-3 border-t border-gray-100">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Ví dụ:</span>
-                                <button 
-                                    @click="speak('{{ addslashes($vocab->example) }}')" 
-                                    class="text-xs text-gray-400 hover:text-blue-600 focus:outline-none" 
-                                    title="Nghe toàn bộ câu ví dụ"
-                                >
-                                    🔊 Nghe câu
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button 
+                                        type="button"
+                                        @click="speak('{{ addslashes($vocab->example) }}', 'en-US')" 
+                                        class="text-xs text-gray-400 hover:text-blue-600 focus:outline-none inline-flex items-center gap-1 transition-colors" 
+                                        title="Nghe câu theo giọng Anh - Mỹ (US)"
+                                    >
+                                        <span>🇺🇸</span> US
+                                    </button>
+                                    <span class="text-gray-300 text-xs">|</span>
+                                    <button 
+                                        type="button"
+                                        @click="speak('{{ addslashes($vocab->example) }}', 'en-GB')" 
+                                        class="text-xs text-gray-400 hover:text-indigo-600 focus:outline-none inline-flex items-center gap-1 transition-colors" 
+                                        title="Nghe câu theo giọng Anh - Anh (UK)"
+                                    >
+                                        <span>🇬🇧</span> UK
+                                    </button>
+                                </div>
                             </div>
                             <p class="text-sm text-gray-600 italic leading-relaxed">
                                 "{!! $vocab->highlighted_example !!}"
