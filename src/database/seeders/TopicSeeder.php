@@ -46,9 +46,10 @@ class TopicSeeder extends Seeder
                 'Restaurants',
                 'Eating out',
                 'Ordering Lunch',
-                'Entertainment',
                 'General Travel',
                 'Hotels',
+                'Events',
+                'Cooking as a Career',
             ],
 
             'ielts' => [

@@ -1,5 +1,33 @@
 @extends('layouts.app')
 
+@section('title', $category->name . ' – Từ Vựng Tiếng Anh')
+@section('meta_description', $category->description
+    ? Str::limit(strip_tags($category->description), 155)
+    : 'Học từ vựng tiếng Anh theo chủ đề ' . $category->name . '. Khám phá ' . $category->topics->count() . ' chủ đề với hàng trăm từ vựng thực tế, ví dụ sinh động.')
+@section('canonical', route('categories.show', $category->slug))
+
+@push('schema')
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "{{ $category->name }} – Danh sách chủ đề từ vựng",
+  "url": "{{ route('categories.show', $category->slug) }}",
+  "numberOfItems": {{ $category->topics->count() }},
+  "itemListElement": [
+    @foreach($category->topics as $index => $topic)
+    {
+      "@type": "ListItem",
+      "position": {{ $index + 1 }},
+      "name": "{{ addslashes($topic->name) }}",
+      "url": "{{ route('topics.index', ['category' => $category->slug, 'topic' => $topic->slug]) }}"
+    }{{ !$loop->last ? ',' : '' }}
+    @endforeach
+  ]
+}
+</script>
+@endpush
+
 @section('content')
 
 {{-- Gọi component và truyền dữ liệu động vào --}}
@@ -60,7 +88,7 @@
     </div>
 
     {{-- Grid danh sách topics --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-stagger>
         @forelse ($category->topics as $topic)
             @php
                 $isAuth = auth()->check();
@@ -72,8 +100,9 @@
                 $isCompleted = ($mastered === $total && $total > 0);
                 $isLearning = ($mastered > 0 || $learning > 0);
             @endphp
-            <div class="group bg-white rounded-2xl border transition-all duration-300 p-6 shadow-sm hover:shadow-xl flex flex-col justify-between min-h-[220px]
+            <div class="card-glow reveal stagger-{{ min($loop->iteration, 8) }} group bg-white rounded-2xl border transition-all duration-300 p-6 shadow-sm flex flex-col justify-between min-h-[220px]
                 {{ $isCompleted ? 'border-emerald-300 bg-emerald-50/15 hover:border-emerald-400' : ($isLearning ? 'border-amber-200 bg-amber-50/10 hover:border-blue-400' : 'border-gray-200 hover:border-blue-500') }}">
+
                 <div>
                     {{-- Header của thẻ Topic: Số thứ tự + Badge tiến độ --}}
                     <div class="flex items-center justify-between mb-3 gap-2">

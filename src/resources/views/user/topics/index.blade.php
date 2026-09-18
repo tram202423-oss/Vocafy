@@ -1,5 +1,42 @@
 @extends('layouts.app')
 
+@section('title', $topic->name . ' – ' . $category->name . ' Vocabulary')
+@section('meta_description', $topic->description
+    ? Str::limit(strip_tags($topic->description), 155)
+    : 'Học từ vựng chủ đề ' . $topic->name . ' trong danh mục ' . $category->name . '. ' . $progressSummary['total'] . ' từ vựng với ví dụ thực tế, phát âm chuẩn và bài tập ôn luyện.')
+@section('canonical', route('topics.index', ['category' => $category->slug, 'topic' => $topic->slug]))
+@section('og_type', 'article')
+
+@push('schema')
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "{{ addslashes($topic->name) }}",
+  "description": "{{ addslashes($topic->description ?? 'Học và làm chủ toàn bộ từ vựng cốt lõi của chủ đề ' . $topic->name) }}",
+  "url": "{{ route('topics.index', ['category' => $category->slug, 'topic' => $topic->slug]) }}",
+  "provider": {
+    "@type": "Organization",
+    "name": "Vocafy",
+    "url": "{{ route('home') }}"
+  },
+  "educationalLevel": "Beginner to Advanced",
+  "inLanguage": "vi",
+  "teaches": "English Vocabulary – {{ addslashes($topic->name) }}",
+  "hasCourseInstance": {
+    "@type": "CourseInstance",
+    "courseMode": "online",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "VND",
+      "availability": "https://schema.org/InStock"
+    }
+  }
+}
+</script>
+@endpush
+
 @section('content')
 
 {{-- Gọi component và truyền dữ liệu động vào --}}
@@ -45,14 +82,20 @@
 
     {{-- Header: Tiêu đề + Progress Bar --}}
     <div class="mb-8">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-3">
             <div>
                 <h2 class="text-xl font-bold text-gray-900">Danh sách từ vựng</h2>
                 <p class="text-sm text-gray-500 mt-1">Bấm US hoặc UK để nghe phát âm, gõ lại từ tiếng Anh vào ô bên dưới để xác nhận đã thuộc</p>
             </div>
-            <span class="px-3.5 py-1.5 bg-blue-50 text-blue-700 text-sm font-semibold rounded-full border border-blue-100">
-                {{ $totalVocabs }} Từ vựng
-            </span>
+            <div class="flex items-center gap-2.5">
+                <a href="{{ route('game.matching', ['topic' => $topic->slug]) }}" 
+                   class="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:scale-95">
+                    <span>🎮</span> Luyện Game Ghép Từ
+                </a>
+                <span class="px-3.5 py-2 bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold rounded-xl border border-blue-100">
+                    {{ $totalVocabs }} Từ vựng
+                </span>
+            </div>
         </div>
 
         @if($isAuth && $totalVocabs > 0)

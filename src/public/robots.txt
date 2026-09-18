@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /admin
+Disallow: /writing-ai
+Allow: /
+
+Sitemap: https://vocafy.com/sitemap.xml

@@ -15,56 +15,29 @@
                         <a href="{{ route('categories.index') }}" class="hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold' : '' }}">
                             Categories
                         </a>
-                        @if(isset($categories) && $categories->isNotEmpty())
-                            <button @click="catDropdown = !catDropdown" @mouseenter="catDropdown = true" class="text-gray-400 hover:text-blue-600 focus:outline-none p-0.5">
-                                <svg class="w-3.5 h-3.5 transition-transform" :class="catDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                        @endif
                     </div>
-
-                    @if(isset($categories) && $categories->isNotEmpty())
-                        <div x-show="catDropdown" 
-                             x-cloak
-                             x-transition:enter="transition ease-out duration-150"
-                             x-transition:enter-start="opacity-0 translate-y-1 scale-95"
-                             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                             x-transition:leave="transition ease-in duration-100"
-                             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                             x-transition:leave-end="opacity-0 translate-y-1 scale-95"
-                             class="absolute left-0 top-full w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50">
-                            @foreach($categories as $cat)
-                                <a href="{{ route('categories.show', $cat) }}" class="block px-4 py-2 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                                    {{ $cat->name }}
-                                </a>
-                            @endforeach
-                            <div class="border-t border-gray-100 my-1"></div>
-                            <a href="{{ route('categories.index') }}" class="block px-4 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50">
-                                Xem tất cả &rarr;
-                            </a>
-                        </div>
-                    @endif
                 </li>
                 <li>
-                    <a href="/writing-ai" class="hover:text-blue-600 transition-colors {{ request()->is('writing-ai*') ? 'text-blue-600 font-semibold' : '' }}">Writing AI</a>
+                    <a href="{{ route('writingAi') }}" class="hover:text-blue-600 transition-colors {{ request()->is('writing-ai*') ? 'text-blue-600 font-semibold' : '' }}">Writing AI</a>
+                </li>
+                <li>
+                    <a href="{{ route('game.matching') }}" class="hover:text-indigo-600 transition-colors flex items-center gap-1.5 {{ request()->routeIs('game.matching*') ? 'text-indigo-600 font-semibold' : '' }}">
+                        <span class="text-sm">🎮</span> Minigame
+                    </a>
                 </li>
 
                 @guest
                     <li>
-                        <a href="/login" class="hover:text-blue-600 transition-colors">Login</a>
+                        <a href="{{ route('login') }}" class="hover:text-blue-600 transition-colors">Login</a>
                     </li>
                     <li>
-                        <a href="/register" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all shadow-sm shadow-blue-500/10 active:scale-98">
+                        <a href="{{ route('register') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all shadow-sm shadow-blue-500/10 active:scale-98">
                             Register
                         </a>
                     </li>
                 @endguest
 
                 @auth
-                    <li>
-                        <a href="{{ route('dashboard') }}" class="hover:text-blue-600 transition-colors {{ request()->routeIs('dashboard') ? 'text-blue-600 font-semibold' : '' }}">Dashboard</a>
-                    </li>
                     <div class="flex items-center">
                         <x-dropdown align="right" width="48">
                             <x-slot name="trigger">
@@ -80,7 +53,7 @@
 
                             <x-slot name="content">
                                 @if(Auth::user()->hasAnyRole(['super-admin', 'admin', 'editor', 'moderator']))
-                                    <x-dropdown-link href="/admin" class="font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100">
+                                    <x-dropdown-link href="{{ route('admin.dashboard') }}" class="font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100">
                                         ⚡ {{ __('Trang Quản Trị Admin') }}
                                     </x-dropdown-link>
                                     <div class="border-t border-gray-100 my-1"></div>
@@ -130,15 +103,19 @@
          class="md:hidden border-t border-gray-100 bg-white">
         <div class="px-5 pt-3 pb-6 space-y-3">
             <a href="/" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('/') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Home</a>
-            <a href="/categories" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Categories</a>
+            <a href="{{ route('categories.index') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Categories</a>
+            <a href="{{ route('writingAi') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('writing-ai*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Writing AI</a>
+            <a href="{{ route('game.matching') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-indigo-600 transition-colors flex items-center gap-2 {{ request()->routeIs('game.matching*') ? 'text-indigo-600 font-semibold bg-indigo-50/50 px-3 rounded-xl' : '' }}">
+                <span>🎮</span> Minigame Ghép Từ
+            </a>
             
             <div class="border-t border-gray-100 pt-3">
                 @guest
                     <div class="grid grid-cols-2 gap-3 mt-1">
-                        <a href="/login" class="flex items-center justify-center py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
+                        <a href="{{ route('login') }}" class="flex items-center justify-center py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
                             Login
                         </a>
-                        <a href="/register" class="flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-500/10">
+                        <a href="{{ route('register') }}" class="flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-500/10">
                             Register
                         </a>
                     </div>
@@ -152,7 +129,7 @@
                     
                     <div class="space-y-1">
                         @if(Auth::user()->hasAnyRole(['super-admin', 'admin', 'editor', 'moderator']))
-                            <a href="/admin" class="block py-2 px-3 text-sm font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100 rounded-lg">
+                            <a href="{{ route('admin.dashboard') }}" class="block py-2 px-3 text-sm font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100 rounded-lg">
                                 ⚡ Trang Quản Trị Admin
                             </a>
                         @endif
