@@ -1,0 +1,39 @@
+/* ============================================================
+   VOCAFY WRITING AI PAGE EFFECTS
+   File: writing.css
+   ============================================================ */
+
+/* 1. BAND SCORE GAUGE PULSE */
+.score-badge-glow {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+  animation: score-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes score-glow {
+  0% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 28px rgba(99, 102, 241, 0.35);
+  }
+}
+
+/* 2. GRAMMAR HIGHLIGHT HOVER */
+.grammar-tag {
+  transition: all 0.2s ease;
+}
+
+.grammar-tag:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+}
+
+/* 3. AI EVALUATING PULSE SKELETON */
+.ai-evaluating-pulse {
+  animation: ai-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes ai-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.99); }
+  50% { opacity: 1; transform: scale(1); }
+}

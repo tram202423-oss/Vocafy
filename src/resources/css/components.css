@@ -1,0 +1,122 @@
+/* ============================================================
+   VOCAFY UI COMPONENTS - GLOBAL COMPONENT EFFECTS
+   File: components.css
+   ============================================================ */
+
+/* 1. TOP SCROLL PROGRESS BAR */
+#scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6, #06b6d4);
+  z-index: 9998;
+  width: 0%;
+  transition: width 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+/* 2. PAGE LOADER */
+#page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+#page-loader.loaded {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loader-ring {
+  width: 42px;
+  height: 42px;
+  border: 3.5px solid #e0e7ff;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin-loader 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+@keyframes spin-loader {
+  to { transform: rotate(360deg); }
+}
+
+/* 3. NAVBAR SCROLL SHADOW & BLUR */
+nav {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+nav.scrolled {
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.07) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* 4. ANIMATED PROGRESS BARS */
+.progress-bar-animated {
+  width: 0% !important;
+  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progress-bar-animated.animate {
+  width: var(--progress-width) !important;
+}
+
+/* 5. NUMBER COUNTER */
+.count-up {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 6. TOOLTIP */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 7. PREVENT AUTO-ZOOM ON MOBILE INPUTS */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

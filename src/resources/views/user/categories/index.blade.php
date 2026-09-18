@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@section('title', 'Danh Mục Học Từ Vựng – TOEIC, IELTS, TOEFL')
+@section('meta_description', 'Khám phá các danh mục từ vựng tiếng Anh: TOEIC, IELTS, TOEFL, giao tiếp hàng ngày và nhiều chủ đề thực tế khác. Học miễn phí và theo dõi tiến độ của bạn.')
+@section('canonical', route('categories.index'))
+
 @section('content')
 
 <x-page-header 
@@ -17,10 +21,11 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4" data-stagger>
         @forelse ($categories as $category)
             <a href="{{ route('categories.show', $category) }}"
-                class="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-blue-500 hover:shadow-xl flex flex-col justify-between min-h-[160px]">
+                class="category-card card-glow reveal stagger-{{ min($loop->iteration, 8) }} group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm flex flex-col justify-between min-h-[160px]">
+
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <span class="text-xs font-semibold uppercase tracking-wider text-blue-500 block mb-1">Danh mục</span>
@@ -31,7 +36,7 @@
                             📁 {{ $category->topics_count }} {{ Str::plural('topic', $category->topics_count) }}
                         </p>
                     </div>
-                    <div class="text-3xl bg-blue-50 p-3 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                    <div class="category-icon-box text-3xl bg-blue-50 p-3 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
                         📚
                     </div>
                 </div>

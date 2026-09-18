@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', 'Dashboard – Tiến Độ Học Tập')
+@section('robots', 'noindex, nofollow')
+
 @section('content')
 
 <x-page-header 
@@ -57,8 +60,8 @@
 <div class="container mx-auto px-5 py-10">
 
     {{-- 1. Stats Quick Cards --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10" data-stagger>
+        <div class="card-glow reveal stagger-1 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl font-bold">
                 📚
             </div>
@@ -68,7 +71,7 @@
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+        <div class="card-glow reveal stagger-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl font-bold">
                 📁
             </div>
@@ -78,7 +81,7 @@
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+        <div class="card-glow reveal stagger-3 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl font-bold">
                 📝
             </div>
@@ -89,7 +92,7 @@
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+        <div class="card-glow reveal stagger-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl font-bold">
                 ✅
             </div>
@@ -146,7 +149,7 @@
                     Bạn có quyền truy cập vào trang Admin để quản lý danh mục, bài học, danh sách câu hỏi và người dùng.
                 </p>
             </div>
-            <a href="/admin" class="px-6 py-3 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-xl shadow transition-all whitespace-nowrap active:scale-95">
+            <a href="/admin" class="ripple-btn px-6 py-3 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-xl shadow transition-all whitespace-nowrap active:scale-95">
                 Vào Admin Panel &rarr;
             </a>
         </div>
@@ -156,7 +159,7 @@
     @if($recentTopics->isNotEmpty())
     <div class="mb-10">
         <h3 class="text-base font-bold text-gray-900 mb-4">🕐 Tiếp tục học gần đây</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-stagger>
             @foreach($recentTopics as $recentTopic)
             @php
                 $topicVocabIds = $recentTopic->vocabularies->pluck('id');
@@ -187,7 +190,7 @@
     {{-- 5. Learning Action Hub --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         {{-- Card 1 --}}
-        <div class="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div class="card-glow bg-white p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
             <div>
                 <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mb-4">
                     🎯
@@ -205,7 +208,8 @@
         </div>
 
         {{-- Card 2 --}}
-        <div class="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div class="card-glow bg-white p-8 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+
             <div>
                 <div class="w-12 h-12 rounded-xl bg-gray-50 text-gray-600 flex items-center justify-center text-2xl mb-4">
                     👤

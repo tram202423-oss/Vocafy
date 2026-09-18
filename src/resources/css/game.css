@@ -1,0 +1,176 @@
+/* ============================================================
+   VOCAFY MATCHING GAME STYLESHEET
+   File: game.css
+   ============================================================ */
+
+/* 1. GAME CARD BASE */
+.game-card {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 96px;
+  padding: 1rem 1.25rem;
+  border-radius: 1.25rem;
+  background-color: #ffffff;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease,
+              border-color 0.2s ease,
+              background-color 0.2s ease,
+              opacity 0.35s ease;
+  will-change: transform, opacity;
+}
+
+@media (min-width: 640px) {
+  .game-card {
+    min-height: 110px;
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+.game-card:hover:not(.disabled):not(.matched) {
+  transform: translateY(-4px) scale(1.02);
+  border-color: #94a3b8;
+  box-shadow: 0 12px 20px -4px rgba(0, 0, 0, 0.08);
+}
+
+.game-card:active:not(.disabled):not(.matched) {
+  transform: scale(0.97);
+}
+
+/* Card Types */
+.game-card.type-word {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.game-card.type-meaning {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+/* 2. CARD STATES */
+
+/* Selected State */
+.game-card.selected {
+  border-color: #4f46e5 !important;
+  background: #eef2ff !important;
+  transform: scale(1.04) translateY(-2px);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25),
+              0 12px 24px -4px rgba(79, 70, 229, 0.2);
+  z-index: 10;
+}
+
+/* Matched State */
+.game-card.matched {
+  border-color: #10b981 !important;
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  animation: match-success-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.game-card.matched.fade-out {
+  opacity: 0.18;
+  transform: scale(0.92);
+  pointer-events: none;
+  filter: grayscale(0.6);
+  border-style: dashed;
+}
+
+@keyframes match-success-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08) translateY(-4px); }
+  100% { transform: scale(1); }
+}
+
+/* Mismatch State */
+.game-card.mismatched {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  animation: card-shake 0.45s ease-in-out;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+@keyframes card-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px) rotate(-1.5deg); }
+  40% { transform: translateX(8px) rotate(1.5deg); }
+  60% { transform: translateX(-5px) rotate(-0.5deg); }
+  80% { transform: translateX(5px) rotate(0.5deg); }
+}
+
+/* 3. COMBO & STREAK BADGE */
+.combo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  animation: combo-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes combo-bounce {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 4. GAME HEADER HUD */
+.game-hud {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* 5. VICTORY MODAL & CONFETTI CANVAS */
+.victory-overlay {
+  animation: overlay-fade 0.3s ease-out forwards;
+}
+
+@keyframes overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.victory-card {
+  animation: modal-zoom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes modal-zoom {
+  0% { transform: scale(0.85) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* 6. TIME WARNING (for Time Attack mode) */
+.timer-warning {
+  animation: timer-pulse 0.8s ease-in-out infinite alternate;
+  color: #ef4444 !important;
+}
+
+@keyframes timer-pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+/* 7. QUICK ACTION BUTTONS */
+.scope-tab-btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scope-tab-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.28);
+}

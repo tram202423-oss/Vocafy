@@ -7,7 +7,10 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Vocafy') }} - {{ __('Đăng nhập') }}</title>
+        <title>{{ config('app.name', 'Vocafy') }} – @yield('title', 'Đăng nhập')</title>
+        <meta name="description" content="@yield('meta_description', 'Đăng nhập vào Vocafy để theo dõi tiến độ học từ vựng tiếng Anh của bạn.')">
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="icon" href="{{ asset('vocafy.ico') }}" type="image/x-icon" sizes="32x32">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
