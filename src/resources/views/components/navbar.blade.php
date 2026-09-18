@@ -53,7 +53,7 @@
 
                             <x-slot name="content">
                                 @if(Auth::user()->hasAnyRole(['super-admin', 'admin', 'editor', 'moderator']))
-                                    <x-dropdown-link href="{{ route('admin.dashboard') }}" class="font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100">
+                                    <x-dropdown-link href="{{ route('filament.admin.home') }}" class="font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100">
                                         ⚡ {{ __('Trang Quản Trị Admin') }}
                                     </x-dropdown-link>
                                     <div class="border-t border-gray-100 my-1"></div>
@@ -129,7 +129,7 @@
                     
                     <div class="space-y-1">
                         @if(Auth::user()->hasAnyRole(['super-admin', 'admin', 'editor', 'moderator']))
-                            <a href="{{ route('admin.dashboard') }}" class="block py-2 px-3 text-sm font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100 rounded-lg">
+                            <a href="{{ route('filament.admin.home') }}" class="block py-2 px-3 text-sm font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100 rounded-lg">
                                 ⚡ Trang Quản Trị Admin
                             </a>
                         @endif
