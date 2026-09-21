@@ -256,13 +256,23 @@ export default function matchingGame(config = {}) {
      * Handle Card Click
      */
     onCardClick(card) {
+
       if (
         this.isChecking ||
         this.isGameOver ||
         this.isPaused ||
-        card.isMatched ||
-        card.isSelected
+        card.isMatched
       ) {
+        return;
+      }
+
+      if (card.isSelected) {
+        card.isSelected = false;
+
+        if (this.firstSelected === card) {
+          this.firstSelected = null;
+        }
+
         return;
       }
 
@@ -279,10 +289,9 @@ export default function matchingGame(config = {}) {
       this.isChecking = true;
       this.totalAttempts++;
 
-      const isMatch = (
+      const isMatch =
         this.firstSelected.vocabId === card.vocabId &&
-        this.firstSelected.type !== card.type
-      );
+        this.firstSelected.type !== card.type;
 
       if (isMatch) {
         this.handleMatchSuccess(this.firstSelected, card);
