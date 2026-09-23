@@ -49,7 +49,7 @@
                                 id="email"
                                 type="email"
                                 name="email"
-                                value="{{ old('email', 'tram202423@gmail.com') }}"
+                                value="{{ old('email', '') }}"
                                 required
                                 autofocus
                                 autocomplete="username"
