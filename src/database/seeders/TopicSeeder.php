@@ -58,10 +58,9 @@ class TopicSeeder extends Seeder
                 'Technology',
                 'Health',
                 'Culture',
-                'Media',
+                'Entertainment and media',
                 'Tourism',
                 'Science',
-                'Crime and Punishment',
                 'Work and Career',
                 'Social Issues',
                 'Space Exploration',
@@ -70,6 +69,7 @@ class TopicSeeder extends Seeder
                 'Society',
                 'Banking and Finance',
                 'Law',
+                'Energy',
             ],
 
             'toefl' => [
