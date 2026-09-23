@@ -15,7 +15,19 @@
     <url>
         <loc>{{ route('categories.index') }}</loc>
         <changefreq>weekly</changefreq>
+        <priority>0.95</priority>
+    </url>
+
+    <url>
+        <loc>{{ route('game.matching') }}</loc>
+        <changefreq>weekly</changefreq>
         <priority>0.9</priority>
+    </url>
+
+    <url>
+        <loc>{{ route('writingAi') }}</loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
     </url>
 
     {{-- Từng danh mục --}}
@@ -33,7 +45,7 @@
         <loc>{{ route('topics.index', ['category' => $category->slug, 'topic' => $topic->slug]) }}</loc>
         <lastmod>{{ $topic->updated_at->toAtomString() }}</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
+        <priority>0.75</priority>
     </url>
     @endforeach
 

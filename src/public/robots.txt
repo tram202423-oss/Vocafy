@@ -5,4 +5,4 @@ Disallow: /admin
 Disallow: /writing-ai
 Allow: /
 
-Sitemap: https://vocafy.com/sitemap.xml
+Sitemap: https://vocafy.emptydev.io.vn/sitemap.xml
