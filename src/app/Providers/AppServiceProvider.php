@@ -6,9 +6,11 @@ use App\Models\Category;
 use App\Models\User;
 use App\Observers\UserObserver;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Symfony\Component\Mailer\Bridge\Brevo\Transport\BrevoApiTransport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
             });
 
             $view->with('categories', $categories);
+        });
+
+        Mail::extend('brevo', function () {
+            return new BrevoApiTransport(config('services.brevo.key'));
         });
     }
 }

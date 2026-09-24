@@ -29,7 +29,7 @@ class QueuedResetPasswordNotification extends ResetPassword implements ShouldQue
             ->action('Đặt lại mật khẩu', $url)
             ->line('Liên kết đặt lại mật khẩu này có hiệu lực trong vòng ' . $expireMinutes . ' phút.')
             ->line('Nếu bạn không gửi yêu cầu này, bạn hoàn toàn có thể yên tâm bỏ qua email này. Mật khẩu của bạn vẫn được bảo mật an toàn.')
-            ->line('Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ Bộ phận Hỗ trợ khách hàng của chúng tôi tại support@vocafy.com.')
+            ->line('Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ Bộ phận Hỗ trợ khách hàng của chúng tôi tại support.vocafy@emptydev.io.vn.')
             ->salutation("Trân trọng,\nĐội ngũ Hỗ trợ " . $appName);
     }
 }

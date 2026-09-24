@@ -15,7 +15,9 @@
         "maatwebsite/excel": "^3.1",
         "spatie/laravel-activitylog": "^4.12",
         "spatie/laravel-medialibrary": "^11.23",
-        "spatie/laravel-permission": "^6.25"
+        "spatie/laravel-permission": "^6.25",
+        "symfony/brevo-mailer": "^7.4",
+        "symfony/http-client": "^7.4"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^4.3",

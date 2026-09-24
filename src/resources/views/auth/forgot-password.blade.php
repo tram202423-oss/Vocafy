@@ -45,8 +45,8 @@
         <p class="text-xs text-gray-500">
             Cần trợ giúp thêm? Liên hệ Trung tâm Hỗ trợ khách hàng:
         </p>
-        <a href="mailto:support@vocafy.com" class="mt-1 inline-block text-xs font-semibold text-indigo-600 hover:underline">
-            support@vocafy.com
+        <a href="mailto:support.vocafy@emptydev.io.vn" class="mt-1 inline-block text-xs font-semibold text-indigo-600 hover:underline">
+            support.vocafy@emptydev.io.vn
         </a>
     </div>
 </x-guest-layout>
