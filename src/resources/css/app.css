@@ -7,6 +7,7 @@
 @import './topics.css';
 @import './writing.css';
 @import './game.css';
+@import './blog.css';
 
 @tailwind base;
 @tailwind components;

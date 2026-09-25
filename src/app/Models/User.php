@@ -56,6 +56,11 @@ class User extends Authenticatable implements FilamentUser
         )->withTimestamps();
     }
 
+    public function posts()
+    {
+        return $this->hasMany(Post::class, 'user_id');
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->hasAnyRole([

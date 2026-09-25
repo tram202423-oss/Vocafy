@@ -29,6 +29,33 @@
         <priority>0.85</priority>
     </url>
 
+    {{-- Blog chính --}}
+    <url>
+        <loc>{{ route('blog.index') }}</loc>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    {{-- Chuyên mục Blog --}}
+    @foreach($postCategories as $postCat)
+    <url>
+        <loc>{{ route('blog.category', $postCat->slug) }}</loc>
+        <lastmod>{{ $postCat->updated_at->toAtomString() }}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    @endforeach
+
+    {{-- Bài viết Blog --}}
+    @foreach($posts as $p)
+    <url>
+        <loc>{{ route('blog.show', $p->slug) }}</loc>
+        <lastmod>{{ $p->updated_at->toAtomString() }}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.75</priority>
+    </url>
+    @endforeach
+
     {{-- Từng danh mục --}}
     @foreach($categories as $category)
     <url>

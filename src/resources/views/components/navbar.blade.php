@@ -25,6 +25,9 @@
                         <span class="text-sm">🎮</span> Minigame
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('blog.index') }}" class="hover:text-blue-600 transition-colors {{ request()->is('blog*') ? 'text-blue-600 font-semibold' : '' }}">Blog</a>
+                </li>
 
                 @guest
                     <li>
@@ -108,6 +111,7 @@
             <a href="{{ route('game.matching') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-indigo-600 transition-colors flex items-center gap-2 {{ request()->routeIs('game.matching*') ? 'text-indigo-600 font-semibold bg-indigo-50/50 px-3 rounded-xl' : '' }}">
                 <span>🎮</span> Minigame Ghép Từ
             </a>
+            <a href="{{ route('blog.index') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('blog*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Blog</a>
             
             <div class="border-t border-gray-100 pt-3">
                 @guest

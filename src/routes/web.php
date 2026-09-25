@@ -9,9 +9,17 @@ use App\Http\Controllers\WritingAiController;
 use App\Http\Controllers\VocabularyProgressController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\MatchingGameController;
+use App\Http\Controllers\BlogController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
+// Blog
+Route::prefix('blog')->name('blog.')->group(function () {
+    Route::get('/', [BlogController::class, 'index'])->name('index');
+    Route::get('/category/{category:slug}', [BlogController::class, 'category'])->name('category');
+    Route::get('/{post:slug}', [BlogController::class, 'show'])->name('show');
+});
 
 Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
 Route::get('/categories/{category:slug}', [CategoryController::class, 'show'])->name('categories.show');
