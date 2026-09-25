@@ -27,6 +27,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        @ini_set('memory_limit', '512M');
+
         if (request()->isSecure() || request()->header('x-forwarded-proto') === 'https' || str_starts_with(config('app.url', ''), 'https://')) {
             URL::forceScheme('https');
         }
