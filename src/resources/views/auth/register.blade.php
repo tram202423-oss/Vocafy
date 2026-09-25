@@ -63,7 +63,7 @@
                                 value="{{ old('email') }}"
                                 required
                                 autocomplete="username"
-                                placeholder="tram202423@gmail.com"
+                                placeholder="name@example.com"
                                 class="w-full bg-transparent border-0 p-0 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0"
                             />
                         </div>

@@ -32,6 +32,10 @@ RUN docker-php-ext-configure gd \
         gd \
         opcache
 
+# PHP Memory Limit
+RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/memory-limit.ini
+
+
 # Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 

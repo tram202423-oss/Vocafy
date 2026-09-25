@@ -49,4 +49,8 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
     ],
 
+    'brevo' => [
+        'key' => env('BREVO_KEY'),
+    ],
+
 ];

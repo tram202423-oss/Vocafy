@@ -144,6 +144,9 @@ class VocabularyResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['topic.category']))
+            ->paginationPageOptions([10, 25, 50, 100])
+            ->defaultPaginationPageOption(25)
             ->columns([
                 TextColumn::make('id')
                     ->sortable(),
