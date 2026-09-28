@@ -72,6 +72,26 @@
     box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.07);
 }
 
+/* Ẩn mô tả (caption) của ảnh trong bài viết blog */
+.blog-content figcaption,
+.blog-content figure figcaption {
+    display: none !important;
+}
+
+/* Ẩn caption placeholder trong Trix RichEditor (admin) */
+.fi-fo-rich-editor trix-editor figure figcaption,
+.fi-fo-rich-editor trix-editor figcaption,
+trix-editor figure figcaption,
+trix-editor figcaption {
+    display: none !important;
+}
+
+/* Giữ figure được canh giữa khi đã ẩn caption */
+.blog-content figure {
+    margin: 1.75rem auto;
+    text-align: center;
+}
+
 .blog-content a {
     color: #2563eb;
     text-decoration: underline;

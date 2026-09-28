@@ -14,7 +14,7 @@
         {{-- Breadcrumbs --}}
         @if(!empty($breadcrumbs))
             <nav class="reveal-left flex items-center gap-2 text-sm text-gray-400 mb-4 flex-wrap">
-                <a href="{{ route('categories.index') }}" class="hover:text-blue-600 transition-colors">Categories</a>
+                <a href="{{ route('categories.index') }}" class="hover:text-blue-600 transition-colors">Danh mục</a>
                 @foreach($breadcrumbs as $label => $url)
                     <span class="text-gray-300">/</span>
                     @if(!$loop->last)

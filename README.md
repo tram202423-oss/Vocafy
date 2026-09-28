@@ -244,6 +244,7 @@ docker exec -it vocafy_app bash -c "chown -R www-data:www-data storage bootstrap
 
 Kiểm tra xem đã build assets chưa:
 ```bash
+docker exec -it vocafy_app php artisan filament:assets
 docker exec -it vocafy_app npm run build
 ```
 </details>

@@ -76,6 +76,8 @@ class PostResource extends Resource
                                 ->required()
                                 ->fileAttachmentsDisk('public')
                                 ->fileAttachmentsDirectory('blog-attachments')
+                                ->fileAttachmentsVisibility('public')
+                                ->getUploadedAttachmentUrlUsing(fn ($file) => '/storage/' . $file)
                                 ->columnSpanFull(),
                         ])
                         ->columnSpan(8),
@@ -120,7 +122,7 @@ class PostResource extends Resource
                                     ->disk('public')
                                     ->directory('blog-thumbnails')
                                     ->imageEditor()
-                                    ->maxSize(3072),
+                                    ->maxSize(10240),
                             ]),
 
                         Section::make('Cấu hình SEO')

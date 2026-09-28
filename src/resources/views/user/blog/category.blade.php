@@ -8,12 +8,12 @@
 
 {{-- ==================== CATEGORY HEADER ==================== --}}
 <section class="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-indigo-50/20 to-white pt-12 pb-10 border-b border-gray-100">
-    <div class="container mx-auto px-5 relative z-10 max-w-5xl">
+    <div class="container mx-auto px-5 relative z-10">
         {{-- Breadcrumb --}}
         <nav class="flex items-center gap-2 text-xs sm:text-sm text-gray-400 mb-4 flex-wrap">
             <a href="/" class="hover:text-blue-600 transition-colors">Trang chủ</a>
             <span>/</span>
-            <a href="{{ route('blog.index') }}" class="hover:text-blue-600 transition-colors">Blog</a>
+            <a href="{{ route('blog.index') }}" class="hover:text-blue-600 transition-colors">Bài viết</a>
             <span>/</span>
             <span class="text-gray-700 font-semibold">{{ $category->name }}</span>
         </nav>

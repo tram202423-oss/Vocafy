@@ -1,0 +1,70 @@
+/* ============================================================
+   FILAMENT ADMIN – RICH EDITOR IMPROVEMENTS
+   Sticky toolbar + scrollable content area
+   ============================================================ */
+
+/**
+ * 1. Wrapper của RichEditor: đặt position: relative để là
+ *    scrolling container cho toolbar sticky bên trong.
+ */
+.fi-fo-rich-editor .fi-input-wrp {
+    position: relative;
+}
+
+/**
+ * 2. Toolbar sticky:
+ *    - Bám vào đỉnh của panel header Filament (64px là chiều cao header).
+ *    - z-index cao hơn nội dung để không bị che khuất.
+ *    - Box-shadow nhẹ để phân biệt khi cuộn.
+ */
+/* .fi-fo-rich-editor-toolbar {
+    position: sticky !important;
+    top: 64px;
+    z-index: 30;
+    background: #fff !important;
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+    border-radius: 0 !important;
+} */
+
+/**
+ * 3. Vùng soạn thảo (trix-editor):
+ *    - Chiều cao tối thiểu 520px, tối đa 85% màn hình.
+ *    - overflow-y: auto → cuộn nội dung BÊN TRONG editor.
+ */
+.fi-fo-rich-editor-editor {
+    min-height: 520px !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.fi-fo-rich-editor-editor::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fi-fo-rich-editor-editor::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.fi-fo-rich-editor-editor::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 10px;
+}
+
+/**
+ * 4. Dark mode – cập nhật màu nền toolbar và scrollbar.
+ */
+.dark .fi-fo-rich-editor-toolbar {
+    background: #1e293b !important;
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+}
+
+.dark .fi-fo-rich-editor-editor {
+    scrollbar-color: #475569 transparent;
+}
+
+.dark .fi-fo-rich-editor-editor::-webkit-scrollbar-thumb {
+    background-color: #475569;
+}

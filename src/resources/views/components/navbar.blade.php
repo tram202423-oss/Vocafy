@@ -8,12 +8,12 @@
         <div class="hidden md:flex items-center">
             <ul class="flex items-center gap-6 text-sm font-medium text-gray-600">
                 <li>
-                    <a href="/" class="hover:text-blue-600 transition-colors {{ request()->is('/') ? 'text-blue-600 font-semibold' : '' }}">Home</a>
+                    <a href="/" class="hover:text-blue-600 transition-colors {{ request()->is('/') ? 'text-blue-600 font-semibold' : '' }}">Trang chủ</a>
                 </li>
                 <li x-data="{ catDropdown: false }" class="relative" @mouseleave="catDropdown = false">
                     <div class="flex items-center gap-1">
                         <a href="{{ route('categories.index') }}" class="hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold' : '' }}">
-                            Categories
+                            Danh mục
                         </a>
                     </div>
                 </li>
@@ -26,16 +26,16 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('blog.index') }}" class="hover:text-blue-600 transition-colors {{ request()->is('blog*') ? 'text-blue-600 font-semibold' : '' }}">Blog</a>
+                    <a href="{{ route('blog.index') }}" class="hover:text-blue-600 transition-colors {{ request()->is('blog*') ? 'text-blue-600 font-semibold' : '' }}">Bài viết</a>
                 </li>
 
                 @guest
                     <li>
-                        <a href="{{ route('login') }}" class="hover:text-blue-600 transition-colors">Login</a>
+                        <a href="{{ route('login') }}" class="hover:text-blue-600 transition-colors">Đăng nhập</a>
                     </li>
                     <li>
                         <a href="{{ route('register') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all shadow-sm shadow-blue-500/10 active:scale-98">
-                            Register
+                            Đăng ký
                         </a>
                     </li>
                 @endguest
@@ -63,11 +63,11 @@
                                 @endif
 
                                 <x-dropdown-link :href="route('dashboard')">
-                                    {{ __('Dashboard') }}
+                                    {{ __('Tổng quan') }}
                                 </x-dropdown-link>
 
                                 <x-dropdown-link :href="route('profile.edit')">
-                                    {{ __('Profile') }}
+                                    {{ __('Thông tin tài khoản') }}
                                 </x-dropdown-link>
 
                                 <form method="POST" action="{{ route('logout') }}">
@@ -75,7 +75,7 @@
                                     <x-dropdown-link :href="route('logout')"
                                             onclick="event.preventDefault();
                                                         this.closest('form').submit();">
-                                        {{ __('Log Out') }}
+                                        {{ __('Đăng xuất') }}
                                     </x-dropdown-link>
                                 </form>
                             </x-slot>
@@ -105,22 +105,22 @@
          x-transition:leave-end="opacity-0 -translate-y-4"
          class="md:hidden border-t border-gray-100 bg-white">
         <div class="px-5 pt-3 pb-6 space-y-3">
-            <a href="/" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('/') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Home</a>
-            <a href="{{ route('categories.index') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Categories</a>
+            <a href="/" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('/') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Trang chủ</a>
+            <a href="{{ route('categories.index') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('categories*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Từ vựng</a>
             <a href="{{ route('writingAi') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('writing-ai*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Writing AI</a>
             <a href="{{ route('game.matching') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-indigo-600 transition-colors flex items-center gap-2 {{ request()->routeIs('game.matching*') ? 'text-indigo-600 font-semibold bg-indigo-50/50 px-3 rounded-xl' : '' }}">
                 <span>🎮</span> Minigame Ghép Từ
             </a>
-            <a href="{{ route('blog.index') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('blog*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Blog</a>
+            <a href="{{ route('blog.index') }}" class="block py-2 text-base font-medium text-gray-700 hover:text-blue-600 transition-colors {{ request()->is('blog*') ? 'text-blue-600 font-semibold bg-blue-50/50 px-3 rounded-xl' : '' }}">Bài viết</a>
             
             <div class="border-t border-gray-100 pt-3">
                 @guest
                     <div class="grid grid-cols-2 gap-3 mt-1">
                         <a href="{{ route('login') }}" class="flex items-center justify-center py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
-                            Login
+                            Đăng nhập
                         </a>
                         <a href="{{ route('register') }}" class="flex items-center justify-center py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-500/10">
-                            Register
+                            Đăng ký
                         </a>
                     </div>
                 @endguest
@@ -138,15 +138,15 @@
                             </a>
                         @endif
                         <a href="{{ route('dashboard') }}" class="block py-2 px-3 text-sm font-medium text-gray-600 hover:text-blue-600 rounded-lg hover:bg-gray-50">
-                            📊 Dashboard
+                            📊 Tổng quan
                         </a>
                         <a href="{{ route('profile.edit') }}" class="block py-2 px-3 text-sm font-medium text-gray-600 hover:text-blue-600 rounded-lg hover:bg-gray-50">
-                            👤 Profile Setting
+                            👤 Thông tin tài khoản
                         </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="w-full text-left block py-2 px-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                🚪 Log Out
+                                🚪 Đăng xuất
                             </button>
                         </form>
                     </div>
