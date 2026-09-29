@@ -4,7 +4,7 @@
 # System
 .DS_Store
 Thumbs.db
-
+.env
 # Env files (Laravel trong src)
 src/.env
 src/.env.backup

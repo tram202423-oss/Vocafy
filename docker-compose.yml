@@ -7,6 +7,7 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: vocafy_app
     working_dir: /var/www
+    user: "${UID}:${GID}"
     volumes:
       - ./src:/var/www
     ports:
@@ -30,6 +31,7 @@ services:
     image: vocafy-app:latest
     container_name: vocafy_queue
     working_dir: /var/www
+    user: "${UID}:${GID}"
     command: php artisan queue:work --tries=3 --timeout=90
     volumes:
       - ./src:/var/www

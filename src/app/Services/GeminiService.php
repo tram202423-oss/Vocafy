@@ -111,8 +111,15 @@ PROMPT;
 
         $parts[] = ['text' => $userPrompt];
 
-        $response = Http::timeout(60)
-            ->retry(2, 500)
+        $response = Http::timeout(90)
+            ->retry(3, 2000, function (\Throwable $e, $request) {
+                // Only retry on server errors (503 overload, 429 rate limit) - not on 4xx client errors
+                if ($e instanceof \Illuminate\Http\Client\RequestException) {
+                    $status = $e->response?->status();
+                    return in_array($status, [429, 500, 503]);
+                }
+                return true;
+            })
             ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", [
                 'system_instruction' => [
                     'parts' => [
