@@ -110,9 +110,37 @@ class IeltsSectionResource extends Resource
                                     ->placeholder('Questions 1–6: Do the following statements agree...')
                                     ->rows(2),
 
+                                Forms\Components\Repeater::make('settings.drag_options')
+                                    ->label('Ngân hàng từ kéo thả (Drag & Drop)')
+                                    ->helperText('Chỉ dùng cho Drag & Drop. Thêm các từ lựa chọn ở đây; trong nội dung Passage đặt ô trống theo dạng [blank_1], [blank_2]... Đáp án đúng của mỗi câu là Key tương ứng.')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('key')
+                                            ->label('Key đáp án')
+                                            ->required(),
+                                        Forms\Components\TextInput::make('text')
+                                            ->label('Từ / cụm từ hiển thị')
+                                            ->required(),
+                                    ])
+                                    ->columns(2)
+                                    ->defaultItems(0)
+                                    ->reorderable()
+                                    ->addActionLabel('Thêm từ vào ngân hàng')
+                                    ->itemLabel(fn (array $state): ?string => $state['text'] ?? $state['key'] ?? 'Lựa chọn')
+                                    ->columnSpanFull(),
+
+                                Forms\Components\Select::make('settings.drag_option_usage')
+                                    ->label('Quy tắc sử dụng đáp án kéo thả')
+                                    ->options([
+                                        'repeat' => 'Có thể dùng một đáp án nhiều lần',
+                                        'once' => 'Mỗi đáp án chỉ được dùng một lần',
+                                    ])
+                                    ->default('repeat')
+                                    ->required()
+                                    ->helperText('Chọn quy tắc áp dụng cho toàn bộ ngân hàng từ của nhóm câu hỏi này.'),
+
                                 Forms\Components\RichEditor::make('passage_content')
                                     ->label('Nội dung bài đọc (Passage Rich Text)')
-                                    ->helperText('Hỗ trợ định dạng in đậm, gạch đầu dòng, các đoạn văn <p id="para-A">...')
+                                    ->helperText('Hỗ trợ định dạng văn bản và HTML. Với Drag & Drop, chèn ô trống [blank_1], [blank_2]... vào đoạn ghi chú chung.')
                                     ->columnSpanFull(),
 
                                 Forms\Components\Grid::make(2)->schema([
@@ -144,9 +172,9 @@ class IeltsSectionResource extends Resource
                                                 ->numeric()
                                                 ->required(),
 
-                                            Forms\Components\TextInput::make('correct_answer')
-                                                ->label('Đáp án đúng')
-                                                ->placeholder('Ví dụ: TRUE, FALSE, A, hoặc từ điền')
+                                        Forms\Components\TextInput::make('correct_answer')
+                                            ->label('Đáp án đúng')
+                                            ->placeholder('Ví dụ: TRUE, A, morning (Drag & Drop dùng Key trong ngân hàng từ)')
                                                 ->required()
                                                 ->columnSpan(2),
 
@@ -165,7 +193,7 @@ class IeltsSectionResource extends Resource
                                         // => dùng Repeater thay vì KeyValue để khớp đúng cấu trúc.
                                         Forms\Components\Repeater::make('options')
                                             ->label('Lựa chọn trắc nghiệm')
-                                            ->helperText('Áp dụng cho Multiple choice, True/False, Matching...')
+                                            ->helperText('Dùng cho trắc nghiệm, True/False và Matching. Với Drag & Drop, hãy nhập lựa chọn chung trong Ngân hàng từ ở cấp nhóm câu hỏi phía trên.')
                                             ->schema([
                                                 Forms\Components\TextInput::make('key')
                                                     ->label('Ký hiệu (A, B, C, D / TRUE, FALSE, NOT GIVEN)')

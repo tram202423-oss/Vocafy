@@ -1008,5 +1008,89 @@ TEXT,
                 'explanation' => 'Bài viết cần cấu trúc 4 đoạn: Introduction (Paraphrase + Thesis statement), Body 1 (Phân tích cơ hội/lợi ích), Body 2 (Phân tích rủi ro thất nghiệp), và Conclusion khẳng định quan điểm bản thân.',
             ]
         );
+
+        // Demo section để thử kéo đáp án từ một ngân hàng từ vào nhiều chỗ trống trong ghi chú chung.
+        $dragDropTest = IeltsTest::updateOrCreate(
+            ['slug' => 'ielts-drag-and-drop-demo'],
+            [
+                'title' => 'IELTS Drag & Drop Demo',
+                'type' => IeltsTestTypeEnum::ACADEMIC,
+                'description' => 'Bộ đề riêng gồm một bài ghi chú với 10 ô trống và ngân hàng từ kéo thả dùng chung.',
+                'duration_minutes' => 10,
+                'is_published' => true,
+                'total_questions' => 10,
+            ]
+        );
+
+        $dragDropSection = IeltsSection::updateOrCreate(
+            ['title' => 'Drag & Drop Demo - Reading'],
+            [
+                'skill' => IeltsSkillEnum::READING,
+                'test_type' => IeltsTestTypeEnum::ACADEMIC,
+                'time_limit_minutes' => 10,
+                'total_questions' => 10,
+                'description' => 'Bài ghi chú Theatre booking có 10 ô trống và một ngân hàng từ dùng chung.',
+                'is_active' => true,
+            ]
+        );
+
+        // Nếu seeder bản trước đã gắn section vào Cambridge, chuyển section sang bộ đề demo riêng.
+        $test->sections()->detach($dragDropSection->id);
+        $dragDropTest->sections()->syncWithoutDetaching([
+            $dragDropSection->id => ['order' => 1],
+        ]);
+
+        $dragDropGroup = IeltsQuestionGroup::updateOrCreate(
+            ['ielts_section_id' => $dragDropSection->id, 'order' => 1],
+            [
+                'title' => 'Drag & Drop: Theatre Booking Notes',
+                'question_type' => IeltsQuestionTypeEnum::DRAG_DROP,
+                'instruction' => 'Questions 1–10: Complete the notes below. Drag one answer from the word bank into each numbered gap. You may also click a word, then click a gap.',
+                'settings' => [
+                    'drag_option_usage' => 'once',
+                    'drag_options' => [
+                        ['key' => 'Parkes', 'text' => 'Parkes'],
+                        ['key' => 'family', 'text' => 'family'],
+                        ['key' => '25', 'text' => '25'],
+                        ['key' => '12', 'text' => '12'],
+                        ['key' => 'front', 'text' => 'front'],
+                        ['key' => 'wheelchair', 'text' => 'wheelchair'],
+                        ['key' => 'lift', 'text' => 'lift'],
+                        ['key' => 'box office', 'text' => 'box office'],
+                        ['key' => 'vegetarian', 'text' => 'vegetarian'],
+                        ['key' => 'pizza', 'text' => 'pizza'],
+                        ['key' => 'balcony', 'text' => 'balcony'],
+                        ['key' => 'cash', 'text' => 'cash'],
+                    ],
+                ],
+                'passage_content' => '<h3>Theatre booking</h3><p><strong>Example:</strong> Booking for Pirates<br><strong>Date:</strong> 8th December (afternoon)<br><strong>Name:</strong> Fenella [blank_1]<br><strong>Contact number:</strong> 07796892326</p><p><strong>Booking details:</strong></p><ul><li>Type of booking: [blank_2] with discount</li><li>Tickets: 3 adults at [blank_3] pounds each</li><li>Children under 16 at [blank_4] pounds each</li><li>Requires seats on the [blank_5] row of the circle</li><li>One person uses a [blank_6]</li><li>Need good access to the [blank_7]</li><li>Will collect the tickets from the [blank_8]</li></ul><p><strong>Meals:</strong></p><ul><li>Several people are [blank_9]</li><li>Food: [blank_10] (cheese and tomato)</li></ul>',
+            ]
+        );
+
+        $dragDropQuestions = [
+            [1, 'The customer surname is missing from the booking notes.', 'Parkes'],
+            [2, 'The booking type is described as a discounted family booking.', 'family'],
+            [3, 'Each adult ticket costs 25 pounds.', '25'],
+            [4, 'A child ticket costs 12 pounds.', '12'],
+            [5, 'The customers request seats in the front row of the circle.', 'front'],
+            [6, 'One member of the group uses a wheelchair.', 'wheelchair'],
+            [7, 'The group needs good access to the lift.', 'lift'],
+            [8, 'The tickets will be collected from the box office.', 'box office'],
+            [9, 'Several members of the group are vegetarian.', 'vegetarian'],
+            [10, 'The requested food is pizza with cheese and tomato.', 'pizza'],
+        ];
+
+        foreach ($dragDropQuestions as [$number, $prompt, $answer]) {
+            IeltsQuestion::updateOrCreate(
+                ['ielts_question_group_id' => $dragDropGroup->id, 'question_number' => $number],
+                [
+                    'order' => $number,
+                    'prompt' => $prompt,
+                    'correct_answer' => $answer,
+                    'options' => null,
+                    'explanation' => 'Thông tin trong ghi chú khớp với từ trong ngân hàng lựa chọn.',
+                ]
+            );
+        }
     }
 }

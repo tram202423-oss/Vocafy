@@ -101,6 +101,19 @@
     $isListening = ($skill === 'listening');
     $isReading = ($skill === 'reading');
     $groups = $submission->section->questionGroups;
+    $dragBanksByGroup = $groups->mapWithKeys(function ($group) {
+        $bank = collect(data_get($group->settings, 'drag_options', []));
+        if ($bank->isEmpty()) {
+            $bank = $group->questions->flatMap(fn ($question) => $question->options ?? []);
+        }
+
+        $bank = $bank
+            ->filter(fn ($option) => is_array($option) && filled($option['key'] ?? null) && filled($option['text'] ?? null))
+            ->unique(fn ($option) => (string) $option['key'])
+            ->values();
+
+        return [$group->id => $bank];
+    });
 @endphp
 
 <body class="contrast-standard select-text h-screen overflow-hidden flex flex-col"
@@ -512,6 +525,69 @@
 
     {{-- CASE B: LISTENING WORKSPACE (AUTHENTIC IDP/BC FORMAT: FORM COMPLETION, MAP LABELING, LECTURE NOTES) --}}
     @elseif($isListening)
+        @if($groups->contains(fn ($group) => $group->question_type?->value === 'drag_drop'))
+            <div class="flex-grow overflow-y-auto custom-scroll p-4 md:p-8" style="background-color: var(--bg-main);">
+                <div class="max-w-5xl mx-auto space-y-5">
+                    @foreach($groups as $partGroup)
+                        @php
+                            $isDragDropGroup = $partGroup->question_type?->value === 'drag_drop';
+                            $dragBank = $dragBanksByGroup->get($partGroup->id, collect());
+                            $partNumber = $loop->iteration;
+                        @endphp
+                        <section x-show="activeListeningPart === {{ $partNumber }}" x-cloak
+                                 class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-5 md:p-7 space-y-5"
+                                 style="background-color: var(--bg-card); border-color: var(--border-color);">
+                            <header class="border-b border-slate-200 pb-3">
+                                <div class="text-[11px] font-black uppercase tracking-wider text-blue-600">IELTS Listening • Part {{ $partNumber }}</div>
+                                <h2 class="text-lg font-black mt-1" style="color: var(--text-main);">{{ $partGroup->title }}</h2>
+                            </header>
+
+                            @if($partGroup->instruction)
+                                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-lg text-xs text-blue-900 font-medium">
+                                    {{ $partGroup->instruction }}
+                                </div>
+                            @endif
+
+                            @if($isDragDropGroup)
+                                <div class="space-y-5">
+                                    @include('ielts.partials.drag-drop-bank', ['group' => $partGroup, 'dragBank' => $dragBank])
+                                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 md:p-7 text-sm leading-loose" style="color: var(--text-main);">
+                                        @include('ielts.partials.drag-drop-note', ['group' => $partGroup, 'dragBank' => $dragBank])
+                                    </div>
+                                </div>
+                            @else
+                                @if($partGroup->passage_content)
+                                    <div class="prose max-w-none">{!! $partGroup->passage_content !!}</div>
+                                @endif
+                                <div class="space-y-4">
+                                    @foreach($partGroup->questions as $q)
+                                        <div id="question-block-{{ $q->question_number }}" class="rounded-xl border border-slate-200 p-4 space-y-3">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <p class="text-sm font-medium" style="color: var(--text-main);"><strong>{{ $q->question_number }}.</strong> {{ $q->prompt }}</p>
+                                                <button type="button" @click="toggleFlag({{ $q->id }})" class="text-slate-400" :class="isFlagged({{ $q->id }}) ? 'text-amber-500' : ''" aria-label="Đánh dấu xem lại">⚑</button>
+                                            </div>
+                                            @if($q->options)
+                                                <div class="grid sm:grid-cols-2 gap-2">
+                                                    @foreach($q->options as $option)
+                                                        @php $optionKey = $option['key'] ?? ''; $optionText = $option['text'] ?? ''; @endphp
+                                                        <label class="flex gap-2 items-center rounded-lg border border-slate-200 p-2 text-xs cursor-pointer">
+                                                            <input type="radio" name="listening_q_{{ $q->id }}" value="{{ $optionKey }}" x-model="answers['{{ $q->id }}']" @change="saveAnswer({{ $q->id }}, @js((string) $optionKey))">
+                                                            <span>{{ $optionKey }}. {{ $optionText }}</span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <input type="text" x-model="answers['{{ $q->id }}']" @input.debounce.300ms="saveAnswer({{ $q->id }}, answers['{{ $q->id }}'])" class="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Nhập câu trả lời">
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </section>
+                    @endforeach
+                </div>
+            </div>
+        @else
         <div class="flex-grow overflow-y-auto custom-scroll p-4 md:p-8"
              style="background-color: var(--bg-main);"
              @mouseup="handleTextSelection($event)">
@@ -1023,6 +1099,7 @@
                 </button>
             </div>
         </div>
+        @endif
 
     {{-- CASE C: READING WORKSPACE (AUTHENTIC SPLIT SCREEN: PASSAGE ON LEFT, QUESTIONS ON RIGHT) --}}
     @else
@@ -1037,10 +1114,25 @@
 
                 @if($isReading)
                     @foreach($groups->whereNotNull('passage_content') as $passageGroup)
+                        @php
+                            $isDragDropGroup = $passageGroup->question_type?->value === 'drag_drop';
+                            $dragBank = $dragBanksByGroup->get($passageGroup->id, collect());
+                        @endphp
                         <div x-show="activePassageId === {{ $passageGroup->id }}" x-cloak class="prose max-w-none leading-relaxed">
-                            <div class="text-xs uppercase font-extrabold tracking-wider text-blue-600 mb-2">Reading Passage {{ $loop->iteration }}</div>
+                            <div class="text-xs uppercase font-extrabold tracking-wider text-blue-600 mb-2">
+                                {{ $isDragDropGroup ? 'Reading • ' . $passageGroup->title : 'Reading Passage ' . $loop->iteration }}
+                            </div>
+                            @if($isDragDropGroup && $passageGroup->instruction)
+                                <div class="not-prose bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-3 mb-5 text-xs text-blue-900 font-medium">
+                                    {{ $passageGroup->instruction }}
+                                </div>
+                            @endif
                             <div class="passage-html-body" id="passage-content-{{ $passageGroup->id }}">
-                                {!! $passageGroup->passage_content !!}
+                                @if($isDragDropGroup)
+                                    @include('ielts.partials.drag-drop-note', ['group' => $passageGroup, 'dragBank' => $dragBank])
+                                @else
+                                    {!! $passageGroup->passage_content !!}
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -1083,6 +1175,13 @@
                          x-cloak
                          class="border-2 border-slate-200 rounded-2xl p-5 md:p-6 shadow-sm mb-6"
                          style="background-color: var(--bg-card); border-color: var(--border-color);">
+                        @php
+                            $isDragDropGroup = $group->question_type?->value === 'drag_drop';
+                            $dragBank = $dragBanksByGroup->get($group->id, collect());
+                        @endphp
+                        @if($isDragDropGroup)
+                            @include('ielts.partials.drag-drop-bank', ['group' => $group, 'dragBank' => $dragBank])
+                        @else
                         {{-- Instruction Box --}}
                         @if($group->instruction)
                             <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-lg mb-6 text-xs text-amber-900 font-medium">
@@ -1103,6 +1202,7 @@
                                     @php
                                         $hasBlank = preg_match('/\[blank(_\d+)?\]|__{2,}/', $q->prompt);
                                         $hasOptions = $q->options && is_array($q->options) && count($q->options) > 0;
+                                        $isDragDrop = $group->question_type?->value === 'drag_drop';
                                     @endphp
 
                                     <div class="flex items-start justify-between gap-3 mb-2">
@@ -1141,7 +1241,42 @@
                                     </div>
 
                                     {{-- Question Interaction Type Formats --}}
-                                    @if($hasOptions)
+                                    @if($isDragDrop && $hasOptions)
+                                        <div class="ml-9 mt-3 space-y-3">
+                                            <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Kéo một lựa chọn vào ô trả lời, hoặc bấm để chọn</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach($q->options as $opt)
+                                                    @php
+                                                        $optKey = $opt['key'] ?? (is_string($opt) ? $opt : '');
+                                                        $optText = $opt['text'] ?? (is_string($opt) ? $opt : '');
+                                                    @endphp
+                                                    <button type="button" draggable="true"
+                                                            @dragstart.stop="draggedOption = { questionId: '{{ $q->id }}', key: @js((string) $optKey) }"
+                                                            @dragend="draggedOption = null"
+                                                            @click.stop="setCurrentQuestion({{ $q->question_number }}); saveAnswer({{ $q->id }}, @js((string) $optKey))"
+                                                            class="cursor-grab active:cursor-grabbing select-none px-3 py-2 rounded-xl border-2 border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50 text-xs font-semibold shadow-sm transition"
+                                                            :class="answers['{{ $q->id }}'] === @js((string) $optKey) ? 'border-blue-500 bg-blue-50 text-blue-800' : ''">
+                                                        <span class="font-black">{{ $optKey }}</span><span class="mx-1 text-slate-400">·</span>{{ $optText }}
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <div @dragover.prevent.stop="draggedOption?.questionId === '{{ $q->id }}' && $event.currentTarget.classList.add('border-blue-500', 'bg-blue-50')"
+                                                     @dragleave.stop="$event.currentTarget.classList.remove('border-blue-500', 'bg-blue-50')"
+                                                     @drop.prevent.stop="if (draggedOption?.questionId === '{{ $q->id }}') { saveAnswer({{ $q->id }}, draggedOption.key); draggedOption = null; }; $event.currentTarget.classList.remove('border-blue-500', 'bg-blue-50')"
+                                                     class="min-h-12 min-w-56 flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 text-xs transition-colors">
+                                                    <span class="text-slate-500" x-show="!answers['{{ $q->id }}']">Thả đáp án vào đây</span>
+                                                    @foreach($q->options as $opt)
+                                                        @php $optKey = $opt['key'] ?? (is_string($opt) ? $opt : ''); $optText = $opt['text'] ?? (is_string($opt) ? $opt : ''); @endphp
+                                                        <span x-show="answers['{{ $q->id }}'] === @js((string) $optKey)" x-cloak class="font-bold text-blue-800">{{ $optKey }} · {{ $optText }}</span>
+                                                    @endforeach
+                                                    <button type="button" x-show="answers['{{ $q->id }}']" x-cloak
+                                                            @click.stop="saveAnswer({{ $q->id }}, '')"
+                                                            class="text-slate-400 hover:text-red-600" aria-label="Xóa đáp án">×</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @elseif($hasOptions)
                                         <div class="ml-9 mt-3">
                                             <div class="space-y-2">
                                                 @foreach($q->options as $opt)
@@ -1184,6 +1319,7 @@
                                 </div>
                             @endforeach
                         </div>
+                        @endif
                     </div>
                 @endforeach
             </div>
@@ -1519,6 +1655,8 @@
                 answers: {},
                 flags: {},
                 notes: {},
+                draggedOption: null,
+                dragMessage: '',
                 showTimer: true,
                 timerDisplayMode: 'time',
                 contrastClass: 'contrast-standard',
@@ -1813,6 +1951,40 @@
                 toggleCurrentQuestionFlag() {
                     const qId = this.getQuestionIdByNumber(this.currentQuestionNumber);
                     if (qId) this.toggleFlag(qId);
+                },
+
+                isDragOptionUsed(optionKey, questionIds, exceptQuestionId = null) {
+                    const key = String(optionKey ?? '');
+                    return (questionIds || []).some(questionId =>
+                        String(questionId) !== String(exceptQuestionId) &&
+                        String(this.answers[questionId] ?? '') === key
+                    );
+                },
+
+                selectDragOption(optionKey, optionText, questionIds, usage) {
+                    if (usage === 'once' && this.isDragOptionUsed(optionKey, questionIds)) {
+                        this.draggedOption = null;
+                        this.dragMessage = 'Đáp án này đã được dùng. Hãy xóa đáp án ở ô đang dùng trước khi chuyển nó.';
+                        return;
+                    }
+
+                    this.draggedOption = { key: String(optionKey), text: String(optionText) };
+                    this.dragMessage = '';
+                },
+
+                assignDragOption(questionId, option, questionIds, usage) {
+                    if (!option) return false;
+
+                    if (usage === 'once' && this.isDragOptionUsed(option.key, questionIds, questionId)) {
+                        this.draggedOption = null;
+                        this.dragMessage = 'Đáp án này đã được dùng ở một ô khác.';
+                        return false;
+                    }
+
+                    this.saveAnswer(questionId, option.key);
+                    this.draggedOption = null;
+                    this.dragMessage = '';
+                    return true;
                 },
 
                 saveAnswer(questionId, value) {

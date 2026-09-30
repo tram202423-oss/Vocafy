@@ -63,7 +63,7 @@
         <div class="space-y-3 mb-8 text-xs text-slate-600">
             <h2 class="text-sm font-bold text-slate-900">Quy chế &amp; hướng dẫn thi:</h2>
             <ul class="space-y-2 list-disc list-inside bg-slate-50 p-4 rounded-xl border border-slate-200 leading-relaxed">
-                <li><strong class="text-slate-900">Thời gian làm bài:</strong> Bài thi gồm 40 câu hỏi, thời gian đếm ngược chính xác <span class="text-blue-600 font-bold">60 phút</span>.</li>
+                <li><strong class="text-slate-900">Thời gian làm bài:</strong> Bài thi gồm {{ $test->total_questions ?: $test->sections->sum('total_questions') }} câu hỏi, thời gian đếm ngược chính xác <span class="text-blue-600 font-bold">{{ $test->duration_minutes ?: $test->sections->sum('time_limit_minutes') }} phút</span>.</li>
                 <li><strong class="text-slate-900">Thanh điều hướng câu hỏi:</strong> Bạn có thể dùng thanh số câu hỏi ở cuối màn hình hoặc các phím <em>Previous</em> và <em>Next</em> để di chuyển giữa các câu.</li>
                 <li><strong class="text-slate-900">Đánh dấu Review:</strong> Nhấp nút <em>Review</em> để gắn cờ những câu bạn muốn kiểm tra lại trước khi nộp bài.</li>
                 <li><strong class="text-slate-900">Tô sáng &amp; ghi chú (Highlight &amp; Notes):</strong> Bôi đen bất kỳ đoạn văn bản nào trên bài đọc để chọn <em>Highlight</em> hoặc <em>Note</em>.</li>

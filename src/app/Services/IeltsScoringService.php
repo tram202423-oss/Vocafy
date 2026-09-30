@@ -29,7 +29,21 @@ class IeltsScoringService
 
         // Chấm điểm cho Reading và Listening
         $rawScore = 0;
-        $userAnswers = $submission->userAnswers()->with('question')->get();
+        $userAnswers = $submission->userAnswers()->with('question.questionGroup')->get();
+        $oneUseAnswerCounts = [];
+
+        foreach ($userAnswers as $userAnswer) {
+            $question = $userAnswer->question;
+            $group = $question?->questionGroup;
+            $answerKey = trim((string) $userAnswer->user_answer);
+
+            if ($group?->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP
+                && data_get($group->settings, 'drag_option_usage', 'repeat') === 'once'
+                && $answerKey !== '') {
+                $normalizedKey = mb_strtolower($answerKey, 'UTF-8');
+                $oneUseAnswerCounts[$group->id][$normalizedKey] = ($oneUseAnswerCounts[$group->id][$normalizedKey] ?? 0) + 1;
+            }
+        }
 
         foreach ($userAnswers as $userAnswer) {
             $question = $userAnswer->question;
@@ -38,6 +52,15 @@ class IeltsScoringService
             }
 
             $isCorrect = $this->checkAnswer($userAnswer->user_answer, $question->correct_answer);
+            $group = $question->questionGroup;
+            if ($group?->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP
+                && data_get($group->settings, 'drag_option_usage', 'repeat') === 'once') {
+                $normalizedKey = mb_strtolower(trim((string) $userAnswer->user_answer), 'UTF-8');
+                if ($normalizedKey !== '' && ($oneUseAnswerCounts[$group->id][$normalizedKey] ?? 0) > 1) {
+                    $isCorrect = false;
+                }
+            }
+
             $userAnswer->update([
                 'is_correct' => $isCorrect,
             ]);
