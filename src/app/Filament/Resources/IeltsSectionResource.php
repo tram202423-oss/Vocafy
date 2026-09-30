@@ -138,6 +138,16 @@ class IeltsSectionResource extends Resource
                                     ->required()
                                     ->helperText('Chọn quy tắc áp dụng cho toàn bộ ngân hàng từ của nhóm câu hỏi này.'),
 
+                                Forms\Components\Toggle::make('settings.multi_select')
+                                    ->label('Nhóm trắc nghiệm chọn nhiều đáp án')
+                                    ->helperText('Mỗi câu hỏi trong nhóm là một ô điểm. Nhập cùng prompt và cùng danh sách lựa chọn cho các câu; chọn số đáp án tối đa bên dưới.'),
+
+                                Forms\Components\TextInput::make('settings.selection_limit')
+                                    ->label('Số lựa chọn tối đa')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->helperText('Để trống sẽ dùng số câu hỏi trong nhóm.'),
+
                                 Forms\Components\RichEditor::make('passage_content')
                                     ->label('Nội dung bài đọc (Passage Rich Text)')
                                     ->helperText('Hỗ trợ định dạng văn bản và HTML. Với Drag & Drop, chèn ô trống [blank_1], [blank_2]... vào đoạn ghi chú chung.')

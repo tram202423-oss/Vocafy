@@ -8,6 +8,8 @@ use App\Models\IeltsSection;
 use App\Models\IeltsSubmission;
 use App\Models\IeltsTest;
 use App\Models\IeltsUserAnswer;
+use App\Services\IeltsDragDropService;
+use App\Services\IeltsMultiSelectService;
 use App\Services\IeltsScoringService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,10 +19,18 @@ use Illuminate\Support\Str;
 class IeltsExamController extends Controller
 {
     protected IeltsScoringService $scoringService;
+    protected IeltsDragDropService $dragDropService;
+    protected IeltsMultiSelectService $multiSelectService;
 
-    public function __construct(IeltsScoringService $scoringService)
+    public function __construct(
+        IeltsScoringService $scoringService,
+        IeltsDragDropService $dragDropService,
+        IeltsMultiSelectService $multiSelectService
+    )
     {
         $this->scoringService = $scoringService;
+        $this->dragDropService = $dragDropService;
+        $this->multiSelectService = $multiSelectService;
     }
 
     /**
@@ -168,6 +178,23 @@ class IeltsExamController extends Controller
             return response()->json(['error' => 'Test already completed'], 400);
         }
 
+        if ($request->has('answers') && is_array($request->input('answers'))) {
+            $answers = $request->input('answers');
+            $this->dragDropService->validateAnswers($submission, $answers);
+            $this->multiSelectService->validateAnswers($submission, $answers);
+
+            foreach ($answers as $questionId => $answer) {
+                IeltsUserAnswer::where('ielts_submission_id', $submission->id)
+                    ->where('ielts_question_id', $questionId)
+                    ->update(['user_answer' => $answer]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'question_ids' => array_keys($answers),
+            ]);
+        }
+
         $questionId = $request->input('question_id');
         $answer = $request->input('answer');
         $isFlagged = $request->input('is_flagged');
@@ -176,6 +203,11 @@ class IeltsExamController extends Controller
         $userAnswer = IeltsUserAnswer::where('ielts_submission_id', $submission->id)
             ->where('ielts_question_id', $questionId)
             ->first();
+
+        if ($userAnswer && $request->has('answer')) {
+            $this->dragDropService->validateAnswers($submission, [$questionId => $answer]);
+            $this->multiSelectService->validateAnswers($submission, [$questionId => $answer]);
+        }
 
         if ($userAnswer) {
             $dataToUpdate = [];
@@ -214,6 +246,9 @@ class IeltsExamController extends Controller
 
         // Nếu có gửi kèm answers tổng trong payload submit
         if ($request->has('answers') && is_array($request->input('answers'))) {
+            $this->dragDropService->validateAnswers($submission, $request->input('answers'));
+            $this->multiSelectService->validateAnswers($submission, $request->input('answers'));
+
             foreach ($request->input('answers') as $qId => $ans) {
                 IeltsUserAnswer::where('ielts_submission_id', $submission->id)
                     ->where('ielts_question_id', $qId)

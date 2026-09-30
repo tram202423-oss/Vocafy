@@ -19,6 +19,7 @@ class IeltsSeeder extends Seeder
     {
         $this->seedBandScores();
         $this->seedSampleTests();
+        $this->call(IeltsReadingImportSeeder::class);
     }
 
     private function seedBandScores(): void

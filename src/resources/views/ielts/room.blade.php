@@ -114,6 +114,14 @@
 
         return [$group->id => $bank];
     });
+    $multiSelectAnswersByGroup = $groups
+        ->filter(fn ($group) => data_get($group->settings, 'multi_select', false))
+        ->mapWithKeys(fn ($group) => [
+            $group->id => $group->questions
+                ->map(fn ($question) => $userAnswersMap->get($question->id)?->user_answer)
+                ->filter(fn ($answer) => filled($answer))
+                ->values(),
+        ]);
 @endphp
 
 <body class="contrast-standard select-text h-screen overflow-hidden flex flex-col"
@@ -127,6 +135,7 @@
               'is_flagged' => (bool)$ua->is_flagged_for_review,
               'notes' => $ua->notes,
           ])) }},
+          multiSelectAnswers: {{ Js::from($multiSelectAnswersByGroup) }},
           saveUrl: '{{ route('ielts.exam.save', $submission->id) }}',
           submitUrl: '{{ route('ielts.exam.submit', $submission->id) }}',
           resultUrl: '{{ route('ielts.exam.result', $submission->id) }}',
@@ -1190,6 +1199,9 @@
                             </div>
                         @endif
 
+                        @if(data_get($group->settings, 'multi_select', false))
+                            @include('ielts.partials.multi-choice-bank', ['group' => $group])
+                        @else
                         {{-- Questions List --}}
                         <div class="space-y-6">
                             @foreach($group->questions as $q)
@@ -1319,6 +1331,7 @@
                                 </div>
                             @endforeach
                         </div>
+                        @endif
                         @endif
                     </div>
                 @endforeach
@@ -1653,6 +1666,8 @@
                 currentTaskNumber: 1,
                 currentQuestionNumber: 1,
                 answers: {},
+                multiSelections: {},
+                multiSelectMessages: {},
                 flags: {},
                 notes: {},
                 draggedOption: null,
@@ -1696,6 +1711,11 @@
                             this.answers[qId] = data.answer || '';
                             this.flags[qId] = data.is_flagged || false;
                             this.notes[qId] = data.notes || '';
+                        }
+                    }
+                    if (config.multiSelectAnswers) {
+                        for (const [groupId, selected] of Object.entries(config.multiSelectAnswers)) {
+                            this.multiSelections[groupId] = Array.isArray(selected) ? selected.map(String) : [];
                         }
                     }
 
@@ -1985,6 +2005,51 @@
                     this.draggedOption = null;
                     this.dragMessage = '';
                     return true;
+                },
+
+                updateMultiSelect(groupId, questionIds, optionKey, checked, maxSelections) {
+                    const selected = [...(this.multiSelections[groupId] || [])];
+                    const key = String(optionKey);
+                    const existingIndex = selected.indexOf(key);
+
+                    if (checked && existingIndex === -1) {
+                        if (selected.length >= maxSelections) {
+                            this.multiSelectMessages[groupId] = `Bạn chỉ được chọn tối đa ${maxSelections} đáp án.`;
+                            return false;
+                        }
+                        selected.push(key);
+                    } else if (!checked && existingIndex !== -1) {
+                        selected.splice(existingIndex, 1);
+                    }
+
+                    this.multiSelectMessages[groupId] = '';
+                    this.multiSelections[groupId] = selected;
+                    const answers = {};
+                    questionIds.forEach((questionId, index) => {
+                        const value = selected[index] || '';
+                        this.answers[questionId] = value;
+                        answers[questionId] = value;
+                    });
+                    this.saveAnswerBatch(answers);
+                    return true;
+                },
+
+                saveAnswerBatch(answers) {
+                    this.saving = true;
+                    fetch(config.saveUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({ answers }),
+                    })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Không thể lưu các đáp án đã chọn.');
+                        return res.json();
+                    })
+                    .catch(error => console.error('Multi-select autosave error:', error))
+                    .finally(() => setTimeout(() => this.saving = false, 300));
                 },
 
                 saveAnswer(questionId, value) {

@@ -14,7 +14,7 @@
     <div class="flex flex-wrap gap-2">
         @foreach($dragBank as $dragOption)
             <button type="button" draggable="true"
-                    @dragstart.stop="if (@js($dragOptionUsage) === 'once' && isDragOptionUsed(@js((string) $dragOption['key']), @js($dragQuestionIds))) { $event.preventDefault(); } else { draggedOption = { key: @js((string) $dragOption['key']), text: @js((string) $dragOption['text']) }; dragMessage = ''; }"
+                    @dragstart.stop="if (@js($dragOptionUsage) === 'once' && isDragOptionUsed(@js((string) $dragOption['key']), @js($dragQuestionIds))) { $event.preventDefault(); } else { draggedOption = { key: @js((string) $dragOption['key']), text: @js((string) $dragOption['text']) }; $event.dataTransfer.setData('text/plain', @js((string) $dragOption['key'])); dragMessage = ''; }"
                     @dragend="draggedOption = null"
                     @click.stop="selectDragOption(@js((string) $dragOption['key']), @js((string) $dragOption['text']), @js($dragQuestionIds), @js($dragOptionUsage))"
                     :class="[

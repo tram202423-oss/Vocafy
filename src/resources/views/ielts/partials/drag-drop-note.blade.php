@@ -13,6 +13,7 @@
                       tabindex="0"
                       @click.stop="setCurrentQuestion({{ $blankQuestion->question_number }}); if (draggedOption) assignDragOption({{ $blankQuestion->id }}, draggedOption, @js($dragQuestionIds), @js($dragOptionUsage))"
                       @keydown.enter.prevent="if (draggedOption) assignDragOption({{ $blankQuestion->id }}, draggedOption, @js($dragQuestionIds), @js($dragOptionUsage))"
+                      @keydown.space.prevent="if (draggedOption) assignDragOption({{ $blankQuestion->id }}, draggedOption, @js($dragQuestionIds), @js($dragOptionUsage))"
                       @dragover.prevent.stop="$event.currentTarget.classList.add('border-blue-500', 'bg-blue-50')"
                       @dragleave.stop="$event.currentTarget.classList.remove('border-blue-500', 'bg-blue-50')"
                       @drop.prevent.stop="if (draggedOption) assignDragOption({{ $blankQuestion->id }}, draggedOption, @js($dragQuestionIds), @js($dragOptionUsage)); $event.currentTarget.classList.remove('border-blue-500', 'bg-blue-50')"
