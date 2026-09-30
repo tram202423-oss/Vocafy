@@ -273,7 +273,7 @@
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                         <div>
                             <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-                                <span>📖</span> Toàn văn 3 bài đọc (Reading Passages) &amp; đối chiếu
+                                <span>📖</span> Toàn văn 3 bài đọc (Reading Passages) & đối chiếu
                             </h2>
                             <p class="text-xs text-slate-500 mt-1">Đọc lại bài văn hoàn chỉnh và đối chiếu các câu hỏi của từng bài đọc</p>
                         </div>
@@ -642,7 +642,7 @@
         @if(!$isWriting)
             <div class="space-y-6">
                 <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 mb-4">
-                    <span>🔍</span> Giải thích chi tiết &amp; trích dẫn từng câu hỏi
+                    <span>🔍</span> Giải thích chi tiết & trích dẫn từng câu hỏi
                 </h2>
 
                 @foreach($answers as $ans)
@@ -690,6 +690,17 @@
                             @else
                                 {{ $q->prompt }}
                             @endif
+                            @if(!empty($q->options))
+                                <div class="mt-3 space-y-1">
+                                    @foreach($q->options as $option)
+                                        <div>
+                                            <span class="font-bold">{{ $option['key'] }}.</span>
+                                            {{ $option['text'] }}
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+
                         </div>
 
                         <div class="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">

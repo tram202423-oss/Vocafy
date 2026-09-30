@@ -26,6 +26,7 @@
 - **Theo dõi tiến độ học tập**: Đánh dấu từ đã thuộc (*Master*), cần ôn tập (*Review*), và đặt lại tiến độ (*Reset*).
 - **AI Writing Assistant**: Đánh giá, chấm điểm và góp ý bài viết tiếng Anh tức thì sử dụng sức mạnh của **Google Gemini API**.
 - **Hệ thống Quản trị Filament 3**: Giao diện Admin Panel hiện đại quản lý toàn bộ dữ liệu (Categories, Topics, Lessons, Quizzes, Vocabularies, Users, Roles & Permissions).
+- **IELTS Simulator System**: Hệ thống thi thử IELTS Online với các bài thi Reading, Listening, Writing và Speaking tích hợp, chấm điểm tự động và đánh giá chuyên sâu bằng AI.
 
 ---
 

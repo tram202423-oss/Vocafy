@@ -1276,7 +1276,7 @@
             </div>
 
             {{-- Question Palette 1..40 buttons --}}
-            <div class="flex items-center gap-1.5 overflow-x-auto max-w-full sm:max-w-2xl py-1 custom-scroll">
+            <div class="flex items-center gap-2 overflow-x-auto max-w-full sm:max-w-3xl py-2 px-1 custom-scroll">
                 @for($i = 1; $i <= $submission->total_questions; $i++)
                     @php
                         $questionModel = $submission->section->questions->where('question_number', $i)->first();
@@ -1284,18 +1284,21 @@
                     @endphp
                     <button type="button"
                             @click="setCurrentQuestion({{ $i }}); scrollToQuestion({{ $i }})"
-                            class="w-7 h-7 rounded text-xs font-bold flex items-center justify-center transition-all relative border"
+                            class="relative shrink-0 w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center
+                                border-2 shadow-sm select-none
+                                transition-all duration-150 ease-out
+                                hover:-translate-y-0.5 hover:shadow-md active:scale-95
+                                focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
                             :class="{
-                                'ring-2 ring-blue-600 border-blue-600': currentQuestionNumber === {{ $i }},
-                                'bg-slate-800 text-white border-slate-800': isAnswered({{ $qId }}) && currentQuestionNumber !== {{ $i }},
-                                'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200': !isAnswered({{ $qId }}) && currentQuestionNumber !== {{ $i }}
-                            }"
-                            style="color: var(--text-main);">
+                                'bg-blue-600 text-white border-blue-600 ring-4 ring-blue-200 scale-110 z-10': currentQuestionNumber === {{ $i }},
+                                'bg-slate-800 text-white border-slate-800 hover:bg-slate-700': isAnswered({{ $qId }}) && currentQuestionNumber !== {{ $i }},
+                                'bg-white text-slate-700 border-slate-300 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700': !isAnswered({{ $qId }}) && currentQuestionNumber !== {{ $i }}
+                            }">
                         <span>{{ $i }}</span>
                         {{-- Review dot badge --}}
                         <span x-show="isFlagged({{ $qId }})"
-                              x-cloak
-                              class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border border-white"></span>
+                            x-cloak
+                            class="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white shadow"></span>
                     </button>
                 @endfor
             </div>

@@ -161,11 +161,28 @@ class IeltsSectionResource extends Resource
                                             ->required()
                                             ->rows(2),
 
-                                        Forms\Components\KeyValue::make('options')
-                                            ->label('Lựa chọn trắc nghiệm (Key -> Text)')
-                                            ->keyLabel('Ký hiệu (A, B, C, D / TRUE, FALSE)')
-                                            ->valueLabel('Nội dung lựa chọn')
-                                            ->helperText('Áp dụng cho Multiple choice, True/False, Matching...'),
+                                        // options được lưu dạng JSON list: [{"key": "A", "text": "..."}, ...]
+                                        // => dùng Repeater thay vì KeyValue để khớp đúng cấu trúc.
+                                        Forms\Components\Repeater::make('options')
+                                            ->label('Lựa chọn trắc nghiệm')
+                                            ->helperText('Áp dụng cho Multiple choice, True/False, Matching...')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('key')
+                                                    ->label('Ký hiệu (A, B, C, D / TRUE, FALSE, NOT GIVEN)')
+                                                    ->required()
+                                                    ->columnSpan(1),
+
+                                                Forms\Components\TextInput::make('text')
+                                                    ->label('Nội dung lựa chọn')
+                                                    ->required()
+                                                    ->columnSpan(3),
+                                            ])
+                                            ->columns(4)
+                                            ->defaultItems(0)
+                                            ->reorderable()
+                                            ->addActionLabel('Thêm lựa chọn')
+                                            ->itemLabel(fn (array $state): ?string => ($state['key'] ?? '?') . '. ' . ($state['text'] ?? ''))
+                                            ->columnSpanFull(),
 
                                         Forms\Components\Grid::make(2)->schema([
                                             Forms\Components\Textarea::make('quote_reference')
