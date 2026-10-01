@@ -13,7 +13,7 @@ class ListIeltsSections extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->label('Thêm Section mới'),
+            Actions\CreateAction::make()->label('Tạo phần thi'),
         ];
     }
 }

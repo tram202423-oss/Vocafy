@@ -92,6 +92,30 @@
             background: rgba(100,116,139,0.4);
             border-radius: 4px;
         }
+
+        [data-drop-question-id], [data-drop-answer-bank] {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .drag-drop-hover { border-color: #2563eb !important; background-color: #eff6ff !important; box-shadow: 0 0 0 3px rgb(191 219 254 / 0.8); }
+        .drag-drop-origin { opacity: 0.45; }
+        body.ielts-dragging, body.ielts-dragging * { cursor: grabbing !important; }
+        .ielts-drag-preview {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            width: max-content;
+            max-width: min(340px, calc(100vw - 24px));
+            padding: 10px 14px;
+            border: 2px solid #2563eb;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #1e40af;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgb(15 23 42 / 0.2);
+        }
     </style>
 </head>
 
@@ -101,10 +125,31 @@
     $isListening = ($skill === 'listening');
     $isReading = ($skill === 'reading');
     $groups = $submission->section->questionGroups;
+    $questionGroups = $groups->filter(fn ($group) => $group->questions->isNotEmpty())->values();
+    // A source Passage starts at its first group and is shared by subsequent
+    // groups until the next source. Question counts may differ between tests.
+    $readingPassages = $questionGroups->filter(fn ($group) => filled($group->passage_content))->values();
+    $readingPassageIds = [];
+    $currentReadingPassageId = $readingPassages->first()?->id ?? $questionGroups->first()?->id ?? 1;
+    foreach ($questionGroups as $questionGroup) {
+        if (filled($questionGroup->passage_content)) {
+            $currentReadingPassageId = $questionGroup->id;
+        }
+        $readingPassageIds[$questionGroup->id] = $currentReadingPassageId;
+    }
     $dragBanksByGroup = $groups->mapWithKeys(function ($group) {
-        $bank = collect(data_get($group->settings, 'drag_options', []));
+        $bank = $group->answerOptions->map(fn ($option) => [
+            'key' => $option->option_key,
+            'text' => $option->label,
+        ]);
         if ($bank->isEmpty()) {
-            $bank = $group->questions->flatMap(fn ($question) => $question->options ?? []);
+            $bank = collect(data_get($group->settings, 'drag_options', []));
+        }
+        if ($bank->isEmpty()) {
+            // Legacy Drag & Drop questions may repeat the shared choices per question.
+            // Read one option set only; flattening all questions creates duplicates
+            // and can pull unrelated answer choices into this bank.
+            $bank = collect($group->questions->first()?->options ?? []);
         }
 
         $bank = $bank
@@ -114,17 +159,14 @@
 
         return [$group->id => $bank];
     });
-    $multiSelectAnswersByGroup = $groups
-        ->filter(fn ($group) => data_get($group->settings, 'multi_select', false))
-        ->mapWithKeys(fn ($group) => [
-            $group->id => $group->questions
-                ->map(fn ($question) => $userAnswersMap->get($question->id)?->user_answer)
-                ->filter(fn ($answer) => filled($answer))
-                ->values(),
-        ]);
 @endphp
 
 <body class="contrast-standard select-text h-screen overflow-hidden flex flex-col"
+      @pointermove.window="moveDragPointer($event)"
+      @pointerup.window="finishDragPointer($event)"
+      @pointercancel.window="cancelDragPointer($event)"
+      @pointerdown.capture="dragClickSuppressedUntil = 0"
+      @click.capture="suppressDragClick($event)"
       x-data="ieltsSimulator({
           submissionId: '{{ $submission->id }}',
           initialSeconds: {{ $remainingSeconds }},
@@ -135,13 +177,16 @@
               'is_flagged' => (bool)$ua->is_flagged_for_review,
               'notes' => $ua->notes,
           ])) }},
-          multiSelectAnswers: {{ Js::from($multiSelectAnswersByGroup) }},
           saveUrl: '{{ route('ielts.exam.save', $submission->id) }}',
           submitUrl: '{{ route('ielts.exam.submit', $submission->id) }}',
           resultUrl: '{{ route('ielts.exam.result', $submission->id) }}',
       })"
       :class="[contrastClass, fontSizeClass]"
       @click="handleGlobalClick($event)">
+
+    <div x-ref="dragPreview" x-show="dragPointer?.moved && draggedOption" x-cloak
+         class="ielts-drag-preview" aria-hidden="true"
+         :style="dragPreviewPosition()" x-text="draggedOption?.text || ''"></div>
 
     {{-- ========================================================================= --}}
     {{-- 1. FIXED HEADER BAR (IDP / BC STANDARD) --}}
@@ -397,7 +442,7 @@
             @endforeach
         @else
             {{-- Reading Passages --}}
-            @php $passages = $groups->whereNotNull('passage_content'); @endphp
+            @php $passages = $readingPassages; @endphp
             @foreach($passages as $idx => $passageGroup)
                 <button type="button"
                         @click="activePassageId = {{ $passageGroup->id }}; currentQuestionNumber = {{ $passageGroup->questions->first()?->question_number ?? 1 }}; scrollToQuestion(currentQuestionNumber)"
@@ -534,14 +579,15 @@
 
     {{-- CASE B: LISTENING WORKSPACE (AUTHENTIC IDP/BC FORMAT: FORM COMPLETION, MAP LABELING, LECTURE NOTES) --}}
     @elseif($isListening)
-        @if($groups->contains(fn ($group) => $group->question_type?->value === 'drag_drop'))
-            <div class="flex-grow overflow-y-auto custom-scroll p-4 md:p-8" style="background-color: var(--bg-main);">
+        @if($groups->isNotEmpty())
+            <div id="questions-container" class="flex-grow overflow-y-auto custom-scroll p-4 md:p-8" style="background-color: var(--bg-main);">
                 <div class="max-w-5xl mx-auto space-y-5">
                     @foreach($groups as $partGroup)
                         @php
-                            $isDragDropGroup = $partGroup->question_type?->value === 'drag_drop';
+                            $isDragDropGroup = $partGroup->response_mode === 'drag_drop' || $partGroup->question_type?->value === 'drag_drop';
                             $dragBank = $dragBanksByGroup->get($partGroup->id, collect());
-                            $partNumber = $loop->iteration;
+                            $partNumber = min(4, max(1, (int) ceil(($partGroup->questions->first()?->question_number ?? 1) / 10)));
+                            $partQuestionContent = $partGroup->question_content ?: $partGroup->passage_content;
                         @endphp
                         <section x-show="activeListeningPart === {{ $partNumber }}" x-cloak
                                  class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-5 md:p-7 space-y-5"
@@ -559,14 +605,22 @@
 
                             @if($isDragDropGroup)
                                 <div class="space-y-5">
-                                    @include('ielts.partials.drag-drop-bank', ['group' => $partGroup, 'dragBank' => $dragBank])
-                                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 md:p-7 text-sm leading-loose" style="color: var(--text-main);">
-                                        @include('ielts.partials.drag-drop-note', ['group' => $partGroup, 'dragBank' => $dragBank])
-                                    </div>
+                                    @if(preg_match('/\[blank_\d+\]/', $partQuestionContent ?? ''))
+                                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 md:p-7 text-sm leading-loose" style="color: var(--text-main);">
+                                            @include('ielts.partials.drag-drop-note', ['group' => $partGroup, 'dragBank' => $dragBank, 'noteContent' => $partQuestionContent])
+                                        </div>
+                                    @elseif($partGroup->question_type?->value === 'map_labeling' && $partGroup->image_url)
+                                        @include('ielts.partials.drag-drop-map', ['group' => $partGroup, 'dragBank' => $dragBank])
+                                    @else
+                                        @include('ielts.partials.drag-drop-question-targets', ['group' => $partGroup, 'dragBank' => $dragBank])
+                                    @endif
+                                    @if($dragBank->isNotEmpty())
+                                        @include('ielts.partials.drag-drop-bank', ['group' => $partGroup, 'dragBank' => $dragBank])
+                                    @endif
                                 </div>
                             @else
-                                @if($partGroup->passage_content)
-                                    <div class="prose max-w-none">{!! $partGroup->passage_content !!}</div>
+                                @if($partQuestionContent)
+                                    <div class="prose max-w-none">{!! $partQuestionContent !!}</div>
                                 @endif
                                 <div class="space-y-4">
                                     @foreach($partGroup->questions as $q)
@@ -1122,22 +1176,17 @@
                  style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);">
 
                 @if($isReading)
-                    @foreach($groups->whereNotNull('passage_content') as $passageGroup)
+                    @foreach($readingPassages as $passageGroup)
                         @php
-                            $isDragDropGroup = $passageGroup->question_type?->value === 'drag_drop';
+                            $isDragDropGroup = $passageGroup->response_mode === 'drag_drop' || $passageGroup->question_type?->value === 'drag_drop';
                             $dragBank = $dragBanksByGroup->get($passageGroup->id, collect());
                         @endphp
                         <div x-show="activePassageId === {{ $passageGroup->id }}" x-cloak class="prose max-w-none leading-relaxed">
                             <div class="text-xs uppercase font-extrabold tracking-wider text-blue-600 mb-2">
                                 {{ $isDragDropGroup ? 'Reading • ' . $passageGroup->title : 'Reading Passage ' . $loop->iteration }}
                             </div>
-                            @if($isDragDropGroup && $passageGroup->instruction)
-                                <div class="not-prose bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-3 mb-5 text-xs text-blue-900 font-medium">
-                                    {{ $passageGroup->instruction }}
-                                </div>
-                            @endif
                             <div class="passage-html-body" id="passage-content-{{ $passageGroup->id }}">
-                                @if($isDragDropGroup)
+                                @if($isDragDropGroup && preg_match('/\[blank_\d+\]/', $passageGroup->passage_content ?? ''))
                                     @include('ielts.partials.drag-drop-note', ['group' => $passageGroup, 'dragBank' => $dragBank])
                                 @else
                                     {!! $passageGroup->passage_content !!}
@@ -1168,28 +1217,41 @@
                  id="questions-container"
                  style="background-color: var(--bg-main); color: var(--text-main);">
 
-                @php
-                    $passages = $groups->whereNotNull('passage_content')->values();
-                @endphp
-                @foreach($groups as $group)
+                @foreach($questionGroups as $group)
                     @php
-                        $firstQNum = $group->questions->first()?->question_number ?? 1;
-                        $groupPassageId = ($firstQNum <= 13)
-                            ? ($passages->get(0)?->id ?? 1)
-                            : (($firstQNum <= 26)
-                                ? ($passages->get(1)?->id ?? 2)
-                                : ($passages->get(2)?->id ?? 3));
+                        $groupPassageId = $readingPassageIds[$group->id];
                     @endphp
                     <div x-show="activePassageId === {{ $groupPassageId }}"
                          x-cloak
                          class="border-2 border-slate-200 rounded-2xl p-5 md:p-6 shadow-sm mb-6"
                          style="background-color: var(--bg-card); border-color: var(--border-color);">
                         @php
-                            $isDragDropGroup = $group->question_type?->value === 'drag_drop';
+                            $isDragDropGroup = $group->response_mode === 'drag_drop' || $group->question_type?->value === 'drag_drop';
                             $dragBank = $dragBanksByGroup->get($group->id, collect());
+                            $groupQuestionContent = $group->question_content
+                                ?: (preg_match('/\[blank_\d+\]/', $group->passage_content ?? '') ? $group->passage_content : null);
                         @endphp
                         @if($isDragDropGroup)
-                            @include('ielts.partials.drag-drop-bank', ['group' => $group, 'dragBank' => $dragBank])
+                            @if($group->instruction)
+                                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-lg mb-5 text-xs text-blue-900 font-medium">
+                                    {{ $group->instruction }}
+                                </div>
+                            @endif
+                            @if($groupQuestionContent && preg_match('/\[blank_\d+\]/', $groupQuestionContent))
+                                <div class="prose max-w-none mt-5 rounded-xl border border-slate-200 p-4" style="background-color: var(--bg-card); border-color: var(--border-color);">
+                                    @include('ielts.partials.drag-drop-note', ['group' => $group, 'dragBank' => $dragBank, 'noteContent' => $groupQuestionContent])
+                                </div>
+                            @endif
+                            @if($group->question_type?->value === 'map_labeling' && $group->image_url)
+                                @include('ielts.partials.drag-drop-map', ['group' => $group, 'dragBank' => $dragBank])
+                            @elseif(!$groupQuestionContent || !preg_match('/\[blank_\d+\]/', $groupQuestionContent))
+                                @include('ielts.partials.drag-drop-question-targets', ['group' => $group, 'dragBank' => $dragBank])
+                            @endif
+                            @if($dragBank->isNotEmpty())
+                                <div class="mt-6">
+                                    @include('ielts.partials.drag-drop-bank', ['group' => $group, 'dragBank' => $dragBank])
+                                </div>
+                            @endif
                         @else
                         {{-- Instruction Box --}}
                         @if($group->instruction)
@@ -1199,9 +1261,6 @@
                             </div>
                         @endif
 
-                        @if(data_get($group->settings, 'multi_select', false))
-                            @include('ielts.partials.multi-choice-bank', ['group' => $group])
-                        @else
                         {{-- Questions List --}}
                         <div class="space-y-6">
                             @foreach($group->questions as $q)
@@ -1214,7 +1273,7 @@
                                     @php
                                         $hasBlank = preg_match('/\[blank(_\d+)?\]|__{2,}/', $q->prompt);
                                         $hasOptions = $q->options && is_array($q->options) && count($q->options) > 0;
-                                        $isDragDrop = $group->question_type?->value === 'drag_drop';
+                                        $isDragDrop = $group->response_mode === 'drag_drop' || $group->question_type?->value === 'drag_drop';
                                     @endphp
 
                                     <div class="flex items-start justify-between gap-3 mb-2">
@@ -1331,7 +1390,6 @@
                                 </div>
                             @endforeach
                         </div>
-                        @endif
                         @endif
                     </div>
                 @endforeach
@@ -1660,18 +1718,19 @@
                 endTime: Date.now() + (config.initialSeconds * 1000),
                 totalQuestions: config.totalQuestions,
                 skill: config.skill,
-                activePassageId: {{ $groups->whereNotNull('passage_content')->first()?->id ?? 1 }},
+                activePassageId: {{ $readingPassages->first()?->id ?? $questionGroups->first()?->id ?? 1 }},
                 activePartId: {{ $groups->first()?->id ?? 1 }},
                 activeListeningPart: 1,
                 currentTaskNumber: 1,
                 currentQuestionNumber: 1,
                 answers: {},
-                multiSelections: {},
-                multiSelectMessages: {},
                 flags: {},
                 notes: {},
                 draggedOption: null,
                 dragMessage: '',
+                dragPointer: null,
+                dragScrollFrame: null,
+                dragClickSuppressedUntil: 0,
                 showTimer: true,
                 timerDisplayMode: 'time',
                 contrastClass: 'contrast-standard',
@@ -1711,11 +1770,6 @@
                             this.answers[qId] = data.answer || '';
                             this.flags[qId] = data.is_flagged || false;
                             this.notes[qId] = data.notes || '';
-                        }
-                    }
-                    if (config.multiSelectAnswers) {
-                        for (const [groupId, selected] of Object.entries(config.multiSelectAnswers)) {
-                            this.multiSelections[groupId] = Array.isArray(selected) ? selected.map(String) : [];
                         }
                     }
 
@@ -1947,10 +2001,14 @@
                         else if (num <= 30) this.activeListeningPart = 3;
                         else this.activeListeningPart = 4;
                     } else if (this.skill === 'reading') {
-                        @php $passages = $groups->whereNotNull('passage_content')->values(); @endphp
-                        if (num <= 13) this.activePassageId = {{ $passages->get(0)?->id ?? 1 }};
-                        else if (num <= 26) this.activePassageId = {{ $passages->get(1)?->id ?? 2 }};
-                        else this.activePassageId = {{ $passages->get(2)?->id ?? 3 }};
+                        const passageByQuestion = {
+                            @foreach($questionGroups as $passageGroup)
+                                @foreach($passageGroup->questions as $passageQuestion)
+                                    {{ $passageQuestion->question_number }}: {{ $readingPassageIds[$passageGroup->id] }},
+                                @endforeach
+                            @endforeach
+                        };
+                        if (passageByQuestion[num]) this.activePassageId = passageByQuestion[num];
                     }
                 },
 
@@ -1981,85 +2039,254 @@
                     );
                 },
 
-                selectDragOption(optionKey, optionText, questionIds, usage) {
+                selectDragOption(optionKey, optionText, questionIds, usage, groupId) {
                     if (usage === 'once' && this.isDragOptionUsed(optionKey, questionIds)) {
                         this.draggedOption = null;
                         this.dragMessage = 'Đáp án này đã được dùng. Hãy xóa đáp án ở ô đang dùng trước khi chuyển nó.';
                         return;
                     }
 
-                    this.draggedOption = { key: String(optionKey), text: String(optionText) };
+                    this.draggedOption = { key: String(optionKey), text: String(optionText), sourceQuestionId: null, groupId: String(groupId) };
                     this.dragMessage = '';
                 },
 
-                assignDragOption(questionId, option, questionIds, usage) {
-                    if (!option) return false;
+                startDragPointer(optionKey, optionText, sourceQuestionId, questionIds, usage, groupId, event) {
+                    if (event.button !== 0 || event.isPrimary === false
+                        || event.target.closest('[data-drag-clear]')) return;
+                    if (usage === 'once' && !sourceQuestionId
+                        && this.isDragOptionUsed(optionKey, questionIds)) {
+                        return;
+                    }
 
-                    if (usage === 'once' && this.isDragOptionUsed(option.key, questionIds, questionId)) {
+                    const option = {
+                        key: String(optionKey),
+                        text: String(optionText),
+                        sourceQuestionId: sourceQuestionId ? String(sourceQuestionId) : null,
+                        groupId: String(groupId),
+                    };
+                    this.dragPointer = {
+                        pointerId: event.pointerId,
+                        startX: event.clientX,
+                        startY: event.clientY,
+                        currentX: event.clientX,
+                        currentY: event.clientY,
+                        sourceScrollContainerId: event.currentTarget.closest('.custom-scroll')?.id || null,
+                        sourceElement: event.currentTarget,
+                        option,
+                        moved: false,
+                    };
+                    // Capture only after movement, so clicks on controls inside a slot
+                    // keep their original target and a selected answer can replace a slot.
+                    this.dragMessage = '';
+                },
+
+                dragPreviewPosition() {
+                    const pointer = this.dragPointer;
+                    if (!pointer) return {};
+                    const width = this.$refs.dragPreview?.offsetWidth || 300;
+                    const height = this.$refs.dragPreview?.offsetHeight || 60;
+                    return {
+                        left: `${Math.max(12, Math.min(pointer.currentX + 16, window.innerWidth - width - 12))}px`,
+                        top: `${Math.max(12, Math.min(pointer.currentY + 16, window.innerHeight - height - 12))}px`,
+                    };
+                },
+
+                suppressDragClick(event) {
+                    if (Date.now() >= this.dragClickSuppressedUntil) return;
+                    this.dragClickSuppressedUntil = 0;
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                },
+
+                updateDragHover() {
+                    document.querySelectorAll('.drag-drop-hover').forEach(element => element.classList.remove('drag-drop-hover'));
+                    if (!this.dragPointer?.moved || !this.draggedOption) return;
+                    const target = document.elementFromPoint(this.dragPointer.currentX, this.dragPointer.currentY)
+                        ?.closest('[data-drop-question-id], [data-drop-answer-bank]');
+                    if (target && String(target.dataset.dropGroupId) === String(this.draggedOption.groupId)) {
+                        target.classList.add('drag-drop-hover');
+                    }
+                },
+
+                stopDragGesture() {
+                    const pointer = this.dragPointer;
+                    this.dragPointer = null;
+                    if (this.dragScrollFrame !== null) cancelAnimationFrame(this.dragScrollFrame);
+                    this.dragScrollFrame = null;
+                    if (pointer?.sourceElement.hasPointerCapture?.(pointer.pointerId)) {
+                        pointer.sourceElement.releasePointerCapture(pointer.pointerId);
+                    }
+                    document.body.classList.remove('ielts-dragging');
+                    document.querySelectorAll('.drag-drop-hover, .drag-drop-origin').forEach(element => {
+                        element.classList.remove('drag-drop-hover', 'drag-drop-origin');
+                    });
+                },
+
+                async clearDragAnswer(questionId) {
+                    this.stopDragGesture();
+                    this.draggedOption = null;
+                    const saved = await this.saveAnswer(questionId, '');
+                    this.dragMessage = saved ? '' : 'Không thể xóa đáp án. Hãy thử lại.';
+                },
+
+                moveDragPointer(event) {
+                    if (!this.dragPointer || event.pointerId !== this.dragPointer.pointerId) return;
+
+                    this.dragPointer.currentX = event.clientX;
+                    this.dragPointer.currentY = event.clientY;
+
+                    if (!this.dragPointer.moved
+                        && Math.hypot(event.clientX - this.dragPointer.startX, event.clientY - this.dragPointer.startY) > 8) {
+                        this.dragPointer.moved = true;
+                        this.draggedOption = this.dragPointer.option;
+                        this.dragPointer.sourceElement.setPointerCapture?.(event.pointerId);
+                        this.dragPointer.sourceElement.classList.add('drag-drop-origin');
+                        document.body.classList.add('ielts-dragging');
+                    }
+                    if (!this.dragPointer.moved) return;
+
+                    if (this.dragScrollFrame === null) {
+                        this.dragScrollFrame = requestAnimationFrame(() => this.autoScrollDragFrame());
+                    }
+                    this.scrollDragPaneIfNeeded(this.dragPointer);
+
+                    this.updateDragHover();
+                },
+
+                scrollDragPaneIfNeeded(pointer) {
+                    const hoveredPane = document.elementFromPoint(pointer.currentX, pointer.currentY)
+                        ?.closest('#questions-container, #passage-container');
+                    const pane = hoveredPane || (pointer.sourceScrollContainerId
+                        ? document.getElementById(pointer.sourceScrollContainerId)
+                        : null);
+
+                    if (pane && pane.scrollHeight > pane.clientHeight) {
+                        const bounds = pane.getBoundingClientRect();
+                        const edgeSize = 72;
+                        const maxSpeed = 12;
+                        let direction = 0;
+                        let intensity = 0;
+
+                        if (pointer.currentY < bounds.top + edgeSize) {
+                            direction = -1;
+                            intensity = Math.min(1, (bounds.top + edgeSize - pointer.currentY) / edgeSize);
+                        } else if (pointer.currentY > bounds.bottom - edgeSize) {
+                            direction = 1;
+                            intensity = Math.min(1, (pointer.currentY - (bounds.bottom - edgeSize)) / edgeSize);
+                        }
+
+                        if (direction && intensity > 0) {
+                            pane.scrollTop += direction * Math.max(2, Math.ceil(maxSpeed * intensity));
+                        }
+                    }
+                },
+
+                autoScrollDragFrame() {
+                    this.dragScrollFrame = null;
+                    const pointer = this.dragPointer;
+                    if (!pointer?.moved) return;
+
+                    this.scrollDragPaneIfNeeded(pointer);
+                    this.updateDragHover();
+
+                    if (this.dragPointer?.moved) {
+                        this.dragScrollFrame = requestAnimationFrame(() => this.autoScrollDragFrame());
+                    }
+                },
+
+                async finishDragPointer(event) {
+                    if (!this.dragPointer || event.pointerId !== this.dragPointer.pointerId) return;
+
+                    const pointer = this.dragPointer;
+                    this.stopDragGesture();
+                    if (!pointer.moved || !this.draggedOption) return;
+                    // Pointer capture can generate a click on the source after a drop.
+                    this.dragClickSuppressedUntil = Date.now() + 400;
+
+                    const target = document.elementFromPoint(event.clientX, event.clientY)
+                        ?.closest('[data-drop-question-id], [data-drop-answer-bank]');
+                    if (!target) {
+                        this.draggedOption = null;
+                        return;
+                    }
+
+                    if (target.dataset.dropQuestionId && String(target.dataset.dropGroupId) === String(this.draggedOption.groupId)) {
+                        await this.assignDragOption(
+                            target.dataset.dropQuestionId,
+                            this.draggedOption,
+                            JSON.parse(target.dataset.questionIds || '[]'),
+                            target.dataset.optionUsage || 'repeat',
+                            target.dataset.dropGroupId
+                        );
+                    } else if (target.dataset.dropAnswerBank && String(target.dataset.dropGroupId) === String(this.draggedOption.groupId) && this.draggedOption.sourceQuestionId) {
+                        const saved = await this.saveAnswer(this.draggedOption.sourceQuestionId, '');
+                        this.draggedOption = null;
+                        this.dragMessage = saved ? '' : 'Không thể bỏ đáp án. Hãy thử lại.';
+                    } else {
+                        this.draggedOption = null;
+                    }
+                },
+
+                cancelDragPointer(event) {
+                    if (!this.dragPointer || event.pointerId !== this.dragPointer.pointerId) return;
+                    this.stopDragGesture();
+                    this.draggedOption = null;
+                },
+
+                async assignDragOption(questionId, option, questionIds, usage, groupId = null) {
+                    if (!option) return false;
+                    if (groupId !== null && String(option.groupId ?? groupId) !== String(groupId)) {
+                        this.draggedOption = null;
+                        return false;
+                    }
+
+                    const sourceQuestionId = option.sourceQuestionId ? String(option.sourceQuestionId) : null;
+                    const existingOtherQuestionId = (questionIds || []).find(id =>
+                        String(id) !== String(questionId)
+                        && String(id) !== sourceQuestionId
+                        && String(this.answers[id] ?? '') === String(option.key)
+                    );
+                    const isMovingExistingAnswer = sourceQuestionId
+                        && String(this.answers[sourceQuestionId] ?? '') === String(option.key);
+
+                    if (usage === 'once' && existingOtherQuestionId) {
                         this.draggedOption = null;
                         this.dragMessage = 'Đáp án này đã được dùng ở một ô khác.';
                         return false;
                     }
 
-                    this.saveAnswer(questionId, option.key);
+                    if (isMovingExistingAnswer && String(option.sourceQuestionId) !== String(questionId)) {
+                        const cleared = await this.saveAnswer(option.sourceQuestionId, '');
+                        if (!cleared) {
+                            this.dragMessage = 'Chưa thể chuyển đáp án này. Hãy thử lại.';
+                            return false;
+                        }
+                    }
+
+                    const saved = await this.saveAnswer(questionId, option.key);
+                    if (!saved) {
+                        this.dragMessage = 'Không thể lưu đáp án. Hãy thử lại.';
+                        return false;
+                    }
                     this.draggedOption = null;
                     this.dragMessage = '';
                     return true;
                 },
 
-                updateMultiSelect(groupId, questionIds, optionKey, checked, maxSelections) {
-                    const selected = [...(this.multiSelections[groupId] || [])];
-                    const key = String(optionKey);
-                    const existingIndex = selected.indexOf(key);
-
-                    if (checked && existingIndex === -1) {
-                        if (selected.length >= maxSelections) {
-                            this.multiSelectMessages[groupId] = `Bạn chỉ được chọn tối đa ${maxSelections} đáp án.`;
-                            return false;
-                        }
-                        selected.push(key);
-                    } else if (!checked && existingIndex !== -1) {
-                        selected.splice(existingIndex, 1);
-                    }
-
-                    this.multiSelectMessages[groupId] = '';
-                    this.multiSelections[groupId] = selected;
-                    const answers = {};
-                    questionIds.forEach((questionId, index) => {
-                        const value = selected[index] || '';
-                        this.answers[questionId] = value;
-                        answers[questionId] = value;
-                    });
-                    this.saveAnswerBatch(answers);
-                    return true;
-                },
-
-                saveAnswerBatch(answers) {
-                    this.saving = true;
-                    fetch(config.saveUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        },
-                        body: JSON.stringify({ answers }),
-                    })
-                    .then(res => {
-                        if (!res.ok) throw new Error('Không thể lưu các đáp án đã chọn.');
-                        return res.json();
-                    })
-                    .catch(error => console.error('Multi-select autosave error:', error))
-                    .finally(() => setTimeout(() => this.saving = false, 300));
-                },
-
-                saveAnswer(questionId, value) {
+                async saveAnswer(questionId, value) {
+                    const previousValue = this.answers[questionId];
                     this.answers[questionId] = value;
-                    this.saveAnswerData(questionId, { answer: value });
+                    const result = await this.saveAnswerData(questionId, { answer: value });
+                    if (!result || result.status !== 'success') {
+                        this.answers[questionId] = previousValue ?? '';
+                        return false;
+                    }
+                    return true;
                 },
 
                 saveAnswerData(questionId, payload) {
                     this.saving = true;
-                    fetch(config.saveUrl, {
+                    return fetch(config.saveUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2070,7 +2297,11 @@
                             ...payload,
                         }),
                     })
-                    .then(res => res.json())
+                    .then(async res => {
+                        const data = await res.json();
+                        return res.ok ? data : null;
+                    })
+                    .catch(() => null)
                     .finally(() => {
                         setTimeout(() => this.saving = false, 300);
                     });

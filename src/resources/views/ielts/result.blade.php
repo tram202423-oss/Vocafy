@@ -266,14 +266,14 @@
         {{-- READING: PASSAGES REVIEWER --}}
         {{-- ===================================================== --}}
         @if($isReading)
-            @php $readingPassages = $groups->whereNotNull('passage_content')->values(); @endphp
+            @php $readingPassages = $groups->filter(fn ($group) => filled($group->passage_content))->values(); @endphp
             @if($readingPassages->isNotEmpty())
                 <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
                      x-data="{ activePassageTab: 1 }">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                         <div>
                             <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-                                <span>📖</span> Toàn văn 3 bài đọc (Reading Passages) & đối chiếu
+                                <span>📖</span> Toàn văn {{ $readingPassages->count() }} bài đọc (Reading Passages) & đối chiếu
                             </h2>
                             <p class="text-xs text-slate-500 mt-1">Đọc lại bài văn hoàn chỉnh và đối chiếu các câu hỏi của từng bài đọc</p>
                         </div>
@@ -293,7 +293,14 @@
                             <div class="flex items-center justify-between text-xs text-slate-500 border-b border-slate-100 pb-2">
                                 <span class="font-bold uppercase text-blue-600">{{ $pGroup->title }}</span>
                                 <span class="font-mono text-[11px]">
-                                    {{ $pIdx === 0 ? 'Questions 1–13' : ($pIdx === 1 ? 'Questions 14–26' : 'Questions 27–40') }}
+                                    @php
+                                        $passageQuestionNumbers = $groups->skipUntil(fn ($group) => $group->id === $pGroup->id)
+                                            ->takeUntil(fn ($group) => $group->id !== $pGroup->id && filled($group->passage_content))
+                                            ->flatMap(fn ($group) => $group->questions)->pluck('question_number');
+                                    @endphp
+                                    @if($passageQuestionNumbers->isNotEmpty())
+                                        Questions {{ $passageQuestionNumbers->min() }}–{{ $passageQuestionNumbers->max() }}
+                                    @endif
                                 </span>
                             </div>
                             <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-sm font-sans leading-relaxed text-slate-700 prose max-w-none custom-scroll max-h-[500px] overflow-y-auto">

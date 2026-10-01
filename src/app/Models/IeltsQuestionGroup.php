@@ -17,9 +17,12 @@ class IeltsQuestionGroup extends Model
         'title',
         'order',
         'passage_content',
+        'question_content',
         'audio_url',
         'transcript',
         'question_type',
+        'response_mode',
+        'option_usage',
         'instruction',
         'image_url',
         'settings',
@@ -42,5 +45,10 @@ class IeltsQuestionGroup extends Model
     public function questions(): HasMany
     {
         return $this->hasMany(IeltsQuestion::class)->orderBy('question_number');
+    }
+
+    public function answerOptions(): HasMany
+    {
+        return $this->hasMany(IeltsAnswerOption::class, 'ielts_question_group_id')->orderBy('order');
     }
 }

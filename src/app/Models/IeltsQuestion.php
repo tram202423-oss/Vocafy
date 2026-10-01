@@ -22,6 +22,8 @@ class IeltsQuestion extends Model
         'correct_answer',
         'word_limit',
         'points',
+        'drop_x',
+        'drop_y',
     ];
 
     protected function casts(): array
@@ -32,6 +34,8 @@ class IeltsQuestion extends Model
             'options' => 'array',
             'word_limit' => 'integer',
             'points' => 'integer',
+            'drop_x' => 'decimal:2',
+            'drop_y' => 'decimal:2',
         ];
     }
 

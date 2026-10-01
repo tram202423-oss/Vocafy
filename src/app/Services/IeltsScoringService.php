@@ -37,8 +37,8 @@ class IeltsScoringService
             $group = $question?->questionGroup;
             $answerKey = trim((string) $userAnswer->user_answer);
 
-            if ($group?->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP
-                && data_get($group->settings, 'drag_option_usage', 'repeat') === 'once'
+            if ($this->usesDragDrop($group)
+                && ($group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat')) === 'once'
                 && $answerKey !== '') {
                 $normalizedKey = mb_strtolower($answerKey, 'UTF-8');
                 $oneUseAnswerCounts[$group->id][$normalizedKey] = ($oneUseAnswerCounts[$group->id][$normalizedKey] ?? 0) + 1;
@@ -53,8 +53,8 @@ class IeltsScoringService
 
             $isCorrect = $this->checkAnswer($userAnswer->user_answer, $question->correct_answer);
             $group = $question->questionGroup;
-            if ($group?->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP
-                && data_get($group->settings, 'drag_option_usage', 'repeat') === 'once') {
+            if ($this->usesDragDrop($group)
+                && ($group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat')) === 'once') {
                 $normalizedKey = mb_strtolower(trim((string) $userAnswer->user_answer), 'UTF-8');
                 if ($normalizedKey !== '' && ($oneUseAnswerCounts[$group->id][$normalizedKey] ?? 0) > 1) {
                     $isCorrect = false;
@@ -193,6 +193,12 @@ class IeltsScoringService
         }
 
         return $this->isMatch($userStr, $correctStr);
+    }
+
+    private function usesDragDrop(?\App\Models\IeltsQuestionGroup $group): bool
+    {
+        return $group !== null && ($group->response_mode === 'drag_drop'
+            || $group->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP);
     }
 
     private function isMatch(string $user, string $target): bool

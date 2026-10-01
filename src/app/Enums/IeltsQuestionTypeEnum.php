@@ -23,7 +23,7 @@ enum IeltsQuestionTypeEnum: string
             self::MATCHING_HEADINGS => 'Matching Headings (Nối tiêu đề)',
             self::MATCHING_INFORMATION => 'Matching Information (Nối thông tin)',
             self::FILL_IN_BLANKS => 'Fill in the Blanks / Completion (Điền từ)',
-            self::DRAG_DROP => 'Drag & Drop (Kéo thả)',
+            self::DRAG_DROP => 'Legacy Drag & Drop (dữ liệu cũ)',
             self::MAP_LABELING => 'Plan / Map / Diagram Labeling (Gán nhãn bản đồ/sơ đồ)',
             self::SHORT_ANSWER => 'Short Answer Questions (Câu hỏi ngắn)',
         };

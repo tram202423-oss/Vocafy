@@ -8,8 +8,6 @@ use App\Models\IeltsSection;
 use App\Models\IeltsSubmission;
 use App\Models\IeltsTest;
 use App\Models\IeltsUserAnswer;
-use App\Services\IeltsDragDropService;
-use App\Services\IeltsMultiSelectService;
 use App\Services\IeltsScoringService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,18 +17,10 @@ use Illuminate\Support\Str;
 class IeltsExamController extends Controller
 {
     protected IeltsScoringService $scoringService;
-    protected IeltsDragDropService $dragDropService;
-    protected IeltsMultiSelectService $multiSelectService;
 
-    public function __construct(
-        IeltsScoringService $scoringService,
-        IeltsDragDropService $dragDropService,
-        IeltsMultiSelectService $multiSelectService
-    )
+    public function __construct(IeltsScoringService $scoringService)
     {
         $this->scoringService = $scoringService;
-        $this->dragDropService = $dragDropService;
-        $this->multiSelectService = $multiSelectService;
     }
 
     /**
@@ -139,6 +129,7 @@ class IeltsExamController extends Controller
         $submission = IeltsSubmission::with([
             'test',
             'section.questionGroups.questions',
+            'section.questionGroups.answerOptions',
             'userAnswers',
             'user',
         ])->findOrFail($submissionId);
@@ -178,23 +169,6 @@ class IeltsExamController extends Controller
             return response()->json(['error' => 'Test already completed'], 400);
         }
 
-        if ($request->has('answers') && is_array($request->input('answers'))) {
-            $answers = $request->input('answers');
-            $this->dragDropService->validateAnswers($submission, $answers);
-            $this->multiSelectService->validateAnswers($submission, $answers);
-
-            foreach ($answers as $questionId => $answer) {
-                IeltsUserAnswer::where('ielts_submission_id', $submission->id)
-                    ->where('ielts_question_id', $questionId)
-                    ->update(['user_answer' => $answer]);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'question_ids' => array_keys($answers),
-            ]);
-        }
-
         $questionId = $request->input('question_id');
         $answer = $request->input('answer');
         $isFlagged = $request->input('is_flagged');
@@ -204,12 +178,43 @@ class IeltsExamController extends Controller
             ->where('ielts_question_id', $questionId)
             ->first();
 
-        if ($userAnswer && $request->has('answer')) {
-            $this->dragDropService->validateAnswers($submission, [$questionId => $answer]);
-            $this->multiSelectService->validateAnswers($submission, [$questionId => $answer]);
-        }
-
         if ($userAnswer) {
+            if ($request->has('answer') && filled($answer)) {
+                $question = $userAnswer->question()->with('questionGroup.answerOptions')->first();
+                $group = $question?->questionGroup;
+                $usesDragDrop = $group && ($group->response_mode === 'drag_drop'
+                    || $group->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP);
+
+                if ($usesDragDrop) {
+                    $allowedKeys = $group->answerOptions->pluck('option_key');
+                    if ($allowedKeys->isEmpty()) {
+                        $allowedKeys = collect(data_get($group->settings, 'drag_options', []))
+                            ->pluck('key');
+                    }
+
+                    foreach ($group->questions as $groupQuestion) {
+                        foreach ($groupQuestion->options ?? [] as $legacyOption) {
+                            if (isset($legacyOption['key'])) {
+                                $allowedKeys->push((string) $legacyOption['key']);
+                            }
+                        }
+                    }
+
+                    if ($allowedKeys->isNotEmpty() && !$allowedKeys->contains((string) $answer)) {
+                        return response()->json(['error' => 'Answer is not in this question group\'s option bank'], 422);
+                    }
+
+                    $usage = $group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat');
+                    if ($usage === 'once' && IeltsUserAnswer::where('ielts_submission_id', $submission->id)
+                        ->where('user_answer', (string) $answer)
+                        ->where('ielts_question_id', '!=', $question->id)
+                        ->whereHas('question', fn ($query) => $query->where('ielts_question_group_id', $group->id))
+                        ->exists()) {
+                        return response()->json(['error' => 'This answer option is already used in this group'], 422);
+                    }
+                }
+            }
+
             $dataToUpdate = [];
             if ($request->has('answer')) {
                 $dataToUpdate['user_answer'] = $answer;
@@ -246,9 +251,6 @@ class IeltsExamController extends Controller
 
         // Nếu có gửi kèm answers tổng trong payload submit
         if ($request->has('answers') && is_array($request->input('answers'))) {
-            $this->dragDropService->validateAnswers($submission, $request->input('answers'));
-            $this->multiSelectService->validateAnswers($submission, $request->input('answers'));
-
             foreach ($request->input('answers') as $qId => $ans) {
                 IeltsUserAnswer::where('ielts_submission_id', $submission->id)
                     ->where('ielts_question_id', $qId)

@@ -5,7 +5,9 @@
 
 <section class="not-prose" aria-label="Ngân hàng từ kéo thả"
          data-drop-answer-bank="true"
-         data-drop-group-id="{{ $group->id }}">
+         data-drop-group-id="{{ $group->id }}"
+         @dragover.prevent.stop
+         @drop.prevent.stop="if (draggedOption?.sourceQuestionId) { saveAnswer(draggedOption.sourceQuestionId, ''); draggedOption = null; dragMessage = ''; }">
     <div class="flex items-center justify-between gap-3 mb-3">
         <h3 class="text-sm font-black text-slate-800">Ngân hàng từ</h3>
         <span class="text-[11px] text-slate-500">
@@ -15,8 +17,10 @@
 
     <div class="flex flex-wrap gap-2">
         @foreach($dragBank as $dragOption)
-            <button type="button" draggable="false"
+            <button type="button" draggable="true"
                     @pointerdown.stop="startDragPointer(@js((string) $dragOption['key']), @js((string) $dragOption['text']), null, @js($dragQuestionIds), @js($dragOptionUsage), {{ $group->id }}, $event)"
+                    @dragstart.stop="if (@js($dragOptionUsage) === 'once' && isDragOptionUsed(@js((string) $dragOption['key']), @js($dragQuestionIds))) { $event.preventDefault(); } else { draggedOption = { key: @js((string) $dragOption['key']), text: @js((string) $dragOption['text']), sourceQuestionId: null, groupId: '{{ $group->id }}' }; $event.dataTransfer?.setData('text/plain', @js((string) $dragOption['key'])); if ($event.dataTransfer) $event.dataTransfer.effectAllowed = 'move'; dragMessage = ''; }"
+                    @dragend="draggedOption = null"
                     @click.stop="selectDragOption(@js((string) $dragOption['key']), @js((string) $dragOption['text']), @js($dragQuestionIds), @js($dragOptionUsage), {{ $group->id }})"
                     :class="[
                         draggedOption?.key === @js((string) $dragOption['key']) ? 'border-blue-500 bg-blue-50 text-blue-800 ring-2 ring-blue-100' : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50',
@@ -30,7 +34,7 @@
     </div>
 
     <p x-show="draggedOption" x-cloak class="mt-3 text-[11px] text-blue-700">
-        <span x-text="dragPointer?.moved ? 'Thả đáp án vào ô được đánh dấu.' : `Đã chọn: ${draggedOption?.text || ''} — kéo thả hoặc bấm vào ô để đặt đáp án`"></span>
+        <span x-text="`Đã chọn: ${draggedOption?.text || ''} — bấm vào ô trống để đặt đáp án`"></span>
     </p>
     <p x-show="dragMessage" x-cloak x-text="dragMessage" class="mt-3 text-xs font-semibold text-amber-700"></p>
 </section>

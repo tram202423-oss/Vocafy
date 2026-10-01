@@ -10,10 +10,31 @@ class EditIeltsTest extends EditRecord
 {
     protected static string $resource = IeltsTestResource::class;
 
+    protected static ?string $title = 'Chỉnh sửa bộ đề thi';
+
+    protected ?bool $hasDatabaseTransactions = true;
+
+    protected function afterSave(): void
+    {
+        \App\Services\IeltsAuthoringService::syncTestSections($this->record);
+    }
+
+    protected function getSaveFormAction(): Actions\Action
+    {
+        return parent::getSaveFormAction()->label('Lưu thay đổi');
+    }
+
+    protected function getCancelFormAction(): Actions\Action
+    {
+        return parent::getCancelFormAction()->label('Hủy');
+    }
+
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\Action::make('preview')->label('Xem bộ đề')->icon('heroicon-o-eye')
+                ->url(fn (): string => route('ielts.tests.show', $this->record->slug))->openUrlInNewTab(),
+            Actions\DeleteAction::make()->label('Xóa bộ đề'),
         ];
     }
 }

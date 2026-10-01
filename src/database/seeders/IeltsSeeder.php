@@ -19,7 +19,6 @@ class IeltsSeeder extends Seeder
     {
         $this->seedBandScores();
         $this->seedSampleTests();
-        $this->call(IeltsReadingImportSeeder::class);
     }
 
     private function seedBandScores(): void
@@ -1016,7 +1015,7 @@ TEXT,
             [
                 'title' => 'IELTS Drag & Drop Demo',
                 'type' => IeltsTestTypeEnum::ACADEMIC,
-                'description' => 'Bộ đề riêng gồm một bài ghi chú với 10 ô trống và ngân hàng từ kéo thả dùng chung.',
+                'description' => 'Bộ đề riêng gồm bài đọc nguồn, phần ghi chú 10 ô trống và ngân hàng từ kéo thả dùng chung.',
                 'duration_minutes' => 10,
                 'is_published' => true,
                 'total_questions' => 10,
@@ -1030,7 +1029,7 @@ TEXT,
                 'test_type' => IeltsTestTypeEnum::ACADEMIC,
                 'time_limit_minutes' => 10,
                 'total_questions' => 10,
-                'description' => 'Bài ghi chú Theatre booking có 10 ô trống và một ngân hàng từ dùng chung.',
+                'description' => 'Bài đọc Theatre booking kèm phần ghi chú 10 ô trống và ngân hàng từ dùng chung.',
                 'is_active' => true,
             ]
         );
@@ -1045,28 +1044,31 @@ TEXT,
             ['ielts_section_id' => $dragDropSection->id, 'order' => 1],
             [
                 'title' => 'Drag & Drop: Theatre Booking Notes',
-                'question_type' => IeltsQuestionTypeEnum::DRAG_DROP,
+                'question_type' => IeltsQuestionTypeEnum::FILL_IN_BLANKS,
+                'response_mode' => 'drag_drop',
+                'option_usage' => 'once',
                 'instruction' => 'Questions 1–10: Complete the notes below. Drag one answer from the word bank into each numbered gap. You may also click a word, then click a gap.',
-                'settings' => [
-                    'drag_option_usage' => 'once',
-                    'drag_options' => [
-                        ['key' => 'Parkes', 'text' => 'Parkes'],
-                        ['key' => 'family', 'text' => 'family'],
-                        ['key' => '25', 'text' => '25'],
-                        ['key' => '12', 'text' => '12'],
-                        ['key' => 'front', 'text' => 'front'],
-                        ['key' => 'wheelchair', 'text' => 'wheelchair'],
-                        ['key' => 'lift', 'text' => 'lift'],
-                        ['key' => 'box office', 'text' => 'box office'],
-                        ['key' => 'vegetarian', 'text' => 'vegetarian'],
-                        ['key' => 'pizza', 'text' => 'pizza'],
-                        ['key' => 'balcony', 'text' => 'balcony'],
-                        ['key' => 'cash', 'text' => 'cash'],
-                    ],
-                ],
-                'passage_content' => '<h3>Theatre booking</h3><p><strong>Example:</strong> Booking for Pirates<br><strong>Date:</strong> 8th December (afternoon)<br><strong>Name:</strong> Fenella [blank_1]<br><strong>Contact number:</strong> 07796892326</p><p><strong>Booking details:</strong></p><ul><li>Type of booking: [blank_2] with discount</li><li>Tickets: 3 adults at [blank_3] pounds each</li><li>Children under 16 at [blank_4] pounds each</li><li>Requires seats on the [blank_5] row of the circle</li><li>One person uses a [blank_6]</li><li>Need good access to the [blank_7]</li><li>Will collect the tickets from the [blank_8]</li></ul><p><strong>Meals:</strong></p><ul><li>Several people are [blank_9]</li><li>Food: [blank_10] (cheese and tomato)</li></ul>',
+                'settings' => [],
+                'passage_content' => '<h2>Planning an accessible theatre visit</h2><p>Fenella Parkes is organising an afternoon visit to the Riverside Theatre on 8 December. Her group has chosen a performance of <em>Pirates</em>. The theatre offers a family booking discount, which applies to their party of three adults and two children. Standard adult tickets cost 25 pounds each, while tickets for children under 16 are 12 pounds.</p><p>When she made the reservation, Fenella requested seats in the front row of the circle so everyone could see the stage clearly. One member of the group uses a wheelchair, so step-free access is essential. The circle can be reached by lift, and the booking staff advised the group to request seats close to it. Their tickets will be held at the box office for collection before the performance.</p><p>The group also discussed food for the journey home. Several people are vegetarian, and they plan to bring pizza topped with cheese and tomato. The theatre has a café, but outside food may only be eaten in the designated picnic area. Visitors are advised to arrive at least thirty minutes before the show, particularly when collecting tickets or arranging accessible seating.</p>',
+                'question_content' => '<h3>Theatre booking</h3><p><strong>Example:</strong> Booking for Pirates<br><strong>Date:</strong> 8th December (afternoon)<br><strong>Name:</strong> Fenella [blank_1]<br><strong>Contact number:</strong> 07796892326</p><p><strong>Booking details:</strong></p><ul><li>Type of booking: [blank_2] with discount</li><li>Tickets: 3 adults at [blank_3] pounds each</li><li>Children under 16 at [blank_4] pounds each</li><li>Requires seats on the [blank_5] row of the circle</li><li>One person uses a [blank_6]</li><li>Need good access to the [blank_7]</li><li>Will collect the tickets from the [blank_8]</li></ul><p><strong>Meals:</strong></p><ul><li>Several people are [blank_9]</li><li>Food: [blank_10] (cheese and tomato)</li></ul>',
             ]
         );
+
+        $dragDropGroup->answerOptions()->delete();
+        $dragDropGroup->answerOptions()->createMany([
+            ['option_key' => 'Parkes', 'label' => 'Parkes', 'order' => 1],
+            ['option_key' => 'family', 'label' => 'family', 'order' => 2],
+            ['option_key' => '25', 'label' => '25', 'order' => 3],
+            ['option_key' => '12', 'label' => '12', 'order' => 4],
+            ['option_key' => 'front', 'label' => 'front', 'order' => 5],
+            ['option_key' => 'wheelchair', 'label' => 'wheelchair', 'order' => 6],
+            ['option_key' => 'lift', 'label' => 'lift', 'order' => 7],
+            ['option_key' => 'box office', 'label' => 'box office', 'order' => 8],
+            ['option_key' => 'vegetarian', 'label' => 'vegetarian', 'order' => 9],
+            ['option_key' => 'pizza', 'label' => 'pizza', 'order' => 10],
+            ['option_key' => 'balcony', 'label' => 'balcony', 'order' => 11],
+            ['option_key' => 'cash', 'label' => 'cash', 'order' => 12],
+        ]);
 
         $dragDropQuestions = [
             [1, 'The customer surname is missing from the booking notes.', 'Parkes'],
