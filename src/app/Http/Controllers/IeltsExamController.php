@@ -9,9 +9,11 @@ use App\Models\IeltsSubmission;
 use App\Models\IeltsTest;
 use App\Models\IeltsUserAnswer;
 use App\Services\IeltsScoringService;
+use App\Services\IeltsMultiSelectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class IeltsExamController extends Controller
@@ -146,7 +148,12 @@ class IeltsExamController extends Controller
 
         // Nếu đã quá thời gian làm bài, tự động thu bài và chuyển sang trang kết quả
         if ($elapsedSeconds >= $totalSeconds) {
-            $submission = $this->scoringService->scoreSubmission($submission);
+            $submission = DB::transaction(function () use ($submissionId) {
+                $locked = IeltsSubmission::lockForUpdate()->findOrFail($submissionId);
+                return $locked->status === IeltsSubmissionStatusEnum::COMPLETED
+                    ? $locked
+                    : $this->scoringService->scoreSubmission($locked);
+            });
             return redirect()->route('ielts.exam.result', $submission->id);
         }
 
@@ -163,83 +170,110 @@ class IeltsExamController extends Controller
      */
     public function saveAnswer(Request $request, string $submissionId): JsonResponse
     {
-        $submission = IeltsSubmission::findOrFail($submissionId);
+        return DB::transaction(function () use ($request, $submissionId): JsonResponse {
+            $submission = IeltsSubmission::lockForUpdate()->findOrFail($submissionId);
 
-        if ($submission->status === IeltsSubmissionStatusEnum::COMPLETED) {
-            return response()->json(['error' => 'Test already completed'], 400);
-        }
+            if ($submission->status === IeltsSubmissionStatusEnum::COMPLETED) {
+                return response()->json(['error' => 'Test already completed'], 400);
+            }
 
-        $questionId = $request->input('question_id');
-        $answer = $request->input('answer');
-        $isFlagged = $request->input('is_flagged');
-        $notes = $request->input('notes');
+            if ($request->has('multi_group_id')) {
+                $request->validate([
+                    'multi_group_id' => ['required', 'integer'],
+                    'selected' => ['present', 'array'],
+                    'selected.*' => ['required', 'string'],
+                ]);
+                $group = $submission->section->questionGroups()->with('questions')->findOrFail($request->input('multi_group_id'));
+                abort_unless(IeltsMultiSelectService::enabled($group), 422, 'Nhóm này không hỗ trợ chọn nhiều đáp án.');
+                $selected = array_values($request->input('selected'));
+                abort_if(count($selected) > $group->questions->count(), 422, 'Bạn đã chọn quá số đáp án cho phép.');
+                $overrides = [];
+                foreach ($group->questions->values() as $index => $question) {
+                    $overrides[$question->id] = $selected[$index] ?? null;
+                }
+                app(IeltsMultiSelectService::class)->validateAnswers($submission, $overrides);
+                foreach ($overrides as $questionId => $value) {
+                    $submission->userAnswers()->where('ielts_question_id', $questionId)->update(['user_answer' => $value]);
+                }
+                return response()->json(['status' => 'success', 'answers' => $overrides]);
+            }
 
-        $userAnswer = IeltsUserAnswer::where('ielts_submission_id', $submission->id)
-            ->where('ielts_question_id', $questionId)
-            ->first();
+            $request->validate(['answer' => ['nullable', 'string']]);
+            $questionId = $request->input('question_id');
+            $answer = $request->input('answer');
+            $isFlagged = $request->input('is_flagged');
+            $notes = $request->input('notes');
 
-        if ($userAnswer) {
-            if ($request->has('answer') && filled($answer)) {
-                $question = $userAnswer->question()->with('questionGroup.answerOptions')->first();
-                $group = $question?->questionGroup;
-                $usesDragDrop = $group && ($group->response_mode === 'drag_drop'
-                    || $group->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP);
+            $userAnswer = IeltsUserAnswer::where('ielts_submission_id', $submission->id)
+                ->where('ielts_question_id', $questionId)
+                ->first();
 
-                if ($usesDragDrop) {
-                    $allowedKeys = $group->answerOptions->pluck('option_key');
-                    if ($allowedKeys->isEmpty()) {
-                        $allowedKeys = collect(data_get($group->settings, 'drag_options', []))
-                            ->pluck('key');
-                    }
+            if ($userAnswer) {
+                if ($request->has('answer') && IeltsMultiSelectService::enabled($userAnswer->question?->questionGroup)) {
+                    app(IeltsMultiSelectService::class)->validateAnswers($submission, [$questionId => $answer]);
+                }
+                if ($request->has('answer') && filled($answer)) {
+                    $question = $userAnswer->question()->with('questionGroup.answerOptions')->first();
+                    $group = $question?->questionGroup;
+                    $usesDragDrop = $group && ($group->response_mode === 'drag_drop'
+                        || $group->question_type === \App\Enums\IeltsQuestionTypeEnum::DRAG_DROP);
 
-                    foreach ($group->questions as $groupQuestion) {
-                        foreach ($groupQuestion->options ?? [] as $legacyOption) {
-                            if (isset($legacyOption['key'])) {
-                                $allowedKeys->push((string) $legacyOption['key']);
+                    if ($usesDragDrop) {
+                        $allowedKeys = $group->answerOptions->pluck('option_key');
+                        if ($allowedKeys->isEmpty()) {
+                            $allowedKeys = collect(data_get($group->settings, 'drag_options', []))
+                                ->pluck('key');
+                        }
+
+                        foreach ($group->questions as $groupQuestion) {
+                            foreach ($groupQuestion->options ?? [] as $legacyOption) {
+                                if (isset($legacyOption['key'])) {
+                                    $allowedKeys->push((string) $legacyOption['key']);
+                                }
                             }
                         }
-                    }
 
-                    if ($allowedKeys->isNotEmpty() && !$allowedKeys->contains((string) $answer)) {
-                        return response()->json(['error' => 'Answer is not in this question group\'s option bank'], 422);
-                    }
+                        if ($allowedKeys->isNotEmpty() && !$allowedKeys->contains((string) $answer)) {
+                            return response()->json(['error' => 'Answer is not in this question group\'s option bank'], 422);
+                        }
 
-                    $usage = $group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat');
-                    if ($usage === 'once' && IeltsUserAnswer::where('ielts_submission_id', $submission->id)
-                        ->where('user_answer', (string) $answer)
-                        ->where('ielts_question_id', '!=', $question->id)
-                        ->whereHas('question', fn ($query) => $query->where('ielts_question_group_id', $group->id))
-                        ->exists()) {
-                        return response()->json(['error' => 'This answer option is already used in this group'], 422);
+                        $usage = $group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat');
+                        if ($usage === 'once' && IeltsUserAnswer::where('ielts_submission_id', $submission->id)
+                            ->where('user_answer', (string) $answer)
+                            ->where('ielts_question_id', '!=', $question->id)
+                            ->whereHas('question', fn ($query) => $query->where('ielts_question_group_id', $group->id))
+                            ->exists()) {
+                            return response()->json(['error' => 'This answer option is already used in this group'], 422);
+                        }
                     }
                 }
+
+                $dataToUpdate = [];
+                if ($request->has('answer')) {
+                    $dataToUpdate['user_answer'] = $answer;
+                }
+                if ($request->has('is_flagged')) {
+                    $dataToUpdate['is_flagged_for_review'] = (bool) $isFlagged;
+                }
+                if ($request->has('notes')) {
+                    $dataToUpdate['notes'] = $notes;
+                }
+
+                $userAnswer->update($dataToUpdate);
             }
 
-            $dataToUpdate = [];
-            if ($request->has('answer')) {
-                $dataToUpdate['user_answer'] = $answer;
-            }
-            if ($request->has('is_flagged')) {
-                $dataToUpdate['is_flagged_for_review'] = (bool) $isFlagged;
-            }
-            if ($request->has('notes')) {
-                $dataToUpdate['notes'] = $notes;
+            // Cập nhật log tab switch nếu có
+            if ($request->has('tab_switched')) {
+                $meta = $submission->metadata ?? [];
+                $meta['tab_switch_count'] = ($meta['tab_switch_count'] ?? 0) + 1;
+                $submission->update(['metadata' => $meta]);
             }
 
-            $userAnswer->update($dataToUpdate);
-        }
-
-        // Cập nhật log tab switch nếu có
-        if ($request->has('tab_switched')) {
-            $meta = $submission->metadata ?? [];
-            $meta['tab_switch_count'] = ($meta['tab_switch_count'] ?? 0) + 1;
-            $submission->update(['metadata' => $meta]);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'question_id' => $questionId,
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'question_id' => $questionId,
+            ]);
+        });
     }
 
     /**
@@ -247,19 +281,26 @@ class IeltsExamController extends Controller
      */
     public function submit(Request $request, string $submissionId)
     {
-        $submission = IeltsSubmission::findOrFail($submissionId);
-
-        // Nếu có gửi kèm answers tổng trong payload submit
-        if ($request->has('answers') && is_array($request->input('answers'))) {
-            foreach ($request->input('answers') as $qId => $ans) {
-                IeltsUserAnswer::where('ielts_submission_id', $submission->id)
-                    ->where('ielts_question_id', $qId)
-                    ->update(['user_answer' => $ans]);
+        $request->validate(['answers' => ['sometimes', 'array'], 'answers.*' => ['nullable', 'string']]);
+        $submission = DB::transaction(function () use ($request, $submissionId) {
+            $submission = IeltsSubmission::lockForUpdate()->findOrFail($submissionId);
+            if ($submission->status === IeltsSubmissionStatusEnum::COMPLETED) {
+                return $submission;
             }
-        }
+            app(IeltsMultiSelectService::class)->validateAnswers($submission, $request->input('answers', []));
 
-        // Chấm điểm tự động và tính band score
-        $submission = $this->scoringService->scoreSubmission($submission);
+            // Nếu có gửi kèm answers tổng trong payload submit
+            if ($request->has('answers') && is_array($request->input('answers'))) {
+                foreach ($request->input('answers') as $qId => $ans) {
+                    IeltsUserAnswer::where('ielts_submission_id', $submission->id)
+                        ->where('ielts_question_id', $qId)
+                        ->update(['user_answer' => $ans]);
+                }
+            }
+
+            // Chấm điểm tự động và tính band score
+            return $this->scoringService->scoreSubmission($submission);
+        });
 
         if ($request->wantsJson()) {
             return response()->json([

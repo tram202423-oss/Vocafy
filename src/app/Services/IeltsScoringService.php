@@ -29,8 +29,9 @@ class IeltsScoringService
 
         // Chấm điểm cho Reading và Listening
         $rawScore = 0;
-        $userAnswers = $submission->userAnswers()->with('question.questionGroup')->get();
+        $userAnswers = $submission->userAnswers()->with('question.questionGroup.questions')->get();
         $oneUseAnswerCounts = [];
+        $multiUsedKeys = [];
 
         foreach ($userAnswers as $userAnswer) {
             $question = $userAnswer->question;
@@ -53,6 +54,14 @@ class IeltsScoringService
 
             $isCorrect = $this->checkAnswer($userAnswer->user_answer, $question->correct_answer);
             $group = $question->questionGroup;
+            $multi = IeltsMultiSelectService::enabled($group);
+            if ($multi) {
+                $key = IeltsMultiSelectService::normalize($userAnswer->user_answer);
+                $isCorrect = $key !== ''
+                    && in_array($key, IeltsMultiSelectService::correctKeys($group), true)
+                    && ! isset($multiUsedKeys[$group->id][$key]);
+                $multiUsedKeys[$group->id][$key] = true;
+            }
             if ($this->usesDragDrop($group)
                 && ($group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat')) === 'once') {
                 $normalizedKey = mb_strtolower(trim((string) $userAnswer->user_answer), 'UTF-8');
@@ -66,7 +75,7 @@ class IeltsScoringService
             ]);
 
             if ($isCorrect) {
-                $rawScore += $question->points ?? 1;
+                $rawScore += $multi ? 1 : ($question->points ?? 1);
             }
         }
 

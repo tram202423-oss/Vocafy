@@ -1,0 +1,598 @@
+{
+  "schema_version": 1,
+  "slug": "academic-reading-tea-transport-innovation",
+  "title": "Academic Reading — Tea, European Transport & Innovation",
+  "duration_minutes": 60,
+  "total_questions": 40,
+  "source_notes": [
+    "Imported from the three texts and answer keys supplied by the user on 2026-10-01. Passage text is preserved as supplied.",
+    "Removed the duplicated heading-iv text appended to heading iii in Passage 1; heading iii reads: The development of cities in Japan.",
+    "Removed website-specific reading-answer instructions; meaning and answer keys are preserved.",
+    "Paragraph F of Passage 2 is an example with answer vii, not an additional scored question.",
+    "Matching Sentence Endings uses matching_information + drag_drop with source_question_type=matching_sentence_endings."
+  ],
+  "passages": [
+    {
+      "title": "Tea and the Industrial Revolution",
+      "introduction": "A Cambridge professor says that a change in drinking habits was the reason for the Industrial Revolution in Britain. Anjana Abuja reports",
+      "paragraphs": [
+        {
+          "label": "A",
+          "text": "Alan Macfarlane, professor of anthropological science at King’s College, Cambridge has, like other historians, spent decades wrestling with the enigma of the Industrial Revolution. Why did this particular Big Bang – the world-changing birth of industry-happen in Britain? And why did it strike at the end of the 18th century?"
+        },
+        {
+          "label": "B",
+          "text": "Macfarlane compares the puzzle to a combination lock. ‘There are about 20 different factors and all of them need to be present before the revolution can happen,’ he says. For industry to take off, there needs to be the technology and power to drive factories, large urban populations to provide cheap labour, easy transport to move goods around, an affluent middle-class willing to buy mass-produced objects, a market-driven economy and a political system that allows this to happen. While this was the case for England, other nations, such as Japan, the Netherlands and France also met some of these criteria but were not industrialising. All these factors must have been necessary. But not sufficient to cause the revolution, says Macfarlane. ‘After all, Holland had everything except coal while China also had many of these factors. Most historians are convinced there are one or two missing factors that you need to open the lock.’"
+        },
+        {
+          "label": "C",
+          "text": "The missing factors, he proposes, are to be found in almost even kitchen cupboard. Tea and beer, two of the nation’s favourite drinks, fuelled the revolution. The antiseptic properties of tannin, the active ingredient in tea, and of hops in beer – plus the fact that both are made with boiled water – allowed urban communities to flourish at close quarters without succumbing to water-borne diseases such as dysentery. The theory sounds eccentric but once he starts to explain the detective work that went into his deduction, the scepticism gives way to wary admiration. Macfarlanes case has been strengthened by support from notable quarters – Roy Porter, the distinguished medical historian, recently wrote a favourable appraisal of his research."
+        },
+        {
+          "label": "D",
+          "text": "Macfarlane had wondered for a long time how the Industrial Revolution came about. Historians had alighted on one interesting factor around the mid-18th century that required explanation. Between about 1650 and 1740, the population in Britain was static. But then there was a burst in population growth. Macfarlane says: ‘The infant mortality rate halved in the space of 20 years, and this happened in both rural areas and cities, and across all classes. People suggested four possible causes. Was there a sudden change in the viruses and bacteria around? Unlikely. Was there a revolution in medical science? But this was a century before Lister’s revolution*. Was there a change in environmental conditions? There were improvements in agriculture that wiped out malaria, but these were small gains. Sanitation did not become widespread until the 19th century. The only option left is food. But the height and weight statistics show a decline. So the food must have got worse. Efforts to explain this sudden reduction in child deaths appeared to draw a blank.’"
+        },
+        {
+          "label": "E",
+          "text": "This population burst seemed to happen at just the right time to provide labour for the Industrial Revolution. ‘When you start moving towards an industrial revolution, it is economically efficient to have people living close together,’ says Macfarlane. ‘But then you get disease, particularly from human waste.’ Some digging around in historical records revealed that there was a change in the incidence of water-borne disease at that time, especially dysentery. Macfarlane deduced that whatever the British were drinking must have been important in regulating disease. He says, ‘We drank beer. For a long time, the English were protected by the strong antibacterial agent in hops, which were added to help preserve the beer. But in the late 17th century a tax was introduced on malt, the basic ingredient of beer. The poor turned to water and gin and in the 1720s the mortality rate began to rise again. Then it suddenly dropped again. What caused this?’"
+        },
+        {
+          "label": "F",
+          "text": "Macfarlane looked to Japan, which was also developing large cities about the same time, and also had no sanitation. Water-borne diseases had a much looser grip on the Japanese population than those in Britain. Could it be the prevalence of tea in their culture? Macfarlane then noted that the history of tea in Britain provided an extraordinary coincidence of dates. Tea was relatively expensive until Britain started a direct clipper trade with China in the early 18th century. By the 1740s, about the time that infant mortality was dipping, the drink was common. Macfarlane guessed that the fact that water had to be boiled, together with the stomach-purifying properties of tea meant that the breast milk provided by mothers was healthier than it had ever been. No other European nation sipped tea like the British, which, by Macfarlanes logic, pushed these other countries out of contention for the revolution."
+        },
+        {
+          "label": "G",
+          "text": "But, if tea is a factor in the combination lock, why didn’t Japan forge ahead in a tea-soaked industrial revolution of its own? Macfarlane notes that even though 17th-century Japan had large cities, high literacy rates, even a futures market, it had turned its back on the essence of any work-based revolution by giving up labour-saving devices such as animals, afraid that they would put people out of work. So, the nation that we now think of as one of the most technologically advanced entered the 19th century having ‘abandoned the wheel’."
+        }
+      ],
+      "groups": [
+        {
+          "title": "Questions 1–7 — Matching Headings",
+          "question_type": "matching_headings",
+          "response_mode": "drag_drop",
+          "option_usage": "once",
+          "instruction": "Reading Passage 1 has seven paragraphs, A–G. Choose the correct heading for each paragraph from the list of headings. Write the correct number, i–ix, in boxes 1–7.",
+          "questions": [
+            {
+              "number": 1,
+              "prompt": "Paragraph A",
+              "answer": "iv"
+            },
+            {
+              "number": 2,
+              "prompt": "Paragraph B",
+              "answer": "viii"
+            },
+            {
+              "number": 3,
+              "prompt": "Paragraph C",
+              "answer": "vii"
+            },
+            {
+              "number": 4,
+              "prompt": "Paragraph D",
+              "answer": "i"
+            },
+            {
+              "number": 5,
+              "prompt": "Paragraph E",
+              "answer": "vi"
+            },
+            {
+              "number": 6,
+              "prompt": "Paragraph F",
+              "answer": "ix"
+            },
+            {
+              "number": 7,
+              "prompt": "Paragraph G",
+              "answer": "ii"
+            }
+          ],
+          "answer_options": [
+            {
+              "key": "i",
+              "text": "The search for the reasons for an increase in population"
+            },
+            {
+              "key": "ii",
+              "text": "Industrialisation and the fear of unemployment"
+            },
+            {
+              "key": "iii",
+              "text": "The development of cities in Japan"
+            },
+            {
+              "key": "iv",
+              "text": "The time and place of the Industrial Revolution"
+            },
+            {
+              "key": "v",
+              "text": "The cases of Holland, France and China"
+            },
+            {
+              "key": "vi",
+              "text": "Changes in drinking habits in Britain"
+            },
+            {
+              "key": "vii",
+              "text": "Two keys to Britain’s industrial revolution"
+            },
+            {
+              "key": "viii",
+              "text": "Conditions required for industrialisation"
+            },
+            {
+              "key": "ix",
+              "text": "Comparisons with Japan lead to the answer"
+            }
+          ]
+        },
+        {
+          "title": "Questions 8–13 — True / False / Not Given",
+          "question_type": "true_false_not_given",
+          "response_mode": "standard",
+          "option_usage": "repeat",
+          "instruction": "Do the following statements agree with the information given in Reading Passage 1? Choose TRUE if the statement agrees with the information, FALSE if it contradicts the information, or NOT GIVEN if there is no information on this.",
+          "questions": [
+            {
+              "number": 8,
+              "prompt": "China’s transport system was not suitable for industry in the 18th century.",
+              "answer": "NOT GIVEN"
+            },
+            {
+              "number": 9,
+              "prompt": "Tea and beer both helped to prevent dysentery in Britain.",
+              "answer": "TRUE"
+            },
+            {
+              "number": 10,
+              "prompt": "Roy Porter disagrees with Professor Macfarlane’s findings.",
+              "answer": "FALSE"
+            },
+            {
+              "number": 11,
+              "prompt": "After 1740，there was a reduction in population in Britain.",
+              "answer": "FALSE"
+            },
+            {
+              "number": 12,
+              "prompt": "People in Britain used to make beer at home.",
+              "answer": "NOT GIVEN"
+            },
+            {
+              "number": 13,
+              "prompt": "The tax on malt indirectly caused a rise in the death rate.",
+              "answer": "TRUE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "EUROPEAN TRANSPORT SYSTEMS 1990-2010",
+      "introduction": "What have been the trends and what are the prospects for European transport systems?",
+      "paragraphs": [
+        {
+          "label": "A",
+          "text": "It is difficult to conceive of vigorous economic growth without an efficient transport system. Although modern information technologies can reduce the demand for physical transport by facilitating teleworking and teleservices, the requirement for transport continues to increase. There are two key factors behind this trend. For passenger transport, the determining factor is the spectacular growth in car use. The number of cars on European Union (EU) roads saw an increase of three million cars each year from 1990 to 2010, and in the next decade the EU will see a further substantial increase in its fleet."
+        },
+        {
+          "label": "B",
+          "text": "As far as goods transport is concerned, growth is due to a large extent to changes in the European economy and its system of production. In the last 20 years, as internal frontiers have been abolished, the EU has moved from a ‘stock’ economy to a ‘flow’ economy. This phenomenon has been emphasised by the relocation of some industries, particularly those which are labour intensive, to reduce production costs, even though the production site is hundreds or even thousands of kilometres away from the final assembly plant or away from users."
+        },
+        {
+          "label": "C",
+          "text": "The strong economic growth expected in countries which are candidates for entry to the EU will also increase transport flows, in particular road haulage traffic. In 1998, some of these countries already exported more than twice their 1990 volumes and imported more than five times their 1990 volumes. And although many candidate countries inherited a transport system which encourages rail, the distribution between modes has tipped sharply in favour of road transport since the 1990s. Between 1990 and 1998, road haulage increased by 19.4%, while during the same period rail haulage decreased by 43.5%, although – and this could benefit the enlarged EU – it is still on average at a much higher level than in existing member states."
+        },
+        {
+          "label": "D",
+          "text": "However, a new imperative-sustainable development – offers an opportunity for adapting the EU’s common transport policy. This objective, agreed by the Gothenburg European Council, has to be achieved by integrating environmental considerations into Community policies, and shifting the balance between modes of transport lies at the heart of its strategy. The ambitious objective can only be fully achieved by 2020, but proposed measures are nonetheless a first essential step towards a sustainable transport system which will ideally be in place in 30 years‟ time, that is by 2040."
+        },
+        {
+          "label": "E",
+          "text": "In 1998, energy consumption in the transport sector was to blame for 28% of emissions of CO2, the leading greenhouse gas. According to the latest estimates, if nothing is done to reverse the traffic growth trend, CO2 emissions from transport can be expected to increase by around 50% to 1,113 billion tonnes by 2020，compared with the 739 billion tonnes recorded in 1990. Once again, road transport is the main culprit since it alone accounts for 84% of the CO2 emissions attributable to transport. Using alternative fuels and improving energy efficiency is thus both an ecological necessity and a technological challenge."
+        },
+        {
+          "label": "F",
+          "text": "At the same time greater efforts must be made to achieve a modal shift. Such a change cannot be achieved overnight, all the less so after over half a century of constant deterioration in favour of road. This has reached such a pitch that today rail freight services are facing marginalisation, with just 8% of market share, and with international goods trains struggling along at an average speed of 18km/h. Three possible options have emerged."
+        },
+        {
+          "label": "G",
+          "text": "The first approach would consist of focusing on road transport solely through pricing. This option would not be accompanied by complementary measures in the other modes of transport. In the short term it might curb the growth in road transport through the better loading ratio of goods vehicles and occupancy rates of passenger vehicles expected as a result of the increase in the price of transport. However, the lack of measures available to revitalise other modes of transport would make it impossible for more sustainable modes of transport to take up the baton."
+        },
+        {
+          "label": "H",
+          "text": "The second approach also concentrates on road transport pricing but is accompanied by measures to increase the efficiency of the other modes (better quality of services, logistics, technology). However, this approach does not include investment in new infrastructure, nor does it guarantee better regional cohesion. It could help to achieve greater uncoupling than the first approach, but road transport would keep the lion’s share of the market and continue to concentrate on saturated arteries, despite being the most polluting of the modes. It is therefore not enough to guarantee the necessary shift of the balance."
+        },
+        {
+          "label": "I",
+          "text": "The third approach, which is not new, comprises a series of measures ranging from pricing to revitalising alternative modes of transport and targeting investment in the trans-European network. This integrated approach would allow the market shares of the other modes to return to their 1998 levels and thus make a shift of balance. It is far more ambitious than it looks, bearing in mind the historical imbalance in favour of roads for the last fifty years, but would achieve a marked break in the link between road transport growth and economic growth, without placing restrictions on the mobility of people and goods."
+        }
+      ],
+      "groups": [
+        {
+          "title": "Questions 14–21 — Matching Headings",
+          "question_type": "matching_headings",
+          "response_mode": "drag_drop",
+          "option_usage": "once",
+          "instruction": "Reading Passage 2 has nine paragraphs, A–I. Choose the correct heading for paragraphs A–E and G–I from the list of headings. Write the correct number, i–xi, in boxes 14–21. Example: Paragraph F — vii (The need to achieve transport rebalance).",
+          "questions": [
+            {
+              "number": 14,
+              "prompt": "Paragraph A",
+              "answer": "viii"
+            },
+            {
+              "number": 15,
+              "prompt": "Paragraph B",
+              "answer": "iii"
+            },
+            {
+              "number": 16,
+              "prompt": "Paragraph C",
+              "answer": "xi"
+            },
+            {
+              "number": 17,
+              "prompt": "Paragraph D",
+              "answer": "i"
+            },
+            {
+              "number": 18,
+              "prompt": "Paragraph E",
+              "answer": "v"
+            },
+            {
+              "number": 19,
+              "prompt": "Paragraph G",
+              "answer": "x"
+            },
+            {
+              "number": 20,
+              "prompt": "Paragraph H",
+              "answer": "ii"
+            },
+            {
+              "number": 21,
+              "prompt": "Paragraph I",
+              "answer": "iv"
+            }
+          ],
+          "answer_options": [
+            {
+              "key": "i",
+              "text": "A fresh and important long-term goal"
+            },
+            {
+              "key": "ii",
+              "text": "Charging for roads and improving other transport methods"
+            },
+            {
+              "key": "iii",
+              "text": "Changes affecting the distances goods may be transported"
+            },
+            {
+              "key": "iv",
+              "text": "Taking all the steps necessary to change transport patterns"
+            },
+            {
+              "key": "v",
+              "text": "The environmental costs of road transport"
+            },
+            {
+              "key": "vi",
+              "text": "The escalating cost of rail transport"
+            },
+            {
+              "key": "vii",
+              "text": "The need to achieve transport rebalance"
+            },
+            {
+              "key": "viii",
+              "text": "The rapid growth of private transport"
+            },
+            {
+              "key": "ix",
+              "text": "Plans to develop major road networks"
+            },
+            {
+              "key": "x",
+              "text": "Restricting road use through charging policies alone"
+            },
+            {
+              "key": "xi",
+              "text": "Transport trends in countries awaiting EU admission"
+            }
+          ]
+        },
+        {
+          "title": "Questions 22–26 — True / False / Not Given",
+          "question_type": "true_false_not_given",
+          "response_mode": "standard",
+          "option_usage": "repeat",
+          "instruction": "Do the following statements agree with the information given in Reading Passage 2? Choose TRUE if the statement agrees with the information, FALSE if it contradicts the information, or NOT GIVEN if there is no information on this.",
+          "questions": [
+            {
+              "number": 22,
+              "prompt": "The need for transport is growing, despite technological developments.",
+              "answer": "TRUE"
+            },
+            {
+              "number": 23,
+              "prompt": "To reduce production costs, some industries have been moved closer to their relevant consumers.",
+              "answer": "FALSE"
+            },
+            {
+              "number": 24,
+              "prompt": "Cars are prohibitively expensive in some EU candidate countries.",
+              "answer": "NOT GIVEN"
+            },
+            {
+              "number": 25,
+              "prompt": "The Gothenburg European Council was set up 30 years ago.",
+              "answer": "NOT GIVEN"
+            },
+            {
+              "number": 26,
+              "prompt": "By the end of this decade, CO2 emissions from transport are predicted to reach 739 billion tonnes.",
+              "answer": "FALSE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "The psychology of innovation",
+      "introduction": "Why are so few companies truly innovative?",
+      "paragraphs": [
+        {
+          "label": null,
+          "text": "Innovation is key to business survival, and companies put substantial resources into inspiring employees to develop new ideas. There are, nevertheless, people working in luxurious, state-of-the-art centres designed to stimulate innovation who find that their environment doesn’t make them feel at all creative. And there are those who don’t have a budget, or much space, but who innovate successfully."
+        },
+        {
+          "label": null,
+          "text": "For Robert B. Cialdini, Professor of Psychology at Arizona State University, one reason that companies don’t succeed as often as they should is that innovation starts with recruitment. Research shows that the fit between an employee’s values and a company’s values makes a difference to what contribution they make and whether, two years after they join, they’re still at the company. Studies at Harvard Business School show that, although some individuals may be more creative than others, almost every individual can be creative in the right circumstances."
+        },
+        {
+          "label": null,
+          "text": "One of the most famous photographs in the story of rock’n’roll emphasises Ciaidini’s views. The 1956 picture of singers Elvis Presley, Carl Perkins, Johnny Cash and Jerry Lee Lewis jamming at a piano in Sun Studios in Memphis tells a hidden story. Sun’s ‘million-dollar quartet’ could have been a quintet. Missing from the picture is Roy Orbison’ a greater natural singer than Lewis, Perkins or Cash. Sam Phillips, who owned Sun, wanted to revolutionise popular music with songs that fused black and white music, and country and blues. Presley, Cash, Perkins and Lewis instinctively understood Phillips’s ambition and believed in it. Orbison wasn’t inspired by the goal, and only ever achieved one hit with the Sun label."
+        },
+        {
+          "label": null,
+          "text": "The value fit matters, says Cialdini, because innovation is, in part, a process of change, and under that pressure we, as a species, behave differently, ‘When things change, we are hard-wired to play it safe.’ Managers should therefore adopt an approach that appears counterintuitive -they should explain what stands to be lost if the company fails to seize a particular opportunity. Studies show that we invariably take more gambles when threatened with a loss than when offered a reward."
+        },
+        {
+          "label": null,
+          "text": "Managing innovation is a delicate art. It’s easy for a company to be pulled in conflicting directions as the marketing, product development, and finance departments each get different feedback from different sets of people. And without a system which ensures collaborative exchanges within the company, it’s also easy for small ‘pockets of innovation’ to disappear. Innovation is a contact sport. You can’t brief people just by saying, ‘We’re going in this direction and I’m going to take you with me.’"
+        },
+        {
+          "label": null,
+          "text": "Cialdini believes that this ‘follow-the-leader syndrome, is dangerous, not least because it encourages bosses to go it alone. ‘It’s been scientifically proven that three people will be better than one at solving problems, even if that one person is the smartest person in the field.’ To prove his point, Cialdini cites an interview with molecular biologist James Watson. Watson, together with Francis Crick, discovered the structure of DNA, the genetic information carrier of all living organisms. ‘When asked how they had cracked the code ahead of an array of highly accomplished rival investigators, he said something that stunned me. He said he and Crick had succeeded because they were aware that they weren’t the most intelligent of the scientists pursuing the answer. The smartest scientist was called Rosalind Franklin who, Watson said, “was so intelligent she rarely sought advice”.’"
+        },
+        {
+          "label": null,
+          "text": "Teamwork taps into one of the basic drivers of human behaviour. ‘The principle of social proof is so pervasive that we don’t even recognise it,’ says Cialdini. ‘If your project is being resisted, for example, by a group of veteran employees, ask another old-timer to speak up for it.’ Cialdini is not alone in advocating this strategy. Research shows that peer power, used horizontally not vertically, is much more powerful than any boss’s speech."
+        },
+        {
+          "label": null,
+          "text": "Writing, visualising and prototyping can stimulate the flow of new ideas. Cialdini cites scores of research papers and historical events that prove that even something as simple as writing deepens every individual’s engagement in the project. It is, he says, the reason why all those competitions on breakfast cereal packets encouraged us to write in saying, in no more than 10 words: ‘I like Kellogg’s Com Flakes because… .’ The very act of writing makes us more likely to believe it."
+        },
+        {
+          "label": null,
+          "text": "Authority doesn’t have to inhibit innovation but it often does. The wrong kind of leadership will lead to what Cialdini calls ‘captainitis, the regrettable tendency of team members to opt out of team responsibilities that are properly theirs’. He calls it captainitis because, he says, ‘crew members of multipilot aircraft exhibit a sometimes deadly passivity when the flight captain makes a clearly wrong-headed decision’. This behaviour is not, he says, unique to air travel, but can happen in any workplace where the leader is overbearing."
+        },
+        {
+          "label": null,
+          "text": "At the other end of the scale is the 1980s Memphis design collective, a group of young designers for whom ‘the only rule was that there were no rule’. This environment encouraged a free interchange of ideas, which led to more creativity with form, function, colour and materials that revolutionised attitudes to furniture design."
+        },
+        {
+          "label": null,
+          "text": "Many theorists believe the ideal boss should lead from behind, taking pride in collective accomplishment and giving credit where it is due. Cialdini says: ‘Leaders should encourage everyone to contribute and simultaneously assure all concerned that every recommendation is important to making the right decision and will be given full attention.’ The frustrating thing about innovation is that there are many approaches, but no magic formula. However, a manager who wants to create a truly innovative culture can make their job a lot easier by recognising these psychological realities."
+        }
+      ],
+      "groups": [
+        {
+          "title": "Questions 27–30 — Multiple Choice",
+          "question_type": "multiple_choice",
+          "response_mode": "standard",
+          "option_usage": "repeat",
+          "instruction": "Choose the correct letter, A, B, C or D. Write the correct letter in boxes 27–30 on your answer sheet.",
+          "questions": [
+            {
+              "number": 27,
+              "prompt": "The example of the ‘million-dollar quartet’ underlines the writer’s point about",
+              "answer": "C",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "recognising talent."
+                },
+                {
+                  "key": "B",
+                  "text": "working as a team."
+                },
+                {
+                  "key": "C",
+                  "text": "having a shared objective."
+                },
+                {
+                  "key": "D",
+                  "text": "being an effective leader."
+                }
+              ]
+            },
+            {
+              "number": 28,
+              "prompt": "James Watson suggests that he and Francis Crick won the race to discover the DNA code because they",
+              "answer": "A",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "were conscious of their own limitations."
+                },
+                {
+                  "key": "B",
+                  "text": "brought complementary skills to their partnership."
+                },
+                {
+                  "key": "C",
+                  "text": "were determined to outperform their brighter rivals."
+                },
+                {
+                  "key": "D",
+                  "text": "encouraged each other to realise their joint ambition."
+                }
+              ]
+            },
+            {
+              "number": 29,
+              "prompt": "The writer mentions competitions on breakfast cereal packets as an example of how to",
+              "answer": "D",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "inspire creative thinking."
+                },
+                {
+                  "key": "B",
+                  "text": "generate concise writing."
+                },
+                {
+                  "key": "C",
+                  "text": "promote loyalty to a group."
+                },
+                {
+                  "key": "D",
+                  "text": "strengthen commitment to an idea."
+                }
+              ]
+            },
+            {
+              "number": 30,
+              "prompt": "In the last paragraph, the writer suggests that it is important for employees to",
+              "answer": "B",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "be aware of their company’s goals."
+                },
+                {
+                  "key": "B",
+                  "text": "feel that their contributions are valued."
+                },
+                {
+                  "key": "C",
+                  "text": "have respect for their co-workers‟ achievements."
+                },
+                {
+                  "key": "D",
+                  "text": "understand why certain management decisions are made."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Questions 31–35 — Matching Sentence Endings",
+          "question_type": "matching_information",
+          "response_mode": "drag_drop",
+          "option_usage": "once",
+          "instruction": "Complete each sentence with the correct ending, A–G, from the list. Write the correct letter, A–G, in boxes 31–35.",
+          "questions": [
+            {
+              "number": 31,
+              "prompt": "Employees whose values match those of their employers are more likely to",
+              "answer": "G"
+            },
+            {
+              "number": 32,
+              "prompt": "At times of change, people tend to",
+              "answer": "E"
+            },
+            {
+              "number": 33,
+              "prompt": "If people are aware of what they might lose, they will often",
+              "answer": "A"
+            },
+            {
+              "number": 34,
+              "prompt": "People working under a dominant boss are liable to",
+              "answer": "F"
+            },
+            {
+              "number": 35,
+              "prompt": "Employees working in organisations with few rules are more likely to",
+              "answer": "B"
+            }
+          ],
+          "answer_options": [
+            {
+              "key": "A",
+              "text": "take chances."
+            },
+            {
+              "key": "B",
+              "text": "share their ideas."
+            },
+            {
+              "key": "C",
+              "text": "become competitive."
+            },
+            {
+              "key": "D",
+              "text": "get promotion."
+            },
+            {
+              "key": "E",
+              "text": "avoid risk."
+            },
+            {
+              "key": "F",
+              "text": "ignore their duties."
+            },
+            {
+              "key": "G",
+              "text": "remain in their jobs."
+            }
+          ],
+          "source_question_type": "matching_sentence_endings"
+        },
+        {
+          "title": "Questions 36–40 — Yes / No / Not Given",
+          "question_type": "yes_no_not_given",
+          "response_mode": "standard",
+          "option_usage": "repeat",
+          "instruction": "Do the following statements agree with the claims of the writer in Reading Passage 3? Choose YES if the statement agrees with the claims of the writer, NO if it contradicts the claims, or NOT GIVEN if it is impossible to say what the writer thinks about this.",
+          "questions": [
+            {
+              "number": 36,
+              "prompt": "The physical surroundings in which a person works play a key role in determining their creativity.",
+              "answer": "NO"
+            },
+            {
+              "number": 37,
+              "prompt": "Most people have the potential to be creative.",
+              "answer": "YES"
+            },
+            {
+              "number": 38,
+              "prompt": "Teams work best when their members are of equally matched intelligence.",
+              "answer": "NOT GIVEN"
+            },
+            {
+              "number": 39,
+              "prompt": "It is easier for smaller companies to be innovative.",
+              "answer": "NOT GIVEN"
+            },
+            {
+              "number": 40,
+              "prompt": "A manager’s approval of an idea is more persuasive than that of a colleague.",
+              "answer": "NO"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

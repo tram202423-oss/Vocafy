@@ -603,7 +603,9 @@
                                 </div>
                             @endif
 
-                            @if($isDragDropGroup)
+                            @if(\App\Services\IeltsMultiSelectService::enabled($partGroup))
+                                @include('ielts.partials.multi-choice-bank', ['group' => $partGroup])
+                            @elseif($isDragDropGroup)
                                 <div class="space-y-5">
                                     @if(preg_match('/\[blank_\d+\]/', $partQuestionContent ?? ''))
                                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 md:p-7 text-sm leading-loose" style="color: var(--text-main);">
@@ -1231,7 +1233,12 @@
                             $groupQuestionContent = $group->question_content
                                 ?: (preg_match('/\[blank_\d+\]/', $group->passage_content ?? '') ? $group->passage_content : null);
                         @endphp
-                        @if($isDragDropGroup)
+                        @if(\App\Services\IeltsMultiSelectService::enabled($group))
+                            @if($group->instruction)
+                                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-lg mb-5 text-xs text-blue-900 font-medium">{{ $group->instruction }}</div>
+                            @endif
+                            @include('ielts.partials.multi-choice-bank', ['group' => $group])
+                        @elseif($isDragDropGroup)
                             @if($group->instruction)
                                 <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-lg mb-5 text-xs text-blue-900 font-medium">
                                     {{ $group->instruction }}
@@ -1712,6 +1719,7 @@
     {{-- ========================================================================= --}}
     <script>
         function ieltsSimulator(config) {
+            const pendingMultiSaves = new Set();
             return {
                 submissionId: config.submissionId,
                 remainingSeconds: config.initialSeconds,
@@ -1724,6 +1732,8 @@
                 currentTaskNumber: 1,
                 currentQuestionNumber: 1,
                 answers: {},
+                multiSaving: {},
+                multiSelectMessages: {},
                 flags: {},
                 notes: {},
                 draggedOption: null,
@@ -2273,6 +2283,31 @@
                     return true;
                 },
 
+                multiSelected(questionIds) {
+                    return questionIds.map(id => String(this.answers[id] ?? '').trim().toUpperCase()).filter(Boolean);
+                },
+
+                async updateMultiSelect(groupId, questionIds, key, checked) {
+                    if (this.multiSaving[groupId] || this.isSubmitting) return;
+                    const previous = questionIds.map(id => this.answers[id] ?? '');
+                    let selected = this.multiSelected(questionIds).filter(value => value !== key);
+                    if (checked) selected.push(key);
+                    if (selected.length > questionIds.length) return;
+                    this.multiSaving[groupId] = true;
+                    this.multiSelectMessages[groupId] = '';
+                    questionIds.forEach((id, index) => this.answers[id] = selected[index] ?? '');
+                    const save = (async () => {
+                        const result = await this.saveAnswerData(null, { multi_group_id: groupId, selected });
+                        if (!result || result.status !== 'success') {
+                            questionIds.forEach((id, index) => this.answers[id] = previous[index]);
+                            this.multiSelectMessages[groupId] = 'Chưa lưu được đáp án. Vui lòng chọn lại.';
+                        }
+                        this.multiSaving[groupId] = false;
+                    })();
+                    pendingMultiSaves.add(save);
+                    try { await save; } finally { pendingMultiSaves.delete(save); }
+                },
+
                 async saveAnswer(questionId, value) {
                     const previousValue = this.answers[questionId];
                     this.answers[questionId] = value;
@@ -2290,6 +2325,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         },
                         body: JSON.stringify({
@@ -2512,10 +2548,14 @@
                     this.highlightActionMenu.show = false;
                 },
 
-                submitExam() {
+                async submitExam() {
+                    if (this.isSubmitting) return;
                     // Show full-screen loading overlay while AI is scoring
                     this.isSubmitting = true;
                     this.confirmSubmitModal = false;
+                    const submittedAnswers = { ...this.answers };
+                    await Promise.all([...pendingMultiSaves]);
+                    this.answers = submittedAnswers;
 
                     fetch(config.submitUrl, {
                         method: 'POST',
@@ -2524,7 +2564,7 @@
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             'Accept': 'application/json',
                         },
-                        body: JSON.stringify({ answers: this.answers }),
+                        body: JSON.stringify({ answers: submittedAnswers }),
                     })
                     .then(res => {
                         if (!res.ok) {
@@ -2541,8 +2581,7 @@
                     .catch(err => {
                         console.error('Submit error:', err);
                         this.isSubmitting = false;
-                        this.submitError = err.message || 'Lỗi khi nộp bài. Đang chuyển về trang kết quả...';
-                        setTimeout(() => { window.location.href = config.resultUrl; }, 3500);
+                        this.submitError = 'Chưa nộp được bài. Vui lòng thử lại; các đáp án vẫn được giữ trên màn hình.';
                     });
                 },
 

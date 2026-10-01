@@ -246,6 +246,9 @@
                             $qNum = (int)$m[1];
                             $ans = $answers->firstWhere('question.question_number', $qNum);
                             $correct = $ans?->question?->correct_answer ?? '';
+                            if (\App\Services\IeltsMultiSelectService::enabled($ans?->question?->questionGroup)) {
+                                $correct = implode(', ', \App\Services\IeltsMultiSelectService::correctKeys($ans->question->questionGroup)).' (any order)';
+                            }
                             return '<span id="transcript-target-q-' . $qNum . '" class="inline-flex items-center gap-1 mx-1 px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-bold font-mono text-xs border border-amber-300 shadow-sm transition-all duration-300 cursor-pointer"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> [Q' . $qNum . ': ' . e($correct) . ']</span>';
                         }, e($rawTranscript));
                     @endphp
@@ -717,7 +720,7 @@
                             </div>
                             <div class="p-3 rounded-xl border bg-white border-slate-200 text-slate-700 text-xs">
                                 <span class="text-slate-500 text-[10px] font-bold block mb-1">Đáp án đúng chuẩn:</span>
-                                <strong class="text-sm font-mono text-emerald-600">{{ $q->correct_answer }}</strong>
+                                <strong class="text-sm font-mono text-emerald-600">{{ \App\Services\IeltsMultiSelectService::enabled($q->questionGroup) ? implode(', ', \App\Services\IeltsMultiSelectService::correctKeys($q->questionGroup)).' (không phân biệt thứ tự trong nhóm)' : $q->correct_answer }}</strong>
                             </div>
                         </div>
 

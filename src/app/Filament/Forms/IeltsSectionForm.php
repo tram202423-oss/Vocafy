@@ -8,6 +8,7 @@ use App\Enums\IeltsTestTypeEnum;
 use App\Models\IeltsQuestionGroup;
 use App\Services\IeltsAuthoringService as Authoring;
 use App\Services\IeltsAudioService;
+use App\Services\IeltsMultiSelectService as MultiSelect;
 use Filament\Forms\Components as C;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Get;
@@ -33,6 +34,7 @@ class IeltsSectionForm
                                     $groups = $get('questionGroups') ?? [];
                                     foreach ($groups as &$group) {
                                         $group['response_mode'] = 'standard';
+                                        $group['settings']['multi_select'] = false;
                                         if (($group['question_type'] ?? '') === 'drag_drop') {
                                             $group['question_type'] = 'short_answer';
                                         }
@@ -56,6 +58,7 @@ class IeltsSectionForm
                         default => 'Mỗi nhóm là một Task / Part. Nhập đề bài trong từng câu; lời giải và trích dẫn là tùy chọn.',
                     }),
                     C\Repeater::make('questionGroups')->relationship('questionGroups')->label('Các nhóm câu hỏi')->orderColumn('order')
+                        ->mutateRelationshipDataBeforeFillUsing(fn (array $data): array => MultiSelect::hydrate($data))
                         ->defaultItems(0)->collapsed()->collapsible()->live(onBlur: true)
                         ->addActionLabel('Thêm nhóm câu hỏi')->deleteAction(fn (Action $action) => $action->label('Xóa nhóm')->requiresConfirmation())
                         ->collapseAllAction(fn (Action $action) => $action->label('Thu gọn tất cả'))
@@ -78,6 +81,9 @@ class IeltsSectionForm
                 C\Select::make('question_type')->label('Dạng câu hỏi')->options(collect(IeltsQuestionTypeEnum::cases())->mapWithKeys(fn ($type) => [$type->value => $type->label()]))
                     ->default('fill_in_blanks')->required()->live()
                     ->afterStateUpdated(function (string $state, Get $get, Set $set): void {
+                        if ($state !== 'multiple_choice') {
+                            $set('settings.multi_select', false);
+                        }
                         if ($state === 'matching_headings' && in_array($get('../../skill'), ['reading', 'listening'], true)) {
                             $set('response_mode', 'drag_drop');
                             $set('option_usage', 'once');
@@ -87,6 +93,23 @@ class IeltsSectionForm
                     })
                     ->visible(fn (Get $get): bool => in_array($get('../../skill'), ['reading', 'listening'], true))->dehydratedWhenHidden(),
             ]),
+            C\Toggle::make('settings.multi_select')->label('Chọn nhiều đáp án (Choose TWO / THREE…)')->default(false)->live()
+                ->visible(fn (Get $get): bool => $get('question_type') === 'multiple_choice' && in_array($get('../../skill'), ['reading', 'listening'], true))
+                ->dehydratedWhenHidden()
+                ->afterStateUpdated(function (bool $state, Get $get, Set $set): void {
+                    if ($state) {
+                        $set('response_mode', 'standard');
+                        $legacy = MultiSelect::hydrate($get());
+                        if (empty($get('questions')) && blank($get('settings.start_number'))) {
+                            $legacy['settings']['start_number'] = self::nextQuestionNumber($get('../../questionGroups') ?? []);
+                        }
+                        foreach (['start_number', 'prompt', 'options', 'correct_keys', 'explanation', 'quote_reference'] as $field) {
+                            if (blank($get('settings.'.$field))) {
+                                $set('settings.'.$field, $legacy['settings'][$field] ?? null);
+                            }
+                        }
+                    }
+                }),
             C\Tabs::make('Biên tập nhóm')->id(fn (C\Tabs $component): string => 'group-editor-'.str_replace('.', '-', $component->getStatePath()))->tabs([
                 C\Tabs\Tab::make('Đề bài')->icon('heroicon-o-document-text')->schema([
                     C\Grid::make(2)->schema([
@@ -142,6 +165,9 @@ class IeltsSectionForm
                         ]),
                 ]),
                 C\Tabs\Tab::make('Câu hỏi & đáp án')->icon('heroicon-o-list-bullet')->schema([
+                    C\Section::make('Một câu hỏi chung, nhiều ô đáp án')
+                        ->visible(fn (Get $get): bool => MultiSelect::enabled($get()))
+                        ->schema(self::multiSelectSchema()),
                     C\Grid::make(2)->schema([
                       C\Actions::make([
                         Action::make('generateQuestions')->label('Tạo dãy câu hỏi')->icon('heroicon-o-plus-circle')->modalHeading('Tạo nhiều câu hỏi')->modalSubmitActionLabel('Tạo câu hỏi')->modalCancelActionLabel('Hủy')
@@ -163,8 +189,9 @@ class IeltsSectionForm
                                 $set('questions', Authoring::appendQuestions($get('questions') ?? [], array_unique($numbers)));
                             }),
                       ])->visible(fn (Get $get): bool => Authoring::isDragDrop($get())),
-                    ]),
+                    ])->visible(fn (Get $get): bool => ! MultiSelect::enabled($get())),
                     C\Repeater::make('questions')->relationship('questions')->label('Các câu hỏi của nhóm')->orderColumn('order')->reorderable(false)->defaultItems(0)->collapsed()->live(onBlur: true)
+                        ->visible(fn (Get $get): bool => ! MultiSelect::enabled($get()))
                         ->helperText('Câu hỏi hiển thị theo số câu. Sửa số câu để thay đổi vị trí trong phần thi.')
                         ->addActionLabel('Thêm một câu hỏi')->deleteAction(fn (Action $action) => $action->label('Xóa câu hỏi')->requiresConfirmation())
                         ->collapseAllAction(fn (Action $action) => $action->label('Thu gọn tất cả'))
@@ -182,6 +209,49 @@ class IeltsSectionForm
                     ...self::audioSchema(),
                     C\Textarea::make('transcript')->label('Transcript / lời bài nghe')->rows(12)->helperText('Hiển thị khi xem lại kết quả, không hiển thị cho thí sinh đang làm bài.'),
                 ]),
+            ]),
+        ];
+    }
+
+    private static function multiSelectSchema(): array
+    {
+        return [
+            C\TextInput::make('settings.start_number')->label('Bắt đầu từ câu số')->integer()->minValue(1)->maxValue(199)->required()->live(onBlur: true),
+            C\Textarea::make('settings.prompt')->label('Nội dung câu hỏi chung')->rows(3)->required(),
+            C\Actions::make([
+                Action::make('pasteMultiOptions')->label('Dán danh sách lựa chọn')->icon('heroicon-o-clipboard-document')
+                    ->modalHeading('Nhập các lựa chọn dùng chung')->modalSubmitActionLabel('Thêm lựa chọn')->modalCancelActionLabel('Hủy')
+                    ->form([C\Textarea::make('entries')->label('Mỗi dòng một lựa chọn')->placeholder("A | First option\nB | Second option\nC | Third option")
+                        ->helperText('Ký hiệu | Nội dung. Có thể dán hai cột từ bảng tính.')->rows(8)->required()])
+                    ->action(function (array $data, Get $get, Set $set, Action $action): void {
+                        try {
+                            $bank = collect($get('settings.options') ?? [])->map(fn ($option) => ['option_key' => $option['key'] ?? '', 'label' => $option['text'] ?? ''])->all();
+                            $bank = Authoring::appendOptions($bank, $data['entries']);
+                            $set('settings.options', collect($bank)->map(fn ($option) => ['key' => $option['option_key'], 'text' => $option['label']])->all());
+                        } catch (ValidationException $exception) {
+                            Notification::make()->title('Chưa nhập được lựa chọn')->body($exception->getMessage())->danger()->send();
+                            $action->halt();
+                        }
+                    }),
+            ]),
+            C\Repeater::make('settings.options')->label('Các lựa chọn (gồm cả đáp án nhiễu)')->columns(4)->defaultItems(0)->minItems(2)->required()->live(onBlur: true)
+                ->addActionLabel('Thêm lựa chọn')->schema([
+                    C\TextInput::make('key')->label('Ký hiệu')->placeholder('A')->required()->maxLength(20)->regex('/^[A-Za-z0-9_-]+$/')->distinct()->live(onBlur: true),
+                    C\TextInput::make('text')->label('Nội dung')->required()->columnSpan(3)->live(onBlur: true),
+                ]),
+            C\CheckboxList::make('settings.correct_keys')->label('Các đáp án đúng')->required()->minItems(2)->live()
+                ->options(fn (Get $get): array => collect($get('settings.options') ?? [])
+                    ->filter(fn ($option) => filled($option['key'] ?? null))
+                    ->mapWithKeys(fn ($option) => [$option['key'] => $option['key'].' — '.($option['text'] ?? '')])->all())
+                ->helperText('Ví dụ: tích B và D. Hệ thống tự tạo 2 câu, mỗi câu 1 điểm; chấp nhận mọi thứ tự trả lời.'),
+            C\Placeholder::make('multi_preview')->label('Dãy câu được tạo')->content(function (Get $get): string {
+                $count = count($get('settings.correct_keys') ?? []);
+                $start = (int) ($get('settings.start_number') ?? 1);
+                return $count >= 2 ? 'Questions '.$start.'–'.($start + $count - 1).' · Choose '.$count.' · '.$count.' điểm' : 'Chọn ít nhất 2 đáp án đúng để tạo dãy câu.';
+            }),
+            C\Section::make('Lời giải chung (tùy chọn)')->collapsible()->collapsed()->columns(2)->schema([
+                C\Textarea::make('settings.quote_reference')->label('Trích dẫn chứa đáp án')->rows(3),
+                C\Textarea::make('settings.explanation')->label('Giải thích')->rows(3),
             ]),
         ];
     }
@@ -335,19 +405,19 @@ class IeltsSectionForm
 
     public static function summary(array $groups): string
     {
-        $questions = collect($groups)->flatMap(fn ($group) => $group['questions'] ?? []);
+        $questions = collect($groups)->flatMap(fn ($group) => MultiSelect::questions($group));
         $answered = $questions->filter(fn ($question) => filled($question['correct_answer'] ?? null))->count();
         return $questions->count().' câu · '.count($groups).' nhóm · '.$answered.' câu có đáp án';
     }
 
     private static function groupLabel(array $group): string
     {
-        $numbers = collect($group['questions'] ?? [])->pluck('question_number')->filter()->map(fn ($n) => (int) $n);
+        $numbers = collect(MultiSelect::questions($group))->pluck('question_number')->filter()->map(fn ($n) => (int) $n);
         return ($group['title'] ?? 'Nhóm mới').' · '.($numbers->count() ? 'Câu '.$numbers->min().'–'.$numbers->max().' ('.$numbers->count().')' : 'Chưa có câu hỏi');
     }
 
     private static function nextQuestionNumber(array $groups): int
     {
-        return 1 + (int) collect($groups)->flatMap(fn ($group) => $group['questions'] ?? [])->max('question_number');
+        return 1 + (int) collect($groups)->flatMap(fn ($group) => MultiSelect::questions($group))->max('question_number');
     }
 }

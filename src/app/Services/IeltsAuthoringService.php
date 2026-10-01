@@ -107,7 +107,22 @@ class IeltsAuthoringService
             $base = "{$path}.{$groupKey}";
             $drag = static::isDragDrop($group);
             $type = $group['question_type'] ?? '';
-            $questions = $group['questions'] ?? [];
+            $multi = IeltsMultiSelectService::enabled($group);
+            $questions = IeltsMultiSelectService::questions($group);
+            if ($multi) {
+                $settings = $group['settings'] ?? [];
+                $keys = array_map([IeltsMultiSelectService::class, 'normalize'], $settings['correct_keys'] ?? []);
+                if (! in_array($skill, ['reading', 'listening'], true)) {
+                    $errors["{$base}.settings.multi_select"] = 'Chọn nhiều đáp án chỉ dùng cho Reading và Listening.';
+                }
+                if (count($keys) < 2 || count($keys) !== count(array_unique($keys))) {
+                    $errors["{$base}.settings.correct_keys"] = 'Chọn ít nhất hai đáp án đúng khác nhau.';
+                }
+                $start = filter_var($settings['start_number'] ?? null, FILTER_VALIDATE_INT);
+                if (! $start || $start < 1 || $start + count($keys) - 1 > 200) {
+                    $errors["{$base}.settings.start_number"] = 'Dãy số câu phải nằm trong khoảng 1–200.';
+                }
+            }
             $bank = $group['answerOptions'] ?? [];
             $bankKeys = [];
 
@@ -137,10 +152,11 @@ class IeltsAuthoringService
             }
             $usedAnswers = [];
             foreach ($questions as $questionKey => $question) {
-                $qPath = "{$base}.questions.{$questionKey}";
+                $qPath = $multi ? "{$base}.settings" : "{$base}.questions.{$questionKey}";
                 $number = (int) ($question['question_number'] ?? 0);
                 if (isset($usedNumbers[$number])) {
-                    $errors["{$qPath}.question_number"] = "Câu {$number} đã có trong nhóm khác hoặc trong nhóm này.";
+                    $numberField = $multi ? 'start_number' : 'question_number';
+                    $errors["{$qPath}.{$numberField}"] = "Câu {$number} đã có trong nhóm khác hoặc trong nhóm này.";
                 }
                 $usedNumbers[$number] = true;
                 if (trim($question['prompt'] ?? '') === '' && ! ($drag && in_array($number, $blanks, true))) {
@@ -166,7 +182,8 @@ class IeltsAuthoringService
                         $errors["{$qPath}.options"] = 'Thêm các lựa chọn có ký hiệu khác nhau.';
                     }
                     if (! in_array($answer, $optionKeys, true)) {
-                        $errors["{$qPath}.correct_answer"] = 'Chọn đáp án trong các lựa chọn của câu hỏi.';
+                        $answerField = $multi ? 'correct_keys' : 'correct_answer';
+                        $errors["{$qPath}.{$answerField}"] = 'Chọn đáp án trong các lựa chọn của câu hỏi.';
                     }
                 }
             }
@@ -178,6 +195,11 @@ class IeltsAuthoringService
 
     public static function syncSectionTotals(IeltsSection $section): void
     {
+        // The multi-select editor hides the per-question relationship repeater.
+        // Materialize its slots after all group settings have been saved.
+        foreach ($section->questionGroups()->get() as $group) {
+            IeltsMultiSelectService::sync($group);
+        }
         $section->update(['total_questions' => $section->questions()->count()]);
         foreach ($section->tests()->get() as $test) {
             static::syncTestSections($test);
