@@ -17,6 +17,7 @@ class EditIeltsTest extends EditRecord
     protected function afterSave(): void
     {
         \App\Services\IeltsAuthoringService::syncTestSections($this->record);
+        $this->refreshFormData(['slug']);
     }
 
     protected function getSaveFormAction(): Actions\Action
@@ -33,7 +34,7 @@ class EditIeltsTest extends EditRecord
     {
         return [
             Actions\Action::make('preview')->label('Xem bộ đề')->icon('heroicon-o-eye')
-                ->url(fn (): string => route('ielts.tests.show', $this->record->slug))->openUrlInNewTab(),
+                ->url(fn (): string => route('ielts.tests.show', ['slug' => $this->record->slug, 'preview' => 1]))->openUrlInNewTab(),
             Actions\DeleteAction::make()->label('Xóa bộ đề'),
         ];
     }

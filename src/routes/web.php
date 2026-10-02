@@ -51,6 +51,11 @@ Route::prefix('ielts')->name('ielts.')->group(function () {
     // Exam Room & Simulation Engine
     Route::get('/exam/{submission}', [IeltsExamController::class, 'room'])->name('exam.room');
     Route::post('/exam/{submission}/save', [IeltsExamController::class, 'saveAnswer'])->name('exam.save');
+    Route::post('/exam/{submission}/speaking-recording/start', [IeltsExamController::class, 'startSpeakingRecording'])->name('exam.speaking-recording.start');
+    Route::post('/exam/{submission}/speaking-recording/finalize', [IeltsExamController::class, 'finalizeSpeakingRecording'])->name('exam.speaking-recording.finalize');
+    Route::post('/exam/{submission}/speaking-recording', [IeltsExamController::class, 'uploadSpeakingRecording'])->name('exam.speaking-recording.upload');
+    Route::delete('/exam/{submission}/speaking-recording', [IeltsExamController::class, 'deleteSpeakingRecording'])->name('exam.speaking-recording.delete');
+    Route::get('/exam/{submission}/speaking-recording', [IeltsExamController::class, 'streamSpeakingRecording'])->name('exam.speaking-recording');
     Route::post('/exam/{submission}/submit', [IeltsExamController::class, 'submit'])->name('exam.submit');
     Route::get('/exam/{submission}/result', [IeltsExamController::class, 'result'])->name('exam.result');
 });

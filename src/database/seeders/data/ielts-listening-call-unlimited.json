@@ -1,0 +1,392 @@
+{
+  "slug": "listening-call-unlimited-london-eye",
+  "title": "IELTS Listening — Call Unlimited, Hotel Jobs, Online Study & London Eye",
+  "duration_minutes": 30,
+  "groups": [
+    {
+      "part": 1,
+      "title": "Call Unlimited Service",
+      "start": 1,
+      "question_type": "fill_in_blanks",
+      "instruction": "Questions 1–6: Complete the notes below. Write ONE WORD AND/OR A NUMBER for each answer.",
+      "question_content": "<h3>Call Unlimited Service</h3><p><strong>Location:</strong> [blank_1] where the lady calls the most</p><p><strong>Cost per minute:</strong> [blank_2] for a national call</p><p><strong>Telephone fee:</strong> 15 cents for connecting to the [blank_3]</p><h4>Customer details</h4><ul><li>Name: Mandy Silverstone</li><li>Address: [blank_4] St., Belmont, 4173</li><li>Telephone: [blank_5]</li><li>Email: mandy [blank_6]</li></ul>",
+      "word_limit": 1,
+      "questions": [
+        {
+          "number": 1,
+          "prompt": "Location: [blank] where the lady calls the most",
+          "answer": "Sydney"
+        },
+        {
+          "number": 2,
+          "prompt": "Cost per minute: [blank] for a national call",
+          "answer": "3 cents"
+        },
+        {
+          "number": 3,
+          "prompt": "Telephone fee: 15 cents for connecting to the [blank]",
+          "answer": "USA"
+        },
+        {
+          "number": 4,
+          "prompt": "Address: [blank] St., Belmont, 4173",
+          "answer": "16 Hazlewood"
+        },
+        {
+          "number": 5,
+          "prompt": "Telephone: [blank]",
+          "answer": "5522 3481"
+        },
+        {
+          "number": 6,
+          "prompt": "Email: mandy [blank]",
+          "answer": "@tele.com"
+        }
+      ]
+    },
+    {
+      "part": 1,
+      "title": "Date of birth",
+      "start": 7,
+      "question_type": "multiple_choice",
+      "instruction": "Questions 7–8: Choose TWO letters, A–E.",
+      "question_content": null,
+      "multi_select": true,
+      "prompt": "Which TWO reasons does the operator give for providing the date of birth?",
+      "options": [
+        {
+          "key": "A",
+          "text": "for security purposes"
+        },
+        {
+          "key": "B",
+          "text": "to make a payment"
+        },
+        {
+          "key": "C",
+          "text": "to request details about the account"
+        },
+        {
+          "key": "D",
+          "text": "to change the account password"
+        },
+        {
+          "key": "E",
+          "text": "to change the payment details"
+        }
+      ],
+      "correct_keys": [
+        "A",
+        "C"
+      ],
+      "questions": [
+        {
+          "number": 7,
+          "prompt": "Which TWO reasons does the operator give for providing the date of birth?",
+          "answer": "A"
+        },
+        {
+          "number": 8,
+          "prompt": "Which TWO reasons does the operator give for providing the date of birth?",
+          "answer": "C"
+        }
+      ]
+    },
+    {
+      "part": 1,
+      "title": "Telephone service and billing",
+      "start": 9,
+      "question_type": "multiple_choice",
+      "instruction": "Questions 9–10: Choose the correct letter, A, B, or C.",
+      "question_content": null,
+      "questions": [
+        {
+          "number": 9,
+          "prompt": "The customer’s new telephone service will",
+          "answer": "B",
+          "options": [
+            {
+              "key": "A",
+              "text": "start next month."
+            },
+            {
+              "key": "B",
+              "text": "start tomorrow."
+            },
+            {
+              "key": "C",
+              "text": "start today."
+            }
+          ]
+        },
+        {
+          "number": 10,
+          "prompt": "The customer will receive the bill",
+          "answer": "C",
+          "options": [
+            {
+              "key": "A",
+              "text": "every three months."
+            },
+            {
+              "key": "B",
+              "text": "every two months."
+            },
+            {
+              "key": "C",
+              "text": "every month."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "part": 2,
+      "title": "Job descriptions",
+      "start": 11,
+      "question_type": "fill_in_blanks",
+      "instruction": "Questions 11–15: Complete the table below. Write NO MORE THAN TWO WORDS for each answer.",
+      "question_content": "<h3>Job descriptions</h3><table style=\"width:100%;border-collapse:collapse\"><thead><tr><th style=\"border:1px solid #cbd5e1;padding:12px\">Job title</th><th style=\"border:1px solid #cbd5e1;padding:12px\">Employer</th><th style=\"border:1px solid #cbd5e1;padding:12px\">Notes</th></tr></thead><tbody><tr><td style=\"border:1px solid #cbd5e1;padding:12px\">Reception Assistant</td><td style=\"border:1px solid #cbd5e1;padding:12px\">Park Hotel</td><td style=\"border:1px solid #cbd5e1;padding:12px\"><ul><li>[blank_11]</li><li>foreign languages</li><li>[blank_12]</li></ul></td></tr><tr><td style=\"border:1px solid #cbd5e1;padding:12px\">General Assistant</td><td style=\"border:1px solid #cbd5e1;padding:12px\">Avenue Hotel</td><td style=\"border:1px solid #cbd5e1;padding:12px\"><ul><li>low pay</li><li>free [blank_13]</li><li>training</li><li>[blank_14]</li></ul></td></tr><tr><td style=\"border:1px solid #cbd5e1;padding:12px\">Catering Assistant</td><td style=\"border:1px solid #cbd5e1;padding:12px\">Hotel 56</td><td style=\"border:1px solid #cbd5e1;padding:12px\"><ul><li>free [blank_15]</li><li>late shifts</li><li>outside city</li></ul></td></tr></tbody></table>",
+      "word_limit": 2,
+      "questions": [
+        {
+          "number": 11,
+          "prompt": "Reception Assistant — Park Hotel: [blank]",
+          "answer": "heavy lifting"
+        },
+        {
+          "number": 12,
+          "prompt": "Reception Assistant — Park Hotel: [blank]",
+          "answer": "driving license"
+        },
+        {
+          "number": 13,
+          "prompt": "General Assistant — Avenue Hotel: free [blank]",
+          "answer": "meals"
+        },
+        {
+          "number": 14,
+          "prompt": "General Assistant — Avenue Hotel: [blank]",
+          "answer": "certificate"
+        },
+        {
+          "number": 15,
+          "prompt": "Catering Assistant — Hotel 56: free [blank]",
+          "answer": "uniform"
+        }
+      ]
+    },
+    {
+      "part": 2,
+      "title": "Recruitment Process",
+      "start": 16,
+      "question_type": "fill_in_blanks",
+      "instruction": "Questions 16–20: Complete the flowchart below. Write ONE WORD ONLY for each answer.",
+      "question_content": "<h3>Recruitment Process</h3><div style=\"text-align:center\"><p style=\"border:1px solid #cbd5e1;padding:14px\"><strong>Step 1:</strong> Complete an individual [blank_16] form</p><p aria-hidden=\"true\">↓</p><p style=\"border:1px solid #cbd5e1;padding:14px\"><strong>Step 2:</strong> Do a skills [blank_17]</p><p aria-hidden=\"true\">↓</p><p style=\"border:1px solid #cbd5e1;padding:14px\"><strong>Step 3:</strong> If accepted, go on a(n) [blank_18] course</p><p aria-hidden=\"true\">↓</p><p style=\"border:1px solid #cbd5e1;padding:14px\"><strong>Step 4:</strong> Includes [blank_19] activities</p><p aria-hidden=\"true\">↓</p><p style=\"border:1px solid #cbd5e1;padding:14px\"><strong>Step 5:</strong> Will be sent a(n) [blank_20] about the hotel</p></div>",
+      "word_limit": 1,
+      "questions": [
+        {
+          "number": 16,
+          "prompt": "Complete an individual [blank] form",
+          "answer": "information"
+        },
+        {
+          "number": 17,
+          "prompt": "Do a skills [blank]",
+          "answer": "questionnaire"
+        },
+        {
+          "number": 18,
+          "prompt": "If accepted, go on a(n) [blank] course",
+          "answer": "general"
+        },
+        {
+          "number": 19,
+          "prompt": "Includes [blank] activities",
+          "answer": "role-play"
+        },
+        {
+          "number": 20,
+          "prompt": "Will be sent a(n) [blank] about the hotel",
+          "answer": "video"
+        }
+      ]
+    },
+    {
+      "part": 3,
+      "title": "Details of studying online",
+      "start": 21,
+      "question_type": "fill_in_blanks",
+      "instruction": "Questions 21–27: Complete the notes below. Write ONE WORD ONLY for each answer.",
+      "question_content": "<h3>Details of studying online</h3><h4>Key for success</h4><ul><li>Make sure you complete all [blank_21]</li><li>A positive [blank_22] towards study</li><li>Work hard to improve language [blank_23]</li><li>Well-developed [blank_24] skills will allow for best use of time</li><li>Good note taking skills for online [blank_25]</li><li>Students who [blank_26] and eat well do better in their studies</li><li>Take time to [blank_27] on the best course of study for you</li></ul>",
+      "word_limit": 1,
+      "questions": [
+        {
+          "number": 21,
+          "prompt": "Make sure you complete all [blank]",
+          "answer": "coursework"
+        },
+        {
+          "number": 22,
+          "prompt": "A positive [blank] towards study",
+          "answer": "attitude"
+        },
+        {
+          "number": 23,
+          "prompt": "Work hard to improve language [blank]",
+          "answer": "proficiency"
+        },
+        {
+          "number": 24,
+          "prompt": "Well-developed [blank] skills will allow for best use of time",
+          "answer": "research"
+        },
+        {
+          "number": 25,
+          "prompt": "Good note taking skills for online [blank]",
+          "answer": "lectures"
+        },
+        {
+          "number": 26,
+          "prompt": "Students who [blank] and eat well do better in their studies",
+          "answer": "exercise"
+        },
+        {
+          "number": 27,
+          "prompt": "Take time to [blank] on the best course of study for you",
+          "answer": "decide"
+        }
+      ]
+    },
+    {
+      "part": 3,
+      "title": "Education assignment",
+      "start": 28,
+      "question_type": "multiple_choice",
+      "instruction": "Questions 28–30: Choose THREE letters, A–F.",
+      "question_content": null,
+      "multi_select": true,
+      "prompt": "Which THREE points are made in relation to the education assignment?",
+      "options": [
+        {
+          "key": "A",
+          "text": "the assignment may be completed in groups"
+        },
+        {
+          "key": "B",
+          "text": "the assignment is due in 3 weeks"
+        },
+        {
+          "key": "C",
+          "text": "students have unlimited access to reserved books for assignments"
+        },
+        {
+          "key": "D",
+          "text": "students materials have been set aside at the equation department"
+        },
+        {
+          "key": "E",
+          "text": "some books for the course can be borrowed from the library"
+        },
+        {
+          "key": "F",
+          "text": "minimum words count for assignment (1500 words)"
+        }
+      ],
+      "correct_keys": [
+        "B",
+        "E",
+        "F"
+      ],
+      "questions": [
+        {
+          "number": 28,
+          "prompt": "Which THREE points are made in relation to the education assignment?",
+          "answer": "B"
+        },
+        {
+          "number": 29,
+          "prompt": "Which THREE points are made in relation to the education assignment?",
+          "answer": "E"
+        },
+        {
+          "number": 30,
+          "prompt": "Which THREE points are made in relation to the education assignment?",
+          "answer": "F"
+        }
+      ]
+    },
+    {
+      "part": 4,
+      "title": "The London Eye",
+      "start": 31,
+      "question_type": "fill_in_blanks",
+      "instruction": "Questions 31–35: Complete the summary below. Write ONE WORD ONLY for each answer.",
+      "question_content": "<h3>The London Eye</h3><p>Architects who designed the London Eye originally drew it for a(n) [blank_31] in 1993. Subsequently, they formed a partnership with British Airway to develop the project. As the biggest [blank_32] wheel ever built, its construction involved 1,700 people in five countries. Most of its components had to be [blank_33], and delivering them had to be coordinated with the [blank_34] in the River Thames. On average, 350 hours a week are spent on maintenance of the Eye, and only purified [blank_35] is used to clean.</p>",
+      "word_limit": 1,
+      "questions": [
+        {
+          "number": 31,
+          "prompt": "Architects originally drew the London Eye for a(n) [blank] in 1993",
+          "answer": "competition"
+        },
+        {
+          "number": 32,
+          "prompt": "The biggest [blank] wheel ever built",
+          "answer": "observation"
+        },
+        {
+          "number": 33,
+          "prompt": "Most of its components had to be [blank]",
+          "answer": "invented"
+        },
+        {
+          "number": 34,
+          "prompt": "Deliveries had to be coordinated with the [blank] in the River Thames",
+          "answer": "tides"
+        },
+        {
+          "number": 35,
+          "prompt": "Only purified [blank] is used to clean",
+          "answer": "water"
+        }
+      ]
+    },
+    {
+      "part": 4,
+      "title": "Manufacturing process of The London Eye",
+      "start": 36,
+      "question_type": "fill_in_blanks",
+      "instruction": "Questions 36–40: Complete the sentences below. Write ONE WORD ONLY for each answer.",
+      "question_content": "<h3>Manufacturing process of The London Eye</h3><p>Other components were being manufactured in other places while [blank_36] piles were being constructed in place.</p><p>After finishing the piles construction, base [blank_37] installation was carried out on top of the piles.</p><p>On which two plinths were attached as a foundation of a(n) [blank_38].</p><p>The passenger cabins were linked to the rim via mounting [blank_39].</p><p>Under the London Eye rim is the [blank_40] platform where visitors gather before taking the London view.</p>",
+      "word_limit": 1,
+      "questions": [
+        {
+          "number": 36,
+          "prompt": "Other components were being manufactured in other places while [blank] piles were being constructed in place.",
+          "answer": "tension"
+        },
+        {
+          "number": 37,
+          "prompt": "After finishing the piles construction, base [blank] installation was carried out on top of the piles.",
+          "answer": "cap"
+        },
+        {
+          "number": 38,
+          "prompt": "On which two plinths were attached as a foundation of a(n) [blank].",
+          "answer": "A-frame"
+        },
+        {
+          "number": 39,
+          "prompt": "The passenger cabins were linked to the rim via mounting [blank].",
+          "answer": "rings"
+        },
+        {
+          "number": 40,
+          "prompt": "Under the London Eye rim is the [blank] platform where visitors gather before taking the London view.",
+          "answer": "boarding"
+        }
+      ]
+    }
+  ]
+}

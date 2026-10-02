@@ -38,7 +38,7 @@ class IeltsTestResource extends Resource
                         Forms\Components\Select::make('type')->label('Hệ thi')->options(collect(IeltsTestTypeEnum::cases())->mapWithKeys(fn ($type) => [$type->value => $type->label()]))->default('academic')->required()->live(),
                         Forms\Components\TextInput::make('duration_minutes')->label('Tổng thời gian')->suffix('phút')->integer()->minValue(1)->maxValue(600)->default(150)->required(),
                         Forms\Components\Textarea::make('description')->label('Giới thiệu bộ đề')->rows(4)->columnSpanFull(),
-                        Forms\Components\TextInput::make('slug')->label('Đường dẫn bộ đề (tùy chọn)')->placeholder('Tự tạo khi để trống')->maxLength(255)->regex('/^[a-z0-9]+(?:-[a-z0-9]+)*$/')->unique(ignoreRecord: true)->columnSpanFull(),
+                        Forms\Components\TextInput::make('slug')->label('Đường dẫn bộ đề (tùy chọn)')->placeholder('Tự tạo khi để trống')->helperText('Để trống sẽ tạo đường dẫn mới từ tên bộ đề. Khi chỉnh sửa, liên kết cũ sẽ thay đổi.')->maxLength(255)->regex('/^[a-z0-9]+(?:-[a-z0-9]+)*$/')->unique(ignoreRecord: true)->columnSpanFull(),
                     ]),
                 ]),
                 Forms\Components\Tabs\Tab::make('Chọn phần thi')->icon('heroicon-o-rectangle-stack')->schema([
@@ -72,7 +72,7 @@ class IeltsTestResource extends Resource
                                 if ($sections->contains(fn ($section) => $section->test_type->value !== $get('type'))) {
                                     $fail('Phần thi phải cùng hệ Academic / General Training với bộ đề.');
                                 }
-                                if ($get('is_published') && ($sections->isEmpty() || $sections->contains(fn ($section) => ! $section->is_active || $section->total_questions < 1))) {
+                                if ($get('is_published') && ($sections->isEmpty() || $sections->contains(fn ($section) => ! $section->is_active || ! $section->questionGroups()->whereHas('questions')->exists()))) {
                                     $fail('Để xuất bản, hãy chọn ít nhất một phần thi đã có câu hỏi và đang cho phép sử dụng.');
                                 }
                             }]),

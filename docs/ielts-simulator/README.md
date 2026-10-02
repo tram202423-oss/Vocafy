@@ -2,7 +2,7 @@
 
 Tài liệu chức năng và kỹ thuật của module giả lập thi IELTS trong Vocafy.
 
-**Cập nhật:** 01/10/2026. **Branch:** `feature/IELTS-Simulator-System-Blueprint`. **Mốc code:** `5a2740e` cùng thay đổi multi-select hiện có trong working tree, chưa coi là một bản phát hành đã nghiệm thu.
+**Cập nhật:** 02/10/2026. **Branch:** `feature/IELTS-Simulator-System-Blueprint`. **Nguồn:** WSL `/home/tram/Study/Vocafy`, HEAD `761e76d` và toàn bộ thay đổi chưa commit tại thời điểm rà soát. Chưa coi là bản phát hành đã nghiệm thu.
 
 ## Mục lục
 
@@ -21,7 +21,8 @@ Tài liệu chức năng và kỹ thuật của module giả lập thi IELTS tro
 Tài liệu đi kèm:
 
 - **[Hướng dẫn admin](ADMIN-GUIDE.md):** tạo phần thi, nhập từng dạng, câu chọn nhiều, kéo thả, bản đồ, audio và xuất bản.
-- **[Mức độ hoàn thiện](QUESTION-TYPES.md):** bảng các dạng đã đủ luồng chính, các dạng còn thiếu, bằng chứng từ code và thứ tự xử lý.
+- **[Trạng thái dạng câu hỏi](QUESTION-TYPES.md):** ma trận hỗ trợ và các kịch bản cần nghiệm thu.
+- **[Báo cáo rà soát](AUDIT.md):** lỗi đã xác nhận, phần nghiệp vụ còn thiếu, bằng chứng và thứ tự P1/P2/P3.
 
 Các đường dẫn mã nguồn bên dưới tính từ root repository. Tài liệu mô tả hành vi của project, không xác nhận tính tương đương với quy trình thi hoặc tiêu chuẩn chấm chính thức của đơn vị tổ chức IELTS.
 
@@ -33,19 +34,20 @@ Module hiện cung cấp:
 - Trang danh sách đề, trang giới thiệu, phòng thi và trang kết quả.
 - Reading: bài đọc và câu hỏi ở hai khung; nhóm theo Passage; chọn đáp án, nhập chữ, chọn nhiều và kéo thả.
 - Listening: audio chung, bốn Part suy ra từ số câu, câu hỏi theo dữ liệu, transcript khi xem kết quả.
-- Writing: Task, ảnh minh họa, vùng viết bài, đếm từ và tích hợp Gemini để chấm.
+- Writing: Task, ảnh minh họa, vùng viết bài, đếm từ, AI tham khảo và điểm chính thức do giáo viên nhập.
+- Speaking: hiển thị prompt, thu âm micro, dừng và upload file riêng tư, nghe/thu lại/xóa; Gemini đánh giá audio tham khảo, giáo viên chấm chính thức.
 - Đồng hồ, cảnh báo thời gian, đánh dấu xem lại, highlight/ghi chú trên giao diện, tùy chọn hiển thị và ghi nhận đổi tab.
 - Chấm Reading/Listening theo đáp án và quy đổi raw score sang band qua bảng dữ liệu.
 
-**Giới hạn:** Speaking mới có cấu hình kỹ năng; chưa có luồng thi riêng. Một lượt thi hiện xử lý một section. Chưa có phiên full test nối nhiều kỹ năng hoặc overall band của cả bộ đề.
+**Trạng thái sau sửa:** Speaking có draft trên thiết bị, checkpoint server, khôi phục/retry và thời gian hoàn tất upload. Admin kết quả đã bỏ callback visibility gây lỗi. FK RESTRICT chặn xóa đề/phần thi đã có lượt. Một lượt vẫn thi một section; Speaking từng Part và full test còn thiếu. Xem [AUDIT.md](AUDIT.md) để phân biệt phần đã sửa và phần còn lại.
 
-Dạng chọn một, chọn nhiều, TFNG và YNNG có đủ đường xử lý chính trong code. Matching, Completion, Short Answer, Drag & Drop, Map và Writing còn các khoảng trống được mô tả trong [báo cáo trạng thái](QUESTION-TYPES.md). Các thay đổi multi-select gần nhất chưa có nghiệm thu giao diện/test chuyên biệt.
+Dạng chọn một, chọn nhiều, TFNG và YNNG có đủ đường xử lý chính trong code. Matching, Completion, Short Answer, Drag & Drop, Map và Writing còn các khoảng trống được mô tả trong [báo cáo trạng thái](QUESTION-TYPES.md). Các luồng mới chưa có đủ kiểm thử hồi quy và nghiệm thu browser, đặc biệt Speaking và hai nguồn điểm.
 
 ## 2. Kiến trúc và bản đồ mã nguồn
 
 ### 2.1. Thành phần
 
-Theo manifest của repository: Laravel 11, Filament 3, Blade, Alpine.js, Tailwind CSS và Vite. MySQL được cấu hình trong Docker Compose. Writing gọi `GeminiService`; Reading/Listening không cần AI để chấm đáp án.
+Theo manifest của repository: Laravel 11, Filament 3, Blade, Alpine.js, Tailwind CSS và Vite. MySQL được cấu hình trong Docker Compose. Writing/Speaking gọi `GeminiService`; Reading/Listening không cần AI để chấm đáp án.
 
 ```mermaid
 flowchart TD
@@ -61,7 +63,7 @@ flowchart TD
     G -->|Autosave / submit| E
     E --> H[IeltsScoringService]
     H --> I[(Bảng band)]
-    H -->|Writing| J[GeminiService]
+    H -->|Writing / Speaking| J[GeminiService]
     H --> F
     E --> K[Trang result]
 ```
@@ -70,17 +72,19 @@ flowchart TD
 
 | Nhóm | File / thư mục | Trách nhiệm |
 | --- | --- | --- |
-| Routes | `src/routes/web.php` | Bảy route IELTS dưới prefix `/ielts` |
-| Controller | `src/app/Http/Controllers/IeltsExamController.php` | Danh sách, start, room, autosave, submit, result |
+| Routes | `src/routes/web.php` | Mười hai route học viên IELTS dưới prefix `/ielts` |
+| Controller | `src/app/Http/Controllers/IeltsExamController.php` | Danh sách, start, room, autosave, thu âm, submit, result |
 | Admin bộ đề | `src/app/Filament/Resources/IeltsTestResource.php` | Ghép section, kiểm tra hệ thi/kỹ năng, xuất bản |
 | Admin phần thi | `src/app/Filament/Resources/IeltsSectionResource.php` | CRUD phần thi, dùng form chung |
 | Form chung | `src/app/Filament/Forms/IeltsSectionForm.php` | Editor group/câu hỏi, ngân hàng, multi-select, audio |
 | Admin kết quả | `src/app/Filament/Resources/IeltsSubmissionResource.php` | Danh sách lượt thi, sửa điểm/trạng thái/nhận xét, mở bài làm |
 | Authoring | `src/app/Services/IeltsAuthoringService.php` | Validation nhóm, tạo dãy câu/blank, đồng bộ tổng câu và thứ tự kỹ năng |
 | Multi-select | `src/app/Services/IeltsMultiSelectService.php` | Nhận dạng nhóm, chuyển dữ liệu cũ sang editor, sinh số câu, kiểm tra đáp án |
-| Scoring | `src/app/Services/IeltsScoringService.php` | So khớp, raw score, band, Writing AI |
-| Drag validation cũ | `src/app/Services/IeltsDragDropService.php` | Validator legacy; chưa được nối vào submit hiện tại |
-| Audio | `src/app/Services/IeltsAudioService.php` | Upload, link trực tiếp, nhập Google Drive |
+| Scoring | `src/app/Services/IeltsScoringService.php` | So khớp, raw/band objective, AI Writing/Speaking tham khảo |
+| Drag validation | `src/app/Services/IeltsDragDropService.php` | Kiểm tra toàn trạng thái theo response mode, answer bank và option usage; dùng ở autosave và submit |
+| Audio | `src/app/Services/IeltsAudioService.php` | Upload, link trực tiếp, nhập Google Drive cho Listening |
+| Snapshot | `src/app/Services/IeltsExamSnapshotService.php` | Chụp đề, khôi phục model/relations cho lượt thi mới |
+| Word limit | `src/app/Services/IeltsWordLimitService.php` | Giới hạn token của Completion/Short Answer standard |
 | Models / enums | `src/app/Models/Ielts*.php`, `src/app/Enums/Ielts*.php` | Quan hệ, casts, kỹ năng, dạng câu, trạng thái |
 | Views | `src/resources/views/ielts/{index,show,room,result}.blade.php` | Giao diện học viên |
 | Partial tương tác | `src/resources/views/ielts/partials/` | Multi-choice bank, drag bank, note, map, question targets |
@@ -115,8 +119,8 @@ erDiagram
 | `ielts_question_groups` | Section FK, `title`, `order`, `question_type`, `response_mode`, `option_usage`, `instruction`, `passage_content`, `question_content`, `audio_url`, `transcript`, `image_url`, `settings` | Một group chứa một dạng câu; Passage có thể gồm nhiều group |
 | `ielts_questions` | Group FK, `question_number`, `order`, `prompt`, `options`, `correct_answer`, `points`, `word_limit`, `explanation`, `quote_reference`, `drop_x`, `drop_y` | Một row = một số câu/ô đáp án; options là JSON |
 | `ielts_answer_options` | Group FK, `option_key`, `label`, `order` | Ngân hàng quan hệ; unique group + option key |
-| `ielts_submissions` | UUID, User/Test/Section FK, `skill`, `test_type`, `status`, timestamps, raw/band score, `total_questions`, `metadata`, `examiner_notes` | Một lượt thi của một section; user có thể null |
-| `ielts_user_answers` | Submission FK, Question FK, `user_answer`, `is_correct`, `is_flagged_for_review`, `notes`, `time_spent_seconds` | Unique submission + question; answer đang là chuỗi, không phải mảng |
+| `ielts_submissions` | UUID, User/Test/Section FK, `skill`, `test_type`, `status`, timestamps, `raw_score`, `band_score`, `ai_band_score`, `teacher_band_score`, `teacher_scored_at`, `total_questions`, `metadata`, `examiner_notes` | Một lượt thi của một section; Writing/Speaking có điểm AI và giáo viên riêng |
+| `ielts_user_answers` | Submission FK, `ielts_question_id` nullable, `question_snapshot_id`, `user_answer`, `is_correct`, `is_flagged_for_review`, `notes`, `time_spent_seconds` | Một row cho mỗi câu tại thời điểm bắt đầu; snapshot ID giữ liên kết khi câu gốc bị xóa |
 | `ielts_band_scores` | `skill`, `test_type`, `raw_score`, `band_score` | Bảng quy đổi; unique skill + type + raw |
 
 `question_number` là số hiển thị trong toàn section. `id` là khóa database dùng khi lưu bài. Ví dụ câu số 7 có thể có ID 107; API dùng 107.
@@ -178,33 +182,34 @@ Scorer gom đáp án đúng từ các row của group, không ép B vào ô 7 v�
 3. Form gọi `validateGroups()` trước khi ghi quan hệ: số câu trùng, prompt, blank mapping, ngân hàng, đáp án đúng và các quy tắc multi-select.
 4. Create/Edit section có database transaction; sau khi lưu gọi `syncSectionTotals()`.
 5. Tạo test, chọn section cùng hệ thi. Form không cho chọn hai section cùng skill trong một test.
-6. Khi xuất bản qua admin, test phải có ít nhất một section đang active và có câu hỏi.
+6. Khi xuất bản qua admin, test phải có ít nhất một section đang active và có question row thực; controller và validation không dựa riêng vào total_questions đã lưu.
 7. `syncTestSections()` sắp thứ tự Listening → Reading → Writing → Speaking và cộng tổng câu. Thời lượng bộ đề vẫn là trường đặt riêng.
 
 Form section cũng được dùng trong hộp thoại tạo section ngay trên test editor. Luồng modal tự lưu quan hệ và đồng bộ tổng câu trong transaction.
 
-Hiện các kiểm tra xuất bản trên form/index chưa được áp dụng đồng nhất trong show/start. Xem mục quyền truy cập của [báo cáo trạng thái](QUESTION-TYPES.md).
+Controller cũng kiểm tra trạng thái xuất bản/section tại show và start; xem quyền truy cập cùng các điểm cần nghiệm thu trong [báo cáo trạng thái](QUESTION-TYPES.md).
 
 ## 5. Luồng làm bài
 
 ### 5.1. Bắt đầu
 
-`start()` tìm test theo slug, chọn section theo `section_id`, tiếp đến `skill` khi không có section ID, cuối cùng rơi về section đầu nếu chưa tìm thấy.
+start() chỉ tìm bộ đề đã xuất bản. Section phải active, thuộc bộ đề và có ít nhất một question row thật. Có thể chỉ định section_id hoặc skill; sau khi lọc phải còn đúng một section. Nếu không gửi lựa chọn nhưng test chỉ có một section hợp lệ thì vẫn bắt đầu được; nhiều hoặc không có section phù hợp sẽ trả lỗi.
 
-Tạo submission UUID với user hiện tại hoặc null, section/test, skill, hệ thi lấy từ test, `in_progress`, thời điểm bắt đầu và tổng câu. Tổng câu bằng `section.total_questions`, fallback 40 nếu giá trị đó rỗng/0. Tạo sẵn user-answer rỗng cho từng câu.
+Snapshot đề được chụp ngay trước khi tạo lượt; submission chứa snapshot và các user-answer rỗng được ghi trong một transaction. Tổng câu lấy từ số câu trong snapshot. Server lưu deadline_at cố định theo thời gian của section. Với khách, controller tạo bí mật ngẫu nhiên, lưu hash trong metadata và giữ bí mật trong session; UUID không đủ để truy cập lượt thi. Người dùng đăng nhập phải là chủ lượt thi, trừ admin/super-admin.
 
-Mỗi lần start tạo một submission mới. Không có logic tự tiếp tục phiên đang dở tại endpoint start.
+Start ưu tiên tiếp tục lượt đang dở còn hạn của cùng người dùng/guest session, test và section; khi không có lượt phù hợp mới tạo lượt mới.
 
 ### 5.2. Vào phòng thi
 
-`room()` nạp section, groups, questions, answerOptions, userAnswers và user:
+room() nạp section, groups, questions, answerOptions, userAnswers và user, sau khi xác thực quyền sở hữu/session:
 
 - Nếu đã completed: chuyển đến result.
-- Tính thời gian còn lại từ `started_at` và `section.time_limit_minutes` (fallback 60 phút).
-- Nếu đã hết giờ: khóa submission, chấm bài và chuyển đến result.
-- Nếu chưa hết giờ: truyền các câu trả lời/flags/notes vào Alpine để khôi phục trạng thái đã lưu.
+- Dựng section, group và câu hỏi từ snapshot tại thời điểm start; dùng snapshot để hiển thị, autosave, validate và chấm điểm.
+- Dùng deadline server đã lưu; submission cũ không có deadline dùng started_at + time_limit_minutes.
+- Khi hết giờ: khóa lượt, chấm các câu đã autosave và chuyển đến result.
+- Trước deadline: truyền câu trả lời/flags/notes đã lưu để khôi phục giao diện.
 
-Frontend đếm ngược theo mốc `Date.now()`, có cảnh báo 10 phút/5 phút và gọi submit khi hết giờ. Save và submit chưa tự kiểm tra hạn giờ như room.
+Frontend đếm ngược theo deadline và tự gọi submit. Save từ chối ghi quá hạn; submit sau hạn bỏ payload mới và chấm trạng thái đã lưu ở server.
 
 ### 5.3. Phân nhóm nội dung
 
@@ -218,23 +223,23 @@ Mỗi group Writing chỉ hiển thị câu đầu; đặt một câu trong mỗ
 
 ### 5.4. Autosave
 
-- Câu thường: gửi `question_id` và `answer` sau thay đổi; có thể gửi riêng flag hoặc notes.
-- Chọn nhiều: frontend tập hợp lựa chọn và gửi group ID + mảng key. Backend phân vào các slot theo thứ tự câu, kiểm tra cả trạng thái nhóm rồi cập nhật trong transaction.
-- Save khóa submission và từ chối ghi sau completed.
-- Nếu lưu chọn nhiều lỗi, UI khôi phục trạng thái trước đó và báo chọn lại.
-- Kéo thả chuyển ô hiện xóa nguồn rồi ghi đích qua hai lần autosave; chưa nguyên tử ở cấp thao tác chuyển.
+- Save yêu cầu quyền của chủ lượt thi (hoặc admin); khách cần secret khớp trong session.
+- Submission phải còn in_progress và chưa quá deadline.
+- Notes, flag và câu trả lời được ghi qua endpoint autosave. Highlight/ghi chú passage được lưu theo text offsets trong metadata và khôi phục khi reload. Snapshot nội dung giữ prompt, passage, ngân hàng, đáp án và cấu hình khi admin sửa đề; FK RESTRICT bảo vệ khi xóa test/section; binary media bên ngoài vẫn phụ thuộc URL.
+- Drag & Drop kiểm tra ngân hàng và quy tắc once/repeat trên autosave và submit. Chuyển đáp án hiện được ghi nguyên tử cho ô nguồn/đích.
+- Autosave frontend xếp hàng tuần tự và gửi expected_revision; server trả 409 nếu cửa sổ khác đã thay đổi lượt. UI giữ thông báo lỗi/retry; submit chờ cả multi-select và drag đang lưu.
+- Speaking lưu Blob dự phòng bằng IndexedDB và checkpoint server khoảng 5 giây; dừng thu gửi bản cuối. Có khôi phục, thử lưu lại và tải file xuống khi upload chưa thành công.
 
 ### 5.5. Nộp bài và kết quả
 
-Submit nhận map câu trả lời cuối cùng; khóa submission, kiểm tra multi-select trước khi cập nhật, chấm điểm rồi trả URL result. Nếu submission đã completed, không chấm lại ở endpoint này.
+Submit xác thực quyền và khóa lượt trong transaction. Nếu còn hạn, dùng payload cuối cùng, chấm rồi hoàn tất. Nếu đã hết hạn, bỏ qua payload gửi muộn và chấm các câu đã lưu trước đó. Submission đang làm không được xem đáp án qua trang result; người dùng được chuyển lại phòng thi. Khi hết giờ, result có thể tự hoàn tất việc chấm phần đã lưu. Lượt đã hoàn tất không bị chấm lại.
 
-Frontend chờ các request lưu multi-select đang chạy, giữ snapshot đáp án ở thời điểm bấm nộp, rồi gửi bài. Khi nộp lỗi, hiển thị thông báo và giữ đáp án trên màn hình.
+Các lượt guest cũ được tạo trước cơ chế session secret không thể được mở chỉ bằng UUID; admin vẫn có thể truy cập để quản trị.
 
-Trang result hiển thị raw/band score, thống kê, từng đáp án, giải thích/trích dẫn; Listening có transcript và Writing có dữ liệu đánh giá AI. Với chọn nhiều, đáp án chuẩn được hiển thị như bộ key chung, không phân biệt thứ tự.
 
 ## 6. Routes và payload
 
-Các route dưới đây là web routes, có cơ chế session/CSRF của ứng dụng. Request JSON nên gửi `Content-Type: application/json`, `Accept: application/json` và CSRF token hợp lệ. Chưa có API version riêng cho module.
+Các route dưới đây là web routes, có cơ chế session/CSRF của ứng dụng và kiểm tra quyền submission; guest phải dùng đúng session đã tạo lượt thi. Request JSON nên gửi `Content-Type: application/json`, `Accept: application/json` và CSRF token hợp lệ. Chưa có API version riêng cho module.
 
 | Method | URL | Route name | Mục đích |
 | --- | --- | --- | --- |
@@ -245,6 +250,9 @@ Các route dưới đây là web routes, có cơ chế session/CSRF của ứng 
 | POST | `/ielts/exam/{submission}/save` | `ielts.exam.save` | Autosave |
 | POST | `/ielts/exam/{submission}/submit` | `ielts.exam.submit` | Nộp và chấm |
 | GET | `/ielts/exam/{submission}/result` | `ielts.exam.result` | Kết quả |
+| POST | `/ielts/exam/{submission}/speaking-recording` | `ielts.exam.speaking-recording.upload` | Upload/thay bản ghi |
+| DELETE | `/ielts/exam/{submission}/speaking-recording` | `ielts.exam.speaking-recording.delete` | Xóa bản ghi khi còn làm bài |
+| GET | `/ielts/exam/{submission}/speaking-recording` | `ielts.exam.speaking-recording` | Nghe file riêng tư |
 
 ### 6.1. Bắt đầu một section
 
@@ -252,7 +260,7 @@ Các route dưới đây là web routes, có cơ chế session/CSRF của ứng 
 {"section_id": 12}
 ```
 
-Có thể gửi `{"skill":"reading"}` thay thế. Section cần thuộc test đang chọn. Hiện code fallback về section đầu khi lựa chọn không hợp lệ; đây là hành vi cần cải thiện, không nên dùng làm hợp đồng tích hợp lâu dài.
+Có thể gửi skill thay section_id. Sau khi lọc theo lựa chọn, test phải có đúng một section hợp lệ. Không gửi lựa chọn chỉ được chấp nhận nếu test có đúng một section đủ điều kiện; trường hợp không có hoặc mơ hồ trả lỗi.
 
 ### 6.2. Lưu một đáp án / flag / notes
 
@@ -265,12 +273,35 @@ Có thể gửi `{"skill":"reading"}` thay thế. Section cần thuộc test đa
 }
 ```
 
-- `answer` nullable string; `""` hoặc null dùng để bỏ đáp án.
+- `answer` nullable string; `""` hoặc null dùng để bỏ đáp án. Với Reading/Listening standard Completion/Short Answer, backend từ chối nội dung vượt word_limit; quy tắc không áp dụng cho option bank hoặc Writing.
+
+Với chuyển đáp án đã đặt từ ô nguồn sang ô đích, UI gửi một thao tác nhóm để server validate và ghi trong cùng transaction:
+
+    {
+      "drag_move": {
+        "group_id": 25,
+        "source_question_id": 107,
+        "target_question_id": 108,
+        "answer": "B"
+      }
+    }
+
+API cho phép kéo từ ngân hàng bằng payload bỏ source_question_id; frontend hiện dùng save câu đơn cho trường hợp này. Thay đáp án ở ô đích sẽ trả đáp án cũ về bank trong cùng thao tác; lỗi validation giữ nguyên trạng thái nguồn/đích.
+
+Listening dùng cùng endpoint save để lưu tiến độ audio và sự kiện audio kết thúc:
+
+    {"audio_progress_seconds": 245}
+
+    {"audio_ended": true}
+
+Tiến độ chỉ cập nhật tăng dần. Khi audio kết thúc, server đặt deadline còn tối đa 120 giây; nếu reload, room tiếp tục từ deadline đó.
+
+
 - Có thể chỉ gửi `question_id` và `is_flagged` để đổi flag.
 - `{"tab_switched":true}` tăng `metadata.tab_switch_count`.
 - Thành công: `{"status":"success","question_id":107}`.
-- Nhánh câu đơn hiện trả success ngay cả khi không tìm được user-answer tương ứng; cần cải thiện error contract.
-- Notes qua API có thể lưu vào DB, nhưng popup ghi chú trên đoạn tô sáng hiện chủ yếu cập nhật DOM.
+- Nhánh câu đơn từ chối question ID không thuộc lượt; kiểm tra kiểu dữ liệu và key lựa chọn standard.
+- Notes theo câu lưu ở user-answer; highlight/ghi chú trên đoạn văn lưu offsets và nội dung note trong submission metadata, khôi phục sau reload.
 
 ### 6.3. Lưu chọn nhiều
 
@@ -300,9 +331,19 @@ Mỗi key là question ID và mỗi value là string/null. Với multi-select, v
 {"status":"success","redirect_url":"https://your-host/ielts/exam/SUBMISSION_UUID/result"}
 ```
 
-Request không yêu cầu JSON sẽ nhận redirect. Validation lỗi trả 422 đối với request JSON. Lưu vào submission completed hiện trả 400; group không tồn tại trả 404.
+Request không yêu cầu JSON sẽ nhận redirect. Validation lỗi trả 422 đối với request JSON. Lưu vào submission completed hoặc quá hạn hiện trả 409; group không tồn tại trả 404.
 
-**Giới hạn hợp đồng:** controller chưa kiểm tra chủ sở hữu lượt thi, chưa bảo vệ result trước khi hoàn tất và chưa áp dụng đủ validation cho tất cả question types. Xem báo cáo trạng thái trước khi xây integration hoặc triển khai thi có dữ liệu thật.
+**Giới hạn hợp đồng:** Drag & Drop đã có validator chung và chuyển ô nguyên tử. Các dạng câu khác vẫn cần rà soát validation theo type; xem báo cáo trạng thái trước khi xây integration hoặc triển khai thi có dữ liệu thật.
+
+### 6.5. Bản ghi Speaking và revision
+
+- POST `/exam/{submission}/speaking-recording/start` trước deadline tạo recording_id.
+- Upload multipart đến `/speaking-recording` gồm recording, recording_id, revision tăng dần, final (0/1) và duration_seconds. Dung lượng tối đa 12 MiB.
+- final=0 ghi checkpoint; final=1 chốt bản thu. File và metadata cập nhật dưới row lock, file cũ chỉ dọn sau commit. Retry cùng bản cuối được chấp nhận nếu nội dung trùng.
+- Phiên đã bắt đầu được hoàn tất chuyển file trong tối đa 120 giây sau deadline; không được tạo phiên thu mới sau deadline.
+- POST `/speaking-recording/finalize` khôi phục checkpoint server; DELETE xóa bản khi còn thời gian làm bài; GET nghe file riêng tư. GET với draft=1 chỉ lấy checkpoint khi lượt còn in-progress.
+- Chủ lượt/guest session và người chấm được phân quyền mới xem được file. Người chấm không có quyền sửa bản ghi.
+- Autosave và submit gửi expected_revision lấy từ room/response save. Mọi save thành công trả revision mới; 409 yêu cầu tải lại khi có xung đột giữa cửa sổ.
 
 ## 7. Chấm điểm
 
@@ -312,8 +353,9 @@ Request không yêu cầu JSON sẽ nhận redirect. Validation lỗi trả 422 
 2. So khớp `user_answer` với `correct_answer`.
 3. Multi-select: xét key trong tập đáp án đúng của group, mỗi key đúng khác nhau được một điểm.
 4. Drag `once`: cùng key bị dùng nhiều lần trong một group làm các câu dùng key lặp bị đánh sai.
-5. Cập nhật `is_correct`; cộng `points` cho câu thường, một điểm cho mỗi slot multi-select đúng.
-6. Tra band, ghi raw/band score, thời gian hoàn tất và status completed.
+5. Với Completion/Short Answer standard ở Reading/Listening, câu vượt word_limit bị tính sai kể cả khi văn bản khớp đáp án.
+6. Cập nhật `is_correct`; cộng một điểm cho mỗi ô đúng, kể cả multi-select.
+7. Tra band, ghi raw/band score, thời gian hoàn tất và status completed.
 
 ### 7.2. Đáp án thay thế của một ô
 
@@ -328,30 +370,22 @@ colour; color
 
 Một trong các cách viết đúng là đủ cho **một câu**. Không dùng định dạng này để biểu diễn “phải chọn hai đáp án”.
 
-Chuẩn hóa hiện có gồm chữ thường, trim, khoảng trắng, dấu nháy/tiền tệ, dấu câu cuối, viết tắt T/F/NG/Y/N, so khớp không có khoảng trắng/gạch nối, và một nhánh so chuỗi chữ số dài. Vì chưa phân loại theo type, các quy tắc này còn có thể chấp nhận quá rộng.
+Scorer phân loại normalization theo loại: key MC/matching/map so không phân biệt hoa thường nhưng không bỏ dấu câu; drag key so chính xác sau trim; TFNG/YNNG giữ alias T/F/NG/Y/N; Completion/Short Answer mới bỏ khác biệt hoa thường, khoảng trắng/gạch nối, dấu câu cuối và ký hiệu tiền tệ, đồng thời cho phép định dạng khác nhau của chuỗi số dài.
 
 ### 7.3. Band score
 
-`IeltsBandScore::convert()`:
+Reading/Listening chỉ quy đổi band cho đề 40 câu, tra đúng skill + test_type + raw_score. Đề luyện tập ngắn hiển thị raw; thiếu bảng đúng hệ để band null và có thông báo, không dùng bảng hệ khác hoặc band 0 dự phòng.
 
-1. Giới hạn raw score vào 0–40.
-2. Tra đúng `skill + test_type + raw_score`.
-3. Nếu không có, tra skill + raw score không phân biệt hệ thi.
-4. Nếu vẫn không có, trả 0.0.
+### 7.4. Writing/Speaking: AI tham khảo và giáo viên chính thức
 
-Không tự quy đổi tỷ lệ theo `total_questions`. Bài luyện 35 câu vẫn được tra raw trên thang 40; band hiển thị chưa được hiệu chỉnh theo độ dài đề. Bảng trong seeder là dữ liệu cấu hình của ứng dụng, không phải bằng chứng rằng mọi đề có cùng độ khó hoặc đã được chuẩn hóa.
-
-### 7.4. Writing
-
-- Gọi `GeminiService::evaluateWriting()` với prompt và essay từng câu.
-- Task 1 được nhận diện bằng số câu 1; dùng `ielts_academic_task1`, còn lại `ielts_academic_task2`.
-- `overallScore` được dùng làm band từng Task; evaluations được lưu vào metadata và notes của user-answer.
-- Overall hiện tính `(Task1 + 2 × Task2) / 3`, làm tròn đến 0.5.
-- `raw_score` của Writing là số phần tử Task score có giá trị, không phải số câu đúng trên 40.
-- Chấm chạy đồng bộ trong request submit. Request hiện được bọc transaction/khóa lượt thi, nên gọi AI kéo dài cũng kéo dài transaction.
-- Exception hoặc thiếu điểm có các fallback; xem báo cáo trạng thái để biết vì sao chưa thể coi Writing hoàn thiện.
-
-Không có scorer Speaking riêng. Hiện skill khác Writing rơi vào nhánh chấm đáp án Reading/Listening; không nên xuất bản Speaking như tính năng đã hoạt động.
+- Nộp bài chốt đáp án, completed_at và duration_seconds trước. AI xử lý qua `EvaluateIeltsSubmission` trên queue/connection `ielts`, không giữ transaction trong lúc gọi Gemini.
+- Metadata ai_assessment ghi pending/processing/graded/incomplete/ungradable/failed và ID chống kết quả cũ ghi đè lượt chấm mới. Có nút **Chấm AI lại** trong admin.
+- Writing nhận đúng Academic/General, prompt/instruction/nội dung group và ảnh nếu có. Ảnh không đọc được làm Task failed. Validator authoring yêu cầu hai group, mỗi group một câu số 1/2.
+- AI Writing tổng hợp Task 1:Task 2 = 1:2, làm tròn 0.5 khi đủ hai Task. Speaking có trạng thái ungradable nếu audio không đủ để đánh giá. Band, criteria, feedback và các field text được kiểm tra trước khi lưu; có model/prompt version và thời điểm đánh giá.
+- `ai_band_score` chỉ tham khảo. `teacher_band_score` là chính thức, đồng bộ sang `band_score`; AI không ghi đè rubric/điểm/nhận xét giáo viên.
+- Giáo viên nhập band tổng hoặc đủ bốn tiêu chí cho mỗi Task/kỹ năng; khi có rubric đầy đủ, hệ thống tính band. Server kiểm tra 0–9 theo bước 0.5. Lưu teacher_scored_by, teacher_scored_at và grading_history.
+- Admin quản lý mọi bài. Tài khoản có quyền `ielts.grade` và quyền vào panel chỉ chấm bài được assigned_examiner_id phân công; chủ lượt vẫn xem bài của mình.
+- Speaking vẫn một recorder cho section; Part/cue card/timing chuyên biệt chưa có. Cần nghiệm thu browser/micro/AI thật.
 
 ## 8. Listening và media
 
@@ -367,11 +401,16 @@ Không có scorer Speaking riêng. Hiện skill khác Writing rơi vào nhánh c
 
 `audio_url` tối đa 255 ký tự trong form/schema. Với link quá dài, dùng upload hoặc nhập Google Drive để có URL nội bộ ngắn.
 
-### 8.2. Player hiện tại
+### 8.2. Player và Part hiện tại
 
-Player chọn audio đầu tiên của các group, tự gọi play; nếu trình duyệt chặn autoplay, yêu cầu người dùng bấm để phát. Có âm lượng, mute, tiến độ và thông báo audio kết thúc.
+Player dùng audio đầu tiên của các group; nên cấu hình một audio cho cả section Listening. Nếu trình duyệt chặn autoplay, thí sinh bấm để phát. Tiến độ audio được lưu tăng dần vào metadata mỗi khoảng 10 giây và được khôi phục sau reload.
 
-Để dùng đúng khả năng hiện có, chuẩn bị **một audio cho cả section Listening**. Audio theo từng group chưa được nối thành playlist. Các giới hạn về reload, Part và 120 giây cuối được ghi tại [trạng thái Listening](QUESTION-TYPES.md#44-listening-chưa-hoàn-chỉnh-như-một-phiên-thi).
+Khi audio kết thúc, client gửi sự kiện lên server. Server lưu audio_completed_at và rút deadline còn tối đa 120 giây; room khôi phục đúng deadline khi mở lại. Nếu request lưu sự kiện lỗi, giao diện báo lỗi và timer server giữ deadline ban đầu.
+
+Room và transcript cùng suy ra Part từ số câu đầu của group: câu 1–10 là Part 1, 11–20 là Part 2, 21–30 là Part 3, 31–40 là Part 4. Form từ chối group có câu trải qua hai Part. Tạo các group sao cho mỗi group nằm trọn trong một khoảng 10 câu.
+
+Playlist nhiều audio và mapping Part nhập riêng chưa có. Xem các giới hạn còn lại tại [trạng thái Listening](QUESTION-TYPES.md#5-listening-và-dữ-liệu-mẫu).
+
 
 ## 9. Tương thích dữ liệu cũ
 
@@ -394,6 +433,13 @@ Migration `2026_10_01_000001_add_ielts_response_modes_and_answer_options.php` th
 `selection_limit` legacy không phải nguồn quyết định độc lập của editor mới; số correct keys quyết định số slot sau sync, còn UI phòng thi giới hạn theo số slot đang tồn tại.
 
 Không có migration database riêng cho thay đổi multi-select gần nhất; nó dùng settings JSON và schema câu hỏi đã có.
+
+### 9.3. Snapshot và điểm chủ quan
+
+- `2026_10_02_000001_snapshot_ielts_submissions.php` thêm `question_snapshot_id` và đổi FK question sang set-null. Lượt bắt đầu mới chụp snapshot; lượt cũ không được backfill.
+- Migration 000003 đã đổi FK test/section sang RESTRICT: đề đã có lượt không được xóa; dùng is_published/is_active để ngừng sử dụng. Lượt legacy cũng được bảo vệ khỏi cascade.
+- `2026_10_02_000002_add_dual_ielts_subjective_scoring.php` thêm ba trường điểm/thời điểm giáo viên; chuyển band Writing cũ vào AI, xóa band Speaking cũ do từng dùng scorer objective. Migration chưa phân biệt điểm Writing từng được sửa tay.
+- Snapshot lưu URL ảnh/audio; không tạo bản sao file media ngoài hệ thống.
 
 ## 10. Thiết lập và dữ liệu mẫu
 
@@ -418,16 +464,27 @@ docker compose exec -T app php artisan db:seed --class=IeltsReadingImportSeeder
 - `DatabaseSeeder` mặc định hiện không gọi hai seeder IELTS này.
 - `IeltsSeeder` tạo bảng band và các đề demo, trong đó có slug `cambridge-ielts-18-academic-test-1` và `ielts-drag-and-drop-demo`.
 - `IeltsReadingImportSeeder` tạo slug `reading-multi-select-flood-gifted-museums-qa`, ba passage và 35 câu/55 phút.
+- `IeltsTeaTransportInnovationSeeder`: slug `academic-reading-tea-transport-innovation`, 3 passages/7 groups/40 câu/60 phút; nguồn JSON đi kèm.
+- `IeltsCallUnlimitedListeningSeeder`: slug `listening-call-unlimited-london-eye`, 4 Parts/9 groups/40 câu/30 phút; không ghi đè audio/transcript khi chạy lại.
+- `ReplaceIeltsWithTeaTransportInnovationSeeder` là công cụ thay thế có xóa toàn bộ đề/lượt thi IELTS sau backup; không phải bước cài đặt/cập nhật thông thường.
 - Seeder dùng `updateOrCreate`, và một số đoạn xóa/rebuild ngân hàng/câu không còn trong bộ mẫu. Chạy lại có thể ghi đè chỉnh sửa của các bản ghi mẫu tương ứng; chỉ chạy có chủ đích trên dữ liệu demo.
 - Không cần chạy lại seeder chỉ để bật renderer hoặc scorer mới cho dữ liệu đã tồn tại.
 
 Trang thử nội dung có dạng `/ielts/tests/<slug>` trên host của ứng dụng. Tài liệu không xác nhận những bản ghi mẫu này đã tồn tại trong database hiện tại.
 
-### 10.3. Writing AI
+### 10.3. Writing/Speaking AI và micro
 
-Cấu hình `GEMINI_API_KEY` được đọc qua `config('services.gemini.api_key')`. Không đưa giá trị key vào tài liệu hoặc dữ liệu đề. Khi thay đổi môi trường, lưu ý config cache và khả năng kết nối từ server đến dịch vụ AI.
+Cấu hình `GEMINI_API_KEY` được đọc qua `config('services.gemini.api_key')`. Không đưa giá trị key vào tài liệu hoặc dữ liệu đề. Khi thay đổi môi trường, lưu ý config cache và khả năng kết nối từ server đến dịch vụ AI. Speaking cần quyền micro trên trình duyệt hỗ trợ MediaRecorder; triển khai với HTTPS (localhost dùng cho phát triển). Disk local phải ghi/đọc được và route file phải giữ kiểm tra quyền; không public-link thư mục ghi âm.
 
-### 10.4. Xử lý lỗi thường gặp
+### 10.4. Worker AI và scheduler
+
+```bash
+docker compose up -d --no-deps ielts_queue scheduler
+```
+
+Worker IELTS dùng connection database riêng, retry_after 900 giây và timeout job 660 giây. Scheduler chạy `ielts:complete-expired` mỗi phút cho lượt mới có lifecycle_version=2. Lượt cũ vẫn hoàn tất qua room/result/submit; không tự chấm lại dữ liệu cũ hàng loạt.
+
+### 10.5. Xử lý lỗi thường gặp
 
 | Hiện tượng | Kiểm tra |
 | --- | --- |
@@ -435,11 +492,14 @@ Cấu hình `GEMINI_API_KEY` được đọc qua `config('services.gemini.api_ke
 | Câu chọn nhiều hiện thành các radio riêng | Type phải là `multiple_choice` và `settings.multi_select = true`; kiểm tra code đã triển khai và cache view |
 | Số câu/tổng câu chưa đúng | Kiểm tra `correct_keys`, số bắt đầu, số câu trùng; đường ghi ngoài admin có gọi đồng bộ không |
 | Kéo thả không có lựa chọn | Ngân hàng quan hệ; fallback legacy; key/text có đầy đủ không |
-| `[blank_N]` hiện nguyên văn | Kiểm tra response mode, vị trí nội dung, N có row câu tương ứng; standard chưa hỗ trợ blank chung đầy đủ |
-| Không thấy map | Cần mode kéo thả, `image_url` truy cập được và tọa độ cho các câu |
+| `[blank_N]` hiện nguyên văn | Nội dung chung Completion phải ở question_content, token N có row khớp; đã hỗ trợ typed/drag trong Reading/Listening |
+| Không thấy map | Kiểm tra image_url; standard/drag đều hiện ảnh dù chưa đặt tọa độ; câu chưa có điểm nằm trong danh sách |
 | Audio không phát | MIME/dung lượng, symlink, link trực tiếp, quyền Drive, autoplay; dùng nghe thử admin |
 | Band bằng 0 dù có điểm raw | Kiểm tra bảng `ielts_band_scores`, skill và test type |
-| Band Writing vẫn có khi AI lỗi | Đây là fallback trong scorer hiện tại; xem log và trạng thái hạn chế, không coi là đánh giá AI thành công |
+| Writing/Speaking chưa có điểm chính thức | teacher_band_score chưa được người chấm nhập; AI có điểm không thay thế điểm chính thức |
+| Writing chưa có AI band | Xem writing_evaluation_status/task_statuses; failed xem log Gemini, incomplete cần đủ hai Task |
+| Speaking upload/nộp lỗi | Xem giới hạn 12 MiB/MIME, hạn hoàn tất upload, token phiên; dùng Lưu lại bản thu hoặc tải bản dự phòng xuống |
+| AI giữ pending | Kiểm tra vocafy_ielts_queue, connection ielts và queue jobs; failed có thể chấm lại từ admin |
 
 ## 11. Hướng dẫn bảo trì và mở rộng
 
@@ -459,13 +519,13 @@ Cấu hình `GEMINI_API_KEY` được đọc qua `config('services.gemini.api_ke
 - Một slot có một question ID, một question number và một user-answer trong một submission.
 - Chọn N đáp án đúng tạo N số câu; không gom N key vào một answer string rồi cộng N điểm.
 - Backend quyết định giới hạn và điểm; UI chỉ giúp thao tác.
-- Hai đường autosave/submit cần cùng quy tắc validation; hiện kéo thả chưa đạt điều này.
+- Hai đường autosave/submit phải tiếp tục dùng cùng validator; Drag & Drop hiện đã dùng chung service.
 - Đồng bộ tổng câu khi thay đổi cấu trúc câu, không suy ra tổng câu bằng số group.
 - Tách bài đọc nguồn khỏi nội dung câu hỏi chung.
 - Kỹ năng có trong enum chưa đồng nghĩa có renderer/scorer đã hoàn thiện.
 
 ### 11.3. Những phần chưa có trong phạm vi hiện tại
 
-Chưa có importer tổng quát từ PDF/Word, API public có version, snapshot phiên bản đề, phiên full test nhiều kỹ năng, chấm Speaking hoặc cơ chế xác nhận đề đã đủ toàn bộ dạng câu. Ba passage được nhập bằng một seeder chuyên biệt.
+Chưa có importer tổng quát từ PDF/Word, API public có version, phiên full test nhiều kỹ năng hoặc cơ chế xác nhận đề đã đủ toàn bộ dạng câu. Ba passage được nhập bằng một seeder chuyên biệt. Snapshot chỉ áp dụng cho lượt bắt đầu sau khi migration được triển khai.
 
-Danh sách công việc và tiêu chí hoàn thành được duy trì tại [QUESTION-TYPES.md](QUESTION-TYPES.md). Khi cập nhật module, sửa đồng thời tài liệu kỹ thuật, hướng dẫn admin và trạng thái, tránh để ví dụ demo bị hiểu là chức năng hoàn chỉnh.
+Danh sách công việc và tiêu chí hoàn thành được duy trì tại [AUDIT.md](AUDIT.md); ma trận dạng câu ở [QUESTION-TYPES.md](QUESTION-TYPES.md). Khi cập nhật module, sửa đồng thời tài liệu kỹ thuật, hướng dẫn admin và trạng thái, tránh để ví dụ demo bị hiểu là chức năng hoàn chỉnh.

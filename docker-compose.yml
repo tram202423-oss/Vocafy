@@ -40,6 +40,32 @@ services:
       - app
     restart: unless-stopped
 
+  ielts_queue:
+    image: vocafy-app:latest
+    container_name: vocafy_ielts_queue
+    working_dir: /var/www
+    user: "${UID}:${GID}"
+    command: php artisan queue:work ielts --queue=ielts --tries=2 --timeout=660
+    volumes:
+      - ./src:/var/www
+    depends_on:
+      - db
+      - app
+    restart: unless-stopped
+
+  scheduler:
+    image: vocafy-app:latest
+    container_name: vocafy_scheduler
+    working_dir: /var/www
+    user: "${UID}:${GID}"
+    command: php artisan schedule:work
+    volumes:
+      - ./src:/var/www
+    depends_on:
+      - db
+      - app
+    restart: unless-stopped
+
   db:
     image: mysql:8.0
     container_name: vocafy_db

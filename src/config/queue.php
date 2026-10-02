@@ -29,6 +29,10 @@ return [
     */
 
     'connections' => [
+        'ielts' => [
+            'driver' => 'database', 'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => 'jobs', 'queue' => 'ielts', 'retry_after' => 900, 'after_commit' => true,
+        ],
 
         'sync' => [
             'driver' => 'sync',

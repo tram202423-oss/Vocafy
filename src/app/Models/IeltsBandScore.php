@@ -24,7 +24,7 @@ class IeltsBandScore extends Model
         ];
     }
 
-    public static function convert(string $skill, string $testType, int $rawScore): float
+    public static function convert(string $skill, string $testType, int $rawScore): ?float
     {
         $clampedScore = max(0, min(40, $rawScore));
 
@@ -33,12 +33,6 @@ class IeltsBandScore extends Model
             ->where('raw_score', $clampedScore)
             ->first();
 
-        if (!$record) {
-            $record = static::where('skill', $skill)
-                ->where('raw_score', $clampedScore)
-                ->first();
-        }
-
-        return $record ? (float) $record->band_score : 0.0;
+        return $record ? (float) $record->band_score : null;
     }
 }

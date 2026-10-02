@@ -37,10 +37,18 @@ class IeltsTest extends Model
     {
         parent::boot();
 
-        static::creating(function ($model) {
-            if (empty($model->slug)) {
-                $model->slug = Str::slug($model->title) . '-' . Str::random(5);
+        static::saving(function (self $model): void {
+            if (! blank($model->slug)) {
+                return;
             }
+
+            $base = rtrim(substr(Str::slug((string) $model->title) ?: 'ielts-test', 0, 240), '-');
+
+            do {
+                $slug = $base . '-' . Str::lower(Str::random(8));
+            } while (self::query()->where('slug', $slug)->exists());
+
+            $model->slug = $slug;
         });
     }
 

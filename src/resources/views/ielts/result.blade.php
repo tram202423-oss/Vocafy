@@ -7,9 +7,12 @@
     $isListening = ($skill === 'listening');
     $isReading = ($skill === 'reading');
     $isWriting = ($skill === 'writing');
+    $isSpeaking = ($skill === 'speaking');
+    $isSubjective = $isWriting || $isSpeaking;
+    $isGeneral = $submission->test_type->value === 'general_training';
+    $officialBand = $isSubjective ? $submission->teacher_band_score : $submission->band_score;
     $groups = $submission->section?->questionGroups ?? collect();
-    $firstAudio = $groups->firstWhere('audio_url', '!=', null)?->audio_url
-        ?? 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg';
+    $firstAudio = $groups->first(fn ($group) => filled($group->audio_url))?->audio_url;
 @endphp
 
 @section('content')
@@ -51,8 +54,15 @@
                     <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-3
                         @if($isListening) bg-blue-50 text-blue-700 border border-blue-100
                         @elseif($isWriting) bg-amber-50 text-amber-700 border border-amber-100
+                        @elseif($isSpeaking) bg-purple-50 text-purple-700 border border-purple-100
                         @else bg-emerald-50 text-emerald-700 border border-emerald-100 @endif">
-                        <span>✓ Đã hoàn thành &amp; chấm điểm</span>
+                        @if($isSubjective && $submission->teacher_band_score === null)
+                            <span>Đã nộp · chờ giáo viên chấm Band chính thức</span>
+                        @elseif($isSubjective)
+                            <span>✓ Giáo viên đã chấm Band chính thức</span>
+                        @else
+                            <span>✓ Đã hoàn thành &amp; chấm điểm</span>
+                        @endif
                         <span class="font-black">• {{ strtoupper($skill) }}</span>
                     </div>
                     <h1 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
@@ -67,25 +77,27 @@
                 {{-- SCORE BADGE --}}
                 <div class="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex-shrink-0">
                     <div class="text-center pr-6 border-r border-slate-200">
-                        <span class="text-xs font-bold text-slate-500 block">IELTS Band</span>
+                        <span class="text-xs font-bold text-slate-500 block">{{ $isSubjective ? 'Band chính thức · giáo viên' : 'IELTS Band' }}</span>
                         <div class="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 my-1">
-                            {{ number_format($submission->band_score, 1) }}
+                            {{ $officialBand !== null ? number_format($officialBand, 1) : '—' }}
                         </div>
-                        <span class="text-[11px] font-semibold text-emerald-600">
-                            @if($submission->band_score >= 8.0) Very Good User
-                            @elseif($submission->band_score >= 7.0) Good User
-                            @elseif($submission->band_score >= 6.0) Competent User
-                            @elseif($submission->band_score >= 5.0) Modest User
+                        <span class="text-[11px] font-semibold {{ $officialBand !== null ? 'text-emerald-600' : 'text-amber-700' }}">
+                            @if($officialBand === null)
+                                {{ $isSubjective ? 'Đang chờ giáo viên chấm' : 'Chưa có điểm' }}
+                            @elseif($officialBand >= 8.0) Very Good User
+                            @elseif($officialBand >= 7.0) Good User
+                            @elseif($officialBand >= 6.0) Competent User
+                            @elseif($officialBand >= 5.0) Modest User
                             @else Limited User
                             @endif
                         </span>
                     </div>
 
                     <div class="text-center pl-2">
-                        @if($isWriting)
-                            <span class="text-xs font-bold text-slate-500 block">AI chấm điểm</span>
-                            <div class="text-3xl font-black text-slate-900 my-1">Gemini <span class="text-slate-400 text-xl font-bold">AI</span></div>
-                            <span class="text-[11px] font-semibold text-amber-600">4 tiêu chí chuẩn IELTS</span>
+                        @if($isSubjective)
+                            <span class="text-xs font-bold text-slate-500 block">Band AI tham khảo</span>
+                            <div class="text-3xl font-black text-slate-900 my-1">{{ $submission->ai_band_score !== null ? number_format($submission->ai_band_score, 1) : '—' }}</div>
+                            <span class="text-[11px] font-semibold text-amber-600">Không phải Band chính thức</span>
                         @else
                             <span class="text-xs font-bold text-slate-500 block">Điểm thô (Raw)</span>
                             <div class="text-3xl font-black text-slate-900 my-1">
@@ -112,7 +124,7 @@
                             ✍️ Task 2 (Essay)
                         </button>
                     </div>
-                @else
+                @elseif(!$isSpeaking)
                     <div class="flex items-center gap-2">
                         <button type="button" @click="filter = 'all'"
                                 :class="filter === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
@@ -151,6 +163,7 @@
         {{-- LISTENING: AUDIO REVIEW PLAYER & TRANSCRIPT VIEWER --}}
         {{-- ===================================================== --}}
         @if($isListening)
+            @if($firstAudio)
             <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm"
                  x-data="{
                      audioEl: null,
@@ -217,6 +230,11 @@
                     <audio x-ref="reviewAudio" @timeupdate="onTimeUpdate()" @ended="isPlaying = false" src="{{ $firstAudio }}" preload="auto"></audio>
                 </div>
             </div>
+            @else
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+                    Bộ đề này chưa có audio để phát lại. Transcript và đáp án vẫn hiển thị bên dưới nếu đã được nhập.
+                </div>
+            @endif
 
             {{-- Transcript Viewer --}}
             <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
@@ -240,7 +258,8 @@
 
                 @foreach($groups as $idx => $group)
                     @php
-                        $partNumber = $group->order ?? ($idx + 1);
+                        $firstQuestionNumber = $group->questions->first()?->question_number ?? (($idx * 10) + 1);
+                        $partNumber = min(4, max(1, (int) ceil($firstQuestionNumber / 10)));
                         $rawTranscript = $group->transcript ?? 'Chưa có bản ghi âm thanh cho phần này.';
                         $formattedTranscript = preg_replace_callback('/\(Q(\d+)\)/', function($m) use ($answers) {
                             $qNum = (int)$m[1];
@@ -315,12 +334,133 @@
             @endif
         @endif
 
+        @if($isSubjective && in_array(data_get($submission->metadata, 'ai_assessment.status'), ['pending', 'processing'], true))
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm" x-init="setTimeout(() => window.location.reload(), 10000)">
+                Bài đã nộp. AI đang xử lý đánh giá tham khảo; trang sẽ tự cập nhật. Giáo viên có thể chấm độc lập.
+            </div>
+        @endif
+        @if($isSubjective && $submission->teacher_criteria)
+            <section class="rounded-2xl border border-emerald-200 bg-white p-5">
+                <h2 class="font-bold text-emerald-800">Điểm tiêu chí của giáo viên</h2>
+                @foreach($submission->teacher_criteria as $rubric => $scores)
+                    @php $labels = $rubric === 'speaking'
+                        ? ['Fluency and Coherence', 'Lexical Resource', 'Grammatical Range and Accuracy', 'Pronunciation']
+                        : [$rubric === 'task1' ? 'Task Achievement' : 'Task Response', 'Coherence and Cohesion', 'Lexical Resource', 'Grammatical Range and Accuracy']; @endphp
+                    @if(collect($scores)->contains(fn ($score) => $score !== null && $score !== ''))
+                        <h3 class="mt-3 font-semibold">{{ ucfirst($rubric) }}</h3>
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mt-2">
+                            @foreach($labels as $index => $label)
+                                <div><dt class="inline text-slate-600">{{ $label }}:</dt>
+                                    <dd class="inline font-bold">{{ isset($scores[$index]) ? number_format((float) $scores[$index], 1) : '—' }}</dd></div>
+                            @endforeach
+                        </dl>
+                    @endif
+                @endforeach
+            </section>
+        @endif
+        @if(!$isSubjective && $submission->band_score === null)
+            <p class="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
+                {{ (int) $submission->total_questions !== 40 ? 'Bài luyện tập này hiển thị số câu đúng; không quy đổi band trên thang 40 câu.' : 'Chưa có bảng quy đổi band phù hợp cho kỹ năng và hệ thi này.' }}
+            </p>
+        @endif
+        @if($isSubjective && filled($submission->examiner_notes))
+            <section class="bg-white border border-emerald-200 rounded-2xl p-5 shadow-sm">
+                <h2 class="text-sm font-black text-emerald-800">Nhận xét của giáo viên</h2>
+                <p class="text-sm text-slate-700 mt-2 whitespace-pre-line">{{ $submission->examiner_notes }}</p>
+            </section>
+        @endif
+
         {{-- ===================================================== --}}
-        {{-- WRITING: AI EVALUATION REPORT (GEMINI) --}}
+        {{-- SPEAKING: RECORDING AND ADVISORY AI EVALUATION --}}
+        {{-- ===================================================== --}}
+        @if($isSpeaking)
+            @php
+                $speakingEval = data_get($submission->metadata, 'speaking_evaluation', []);
+                $speakingRecording = data_get($submission->metadata, 'speaking_recording.path');
+            @endphp
+            <section class="bg-white border border-purple-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">Bài Speaking và đánh giá AI</h2>
+                        <p class="text-xs text-amber-700 mt-1">Điểm và nhận xét AI chỉ để tham khảo. Band chính thức do giáo viên cập nhật.</p>
+                    </div>
+                    <span class="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
+                        {{ data_get($submission->metadata, 'speaking_evaluation_status') === 'graded' ? 'AI đã đánh giá' : (data_get($submission->metadata, 'speaking_evaluation_status') === 'failed' ? 'AI chưa thể đánh giá' : 'Chưa có đánh giá AI') }}
+                    </span>
+                </div>
+
+                @if($speakingRecording)
+                    <audio controls preload="none" class="w-full" src="{{ route('ielts.exam.speaking-recording', $submission->id) }}"></audio>
+                @else
+                    <p class="text-sm text-slate-500">Không tìm thấy tệp ghi âm cho lượt thi này.</p>
+                @endif
+
+                <details class="rounded-xl border border-slate-200 p-4">
+                    <summary class="cursor-pointer text-xs font-bold text-slate-800">Câu hỏi trong phần thi</summary>
+                    <div class="mt-3 space-y-3">
+                        @foreach($groups as $speakingGroup)
+                            <div>
+                                <h3 class="text-xs font-bold text-purple-700">{{ $speakingGroup->title }}</h3>
+                                @if($speakingGroup->instruction)
+                                    <p class="text-xs text-slate-500 mt-1">{{ $speakingGroup->instruction }}</p>
+                                @endif
+                                @if($speakingGroup->image_url)<img src="{{ $speakingGroup->image_url }}" alt="{{ $speakingGroup->title }}" class="max-w-full max-h-80">@endif
+                                @foreach($speakingGroup->questions as $speakingQuestion)
+                                    <p class="text-xs text-slate-700 mt-1"><strong>{{ $speakingQuestion->question_number }}.</strong> {{ $speakingQuestion->prompt }}</p>
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+                </details>
+
+                @if($speakingEval && in_array(data_get($submission->metadata, 'speaking_evaluation_status'), ['graded', 'ungradable'], true))
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($speakingEval['criteria'] ?? [] as $criterion)
+                            <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h3 class="text-xs font-bold text-slate-800">{{ $criterion['name'] ?? 'Tiêu chí IELTS Speaking' }}</h3>
+                                    <strong class="text-purple-700">{{ isset($criterion['score']) ? number_format((float) $criterion['score'], 1) : '—' }}</strong>
+                                </div>
+                                <p class="text-xs text-slate-600 mt-2">{{ $criterion['comment'] ?? '' }}</p>
+                            </article>
+                        @endforeach
+                    </div>
+
+                    @if(filled($speakingEval['transcript'] ?? null))
+                        <div class="rounded-xl border border-slate-200 p-4">
+                            <h3 class="text-xs font-bold text-slate-800">Transcript AI tham khảo</h3>
+                            <p class="text-sm text-slate-700 mt-2 whitespace-pre-line">{{ $speakingEval['transcript'] }}</p>
+                        </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        @foreach(['strengths' => 'Điểm làm tốt', 'improvements' => 'Gợi ý cải thiện'] as $key => $label)
+                            @if(!empty($speakingEval[$key]))
+                                <div class="rounded-xl bg-slate-50 p-4">
+                                    <h3 class="text-xs font-bold text-slate-800 mb-2">{{ $label }}</h3>
+                                    <ul class="list-disc pl-5 space-y-1 text-xs text-slate-600">
+                                        @foreach($speakingEval[$key] as $item)<li>{{ $item }}</li>@endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    @if(filled($speakingEval['limitations'] ?? null))
+                        <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">{{ $speakingEval['limitations'] }}</p>
+                    @endif
+                @endif
+            </section>
+        @endif
+
+        {{-- ===================================================== --}}
+        {{-- WRITING: AI ADVISORY EVALUATION REPORT (GEMINI) --}}
         {{-- ===================================================== --}}
         @if($isWriting)
             @php $writingEvals = $submission->metadata['writing_evaluations'] ?? []; @endphp
 
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-900">
+                Band và nhận xét dưới đây do AI tạo để tham khảo. Band chính thức của Writing là điểm giáo viên chấm ở phần tóm tắt.
+            </div>
             <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
                 {{-- Tab Bar --}}
                 <div class="flex border-b border-slate-200 overflow-x-auto">
@@ -343,28 +483,39 @@
                                 $taskNum = $q->question_number ?? 1;
                                 $evalData = json_decode($taskAns->notes ?? '{}', true) ?? [];
                                 $criteria = $evalData['criteria'] ?? [];
-                                $overallScore = $evalData['overallScore'] ?? ($taskNum === 1 ? 5.5 : 6.0);
-                                $bandLevel = $evalData['bandLevel'] ?? ('Band ' . $overallScore . ' - Competent User');
+                                $overallScore = $evalData['overallScore'] ?? null;
+                                $bandLevel = $evalData['bandLevel'] ?? null;
+                                $taskStatus = data_get($submission->metadata, 'writing_task_statuses.' . $taskNum, 'missing');
                                 $complexity = $evalData['complexity'] ?? 'B2 - C2';
                                 $minWords = $taskNum === 1 ? 150 : 250;
                                 $wordCount = str_word_count($taskAns->user_answer ?? '');
-                                $taskLabel = $taskNum === 1 ? 'Task 1 (Academic Report)' : 'Task 2 (Discursive Essay)';
+                                $taskLabel = $taskNum === 1 ? ($isGeneral ? 'Task 1 (Letter)' : 'Task 1 (Academic Report)') : 'Task 2 (Discursive Essay)';
                             @endphp
                             <div x-show="activeWritingTask === {{ $taskNum }}" x-cloak>
                                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 pb-6 border-b border-slate-100">
                                     <div>
                                         <div class="text-[11px] font-bold text-blue-600 mb-1">
-                                            IELTS Academic Writing – {{ $taskLabel }}
+                                            IELTS {{ $isGeneral ? 'General Training' : 'Academic' }} Writing – {{ $taskLabel }}
                                         </div>
-                                        <div class="flex items-baseline gap-3">
-                                            <span class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-cyan-500">
-                                                {{ number_format((float)$overallScore, 1) }}
-                                            </span>
-                                            <div>
-                                                <div class="text-lg font-black text-slate-900">/ 9.0</div>
-                                                <div class="text-xs text-slate-500 mt-0.5">{{ $bandLevel }}</div>
+                                        @if($overallScore !== null)
+                                            <div class="flex items-baseline gap-3">
+                                                <span class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-cyan-500">
+                                                    {{ number_format((float)$overallScore, 1) }}
+                                                </span>
+                                                <div>
+                                                    <div class="text-lg font-black text-slate-900">/ 9.0</div>
+                                                    <div class="text-xs text-slate-500 mt-0.5">{{ $bandLevel }}</div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        @else
+                                            <p class="mt-3 max-w-md rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                                                @if($taskStatus === 'failed')
+                                                    AI không chấm được Task này. Hệ thống không gán band mặc định.
+                                                @else
+                                                    Chưa có bài viết cho Task này nên chưa thể tính band.
+                                                @endif
+                                            </p>
+                                        @endif
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <div class="text-center px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200">
@@ -418,8 +569,8 @@
                                 @else
                                     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center text-amber-700 text-sm mb-6">
                                         <span class="text-3xl block mb-2">⚡</span>
-                                        <strong>Dữ liệu AI đang được tải...</strong>
-                                        <p class="text-xs text-amber-600/80 mt-1">Kết quả đánh giá từ Gemini AI sẽ hiển thị ở đây sau khi chấm điểm hoàn tất.</p>
+                                        <strong>{{ $taskStatus === 'failed' ? 'AI chưa chấm được Task này.' : 'Chưa có nội dung bài viết cho Task này.' }}</strong>
+                                        <p class="text-xs text-amber-600/80 mt-1">Không có điểm band mặc định được tạo.</p>
                                     </div>
                                 @endif
 
@@ -428,7 +579,8 @@
                                         <span class="font-bold text-slate-700 block mb-1">💡 Công thức tính Band IELTS Writing Overall:</span>
                                         <span class="font-mono">Overall = (Task 1 × ⅓) + (Task 2 × ⅔) → Làm tròn về .0 hoặc .5 gần nhất</span>
                                         <div class="mt-2 font-bold text-blue-600 text-base">
-                                            Kết quả tổng: <span class="text-slate-900">{{ number_format($submission->band_score, 1) }}</span>
+                                            Band AI tham khảo:
+                                            <span class="text-slate-900">{{ $submission->ai_band_score !== null ? number_format($submission->ai_band_score, 1) : 'Chưa có điểm AI' }}</span>
                                         </div>
                                     </div>
                                 @endif
@@ -552,7 +704,7 @@
                                 $taskNum = $q->question_number ?? 1;
                                 $evalData = json_decode($taskAns->notes ?? '{}', true) ?? [];
                                 $sampleEssay = $evalData['sampleEssay'] ?? '';
-                                $taskLabel = $taskNum === 1 ? 'Task 1 (Academic Report)' : 'Task 2 (Discursive Essay)';
+                                $taskLabel = $taskNum === 1 ? ($isGeneral ? 'Task 1 (Letter)' : 'Task 1 (Academic Report)') : 'Task 2 (Discursive Essay)';
                             @endphp
                             <div x-show="activeWritingTask === {{ $taskNum }}" x-cloak>
                                 @if($sampleEssay)
@@ -649,7 +801,7 @@
         {{-- ===================================================== --}}
         {{-- READING & LISTENING: DETAILED Q&A REVIEW --}}
         {{-- ===================================================== --}}
-        @if(!$isWriting)
+        @if(!$isSubjective)
             <div class="space-y-6">
                 <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 mb-4">
                     <span>🔍</span> Giải thích chi tiết & trích dẫn từng câu hỏi

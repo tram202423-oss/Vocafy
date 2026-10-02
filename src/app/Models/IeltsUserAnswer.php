@@ -13,6 +13,7 @@ class IeltsUserAnswer extends Model
     protected $fillable = [
         'ielts_submission_id',
         'ielts_question_id',
+        'question_snapshot_id',
         'user_answer',
         'is_correct',
         'is_flagged_for_review',
@@ -26,6 +27,7 @@ class IeltsUserAnswer extends Model
             'is_correct' => 'boolean',
             'is_flagged_for_review' => 'boolean',
             'time_spent_seconds' => 'integer',
+            'question_snapshot_id' => 'integer',
         ];
     }
 

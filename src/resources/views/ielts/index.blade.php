@@ -75,9 +75,14 @@
                                     <h3 class="font-bold text-slate-900 text-sm line-clamp-1 mb-2">
                                         {{ $sub->test?->title ?? ($sub->section?->title ?? 'Bài thi IELTS') }}
                                     </h3>
-                                    <div class="flex items-center gap-4 text-xs text-slate-600 mb-4">
-                                        <div>Đúng: <strong class="text-emerald-600">{{ $sub->raw_score }}/{{ $sub->total_questions }}</strong></div>
-                                        <div>Band: <strong class="text-blue-600 text-sm font-black">{{ number_format($sub->band_score, 1) }}</strong></div>
+                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 mb-4">
+                                        @if(in_array($sub->skill, ['writing', 'speaking'], true))
+                                            <div>Band chính thức: <strong class="text-blue-600 text-sm font-black">{{ $sub->teacher_band_score !== null ? number_format($sub->teacher_band_score, 1) : 'Chờ giáo viên' }}</strong></div>
+                                            <div>AI tham khảo: <strong class="text-amber-700">{{ $sub->ai_band_score !== null ? number_format($sub->ai_band_score, 1) : '—' }}</strong></div>
+                                        @else
+                                            <div>Đúng: <strong class="text-emerald-600">{{ $sub->raw_score }}/{{ $sub->total_questions }}</strong></div>
+                                            <div>Band: <strong class="text-blue-600 text-sm font-black">{{ $sub->band_score !== null ? number_format($sub->band_score, 1) : '—' }}</strong></div>
+                                        @endif
                                     </div>
                                 </div>
                                 <a href="{{ route('ielts.exam.result', $sub->id) }}"

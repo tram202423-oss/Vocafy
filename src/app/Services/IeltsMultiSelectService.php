@@ -106,7 +106,12 @@ class IeltsMultiSelectService
     /** Validate the final group state before writing any of its slots. */
     public function validateAnswers(IeltsSubmission $submission, array $overrides = []): void
     {
+        $snapshotQuestions = app(IeltsExamSnapshotService::class)->apply($submission)['questions'] ?? [];
         $groups = $submission->userAnswers()->with('question.questionGroup.questions')->get()
+            ->map(function ($answer) use ($snapshotQuestions) {
+                $answer->setRelation('question', $snapshotQuestions[(string) ($answer->question_snapshot_id ?: $answer->ielts_question_id)] ?? $answer->question);
+                return $answer;
+            })
             ->filter(fn ($answer) => static::enabled($answer->question?->questionGroup))
             ->groupBy(fn ($answer) => $answer->question->ielts_question_group_id);
 

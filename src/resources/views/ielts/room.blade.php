@@ -122,6 +122,7 @@
 @php
     $skill = $submission->skill ?? 'reading';
     $isWriting = ($skill === 'writing');
+    $isSpeaking = ($skill === 'speaking');
     $isListening = ($skill === 'listening');
     $isReading = ($skill === 'reading');
     $groups = $submission->section->questionGroups;
@@ -169,6 +170,12 @@
       @click.capture="suppressDragClick($event)"
       x-data="ieltsSimulator({
           submissionId: '{{ $submission->id }}',
+          saveRevision: {{ (int) $submission->save_revision }},
+          questionNumbers: {{ Js::from($submission->section->questions->pluck('question_number')->sort()->values()) }},
+          speakingSession: {{ Js::from(data_get($submission->metadata, 'speaking_session', [])) }},
+          speakingDraftExists: {{ filled(data_get($submission->metadata, 'speaking_draft.path')) ? 'true' : 'false' }},
+          speakingRecordingStartUrl: '{{ route('ielts.exam.speaking-recording.start', $submission->id) }}',
+          speakingRecordingFinalizeUrl: '{{ route('ielts.exam.speaking-recording.finalize', $submission->id) }}',
           initialSeconds: {{ $remainingSeconds }},
           totalQuestions: {{ $submission->total_questions }},
           skill: '{{ $skill }}',
@@ -178,8 +185,16 @@
               'notes' => $ua->notes,
           ])) }},
           saveUrl: '{{ route('ielts.exam.save', $submission->id) }}',
+          speakingRecordingUploadUrl: '{{ route('ielts.exam.speaking-recording.upload', $submission->id) }}',
+          speakingRecordingDeleteUrl: '{{ route('ielts.exam.speaking-recording.delete', $submission->id) }}',
+          speakingRecordingPlaybackUrl: '{{ route('ielts.exam.speaking-recording', $submission->id) }}',
+          speakingRecordingExists: {{ filled(data_get($submission->metadata, 'speaking_recording.path')) ? 'true' : 'false' }},
+          speakingRecordingDurationSeconds: {{ (int) data_get($submission->metadata, 'speaking_recording.duration_seconds', 0) }},
           submitUrl: '{{ route('ielts.exam.submit', $submission->id) }}',
           resultUrl: '{{ route('ielts.exam.result', $submission->id) }}',
+          audioProgressSeconds: {{ (int) data_get($submission->metadata, 'audio_progress_seconds', 0) }},
+          audioCompleted: {{ data_get($submission->metadata, 'audio_completed_at') ? 'true' : 'false' }},
+          highlights: {{ Js::from(data_get($submission->metadata, 'highlights', [])) }},
       })"
       :class="[contrastClass, fontSizeClass]"
       @click="handleGlobalClick($event)">
@@ -196,7 +211,7 @@
         {{-- Left: Candidate Details --}}
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full text-white flex items-center justify-center font-black text-sm uppercase shadow-sm flex-shrink-0
-                @if($isListening) bg-blue-600 @elseif($isWriting) bg-amber-600 @else bg-emerald-600 @endif">
+                @if($isListening) bg-blue-600 @elseif($isWriting) bg-amber-600 @elseif($isSpeaking) bg-purple-600 @else bg-emerald-600 @endif">
                 {{ substr(Auth::user()->name ?? 'C', 0, 1) }}
             </div>
             <div class="text-xs">
@@ -206,7 +221,7 @@
                         {{ $submission->metadata['candidate_number'] ?? 'IDP-012345' }}
                     </span>
                     <span class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider
-                        @if($isListening) bg-blue-100 text-blue-700 @elseif($isWriting) bg-amber-100 text-amber-700 @else bg-emerald-100 text-emerald-700 @endif">
+                        @if($isListening) bg-blue-100 text-blue-700 @elseif($isWriting) bg-amber-100 text-amber-700 @elseif($isSpeaking) bg-purple-100 text-purple-700 @else bg-emerald-100 text-emerald-700 @endif">
                         {{ ucfirst($skill) }}
                     </span>
                 </div>
@@ -258,7 +273,8 @@
             {{-- Autosave indicator --}}
             <div class="hidden sm:flex items-center gap-1 text-[11px] text-slate-400 font-medium">
                 <span class="w-2 h-2 rounded-full" :class="saving ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'"></span>
-                <span x-text="saving ? 'Đang lưu...' : 'Đã tự lưu'">Đã tự lưu</span>
+                <span role="status" x-text="saving ? 'Đang lưu...' : (saveError ? 'Chưa lưu được' : 'Đã lưu thay đổi')">Đã lưu thay đổi</span>
+                <button type="button" x-show="saveError" @click="retrySaves()" :title="saveError" class="text-xs text-red-700 underline">Thử lưu lại</button>
             </div>
         </div>
 
@@ -298,7 +314,7 @@
             </div>
 
             {{-- Nút Xóa tất cả Highlight (chỉ hiển thị khi làm Reading/Listening) --}}
-            @if(!$isWriting)
+            @if(!$isWriting && !$isSpeaking)
                 <button @click="clearAllHighlights()" type="button" class="px-2.5 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 font-medium text-slate-700 shadow-sm" title="Xóa toàn bộ các đoạn tô sáng" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);">
                     <span>🧹 Xóa Highlight</span>
                 </button>
@@ -320,6 +336,10 @@
     {{-- LISTENING AUDIO STREAM BAR (NẾU ĐANG THI LISTENING) --}}
     {{-- ========================================================================= --}}
     @if($isListening)
+        @php $firstAudio = $groups->first(fn ($group) => filled($group->audio_url))?->audio_url; @endphp
+        @if(!$firstAudio)
+            <div class="bg-amber-50 text-amber-900 px-4 py-3 text-sm border-b border-amber-200" role="status">Bài Listening này chưa có audio. File nghe sẽ được bổ sung sau.</div>
+        @else
         {{-- Autoplay Blocked Notification Banner --}}
         <div x-show="autoplayBlocked"
              x-cloak
@@ -336,6 +356,13 @@
         </div>
 
         {{-- Answer Check Phase Announcement Banner --}}
+        <div x-show="audioEndSaveFailed"
+             x-cloak
+             class="bg-amber-100 text-amber-900 px-4 py-2 text-xs font-semibold border-b border-amber-200"
+             role="status">
+            Không thể lưu thời điểm audio kết thúc lên máy chủ. Đồng hồ tiếp tục theo deadline của phần thi.
+        </div>
+
         <div x-show="isAnswerCheckPhase"
              x-cloak
              class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-1.5 flex items-center justify-between text-xs font-bold shadow z-40">
@@ -384,16 +411,13 @@
                 <span class="text-[11px] font-mono text-slate-600 w-8 text-right" x-text="audioMuted ? '0%' : `${audioVolume}%`">80%</span>
             </div>
 
-            @php
-                $firstAudio = $groups->firstWhere('audio_url', '!=', null)?->audio_url
-                    ?? 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg';
-            @endphp
             <audio x-ref="audioPlayer"
                    @timeupdate="updateAudioTime()"
                    @ended="onAudioEnded()"
                    src="{{ $firstAudio }}"
                    preload="auto"></audio>
         </div>
+        @endif
     @endif
 
     {{-- ========================================================================= --}}
@@ -420,10 +444,10 @@
             {{-- 4 Official IELTS Listening Parts --}}
             @php
                 $listeningPartDefs = [
-                    1 => ['title' => 'Part 1', 'desc' => 'Notes Completion (1–10)'],
-                    2 => ['title' => 'Part 2', 'desc' => 'Facilities & Map (11–20)'],
-                    3 => ['title' => 'Part 3', 'desc' => 'Academic Seminar (21–30)'],
-                    4 => ['title' => 'Part 4', 'desc' => 'Lecture Notes (31–40)'],
+                    1 => ['title' => 'Part 1', 'desc' => 'Questions 1–10'],
+                    2 => ['title' => 'Part 2', 'desc' => 'Questions 11–20'],
+                    3 => ['title' => 'Part 3', 'desc' => 'Questions 21–30'],
+                    4 => ['title' => 'Part 4', 'desc' => 'Questions 31–40'],
                 ];
             @endphp
             @foreach($listeningPartDefs as $partIdx => $def)
@@ -440,6 +464,8 @@
                     </span>
                 </button>
             @endforeach
+        @elseif($isSpeaking)
+            <span class="px-4 py-1.5 text-xs font-bold text-purple-700">Speaking recording</span>
         @else
             {{-- Reading Passages --}}
             @php $passages = $readingPassages; @endphp
@@ -603,6 +629,12 @@
                                 </div>
                             @endif
 
+                            @if($partGroup->image_url && !$isDragDropGroup && $partGroup->question_type?->value !== 'map_labeling')
+                                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
+                                    <img src="{{ $partGroup->image_url }}" alt="{{ $partGroup->title }}" class="mx-auto max-h-[32rem] w-auto max-w-full object-contain">
+                                </div>
+                            @endif
+
                             @if(\App\Services\IeltsMultiSelectService::enabled($partGroup))
                                 @include('ielts.partials.multi-choice-bank', ['group' => $partGroup])
                             @elseif($isDragDropGroup)
@@ -620,6 +652,10 @@
                                         @include('ielts.partials.drag-drop-bank', ['group' => $partGroup, 'dragBank' => $dragBank])
                                     @endif
                                 </div>
+                            @elseif($partGroup->question_type?->value === 'map_labeling' && $partGroup->image_url)
+                                @include('ielts.partials.map-standard', ['group' => $partGroup])
+                            @elseif($partGroup->question_type?->value === 'fill_in_blanks' && preg_match('/\[blank_\d+\]/', $partQuestionContent ?? ''))
+                                @include('ielts.partials.completion-note', ['group' => $partGroup, 'noteContent' => $partQuestionContent])
                             @else
                                 @if($partQuestionContent)
                                     <div class="prose max-w-none">{!! $partQuestionContent !!}</div>
@@ -1166,7 +1202,83 @@
         </div>
         @endif
 
-    {{-- CASE C: READING WORKSPACE (AUTHENTIC SPLIT SCREEN: PASSAGE ON LEFT, QUESTIONS ON RIGHT) --}}
+    {{-- CASE C: SPEAKING PROMPTS AND MICROPHONE RECORDING --}}
+    @elseif($isSpeaking)
+        <main class="flex-grow overflow-y-auto custom-scroll p-4 md:p-8" style="background-color: var(--bg-main);">
+            <div class="max-w-5xl mx-auto space-y-6">
+                <section class="bg-white rounded-2xl border-2 border-purple-200 shadow-sm p-5 md:p-7 space-y-4">
+                    <div>
+                        <div class="text-[11px] font-black uppercase tracking-wider text-purple-700">IELTS Speaking</div>
+                        <h2 class="text-xl font-black text-slate-900 mt-1">Câu hỏi và chủ đề</h2>
+                        <p class="text-sm text-slate-600 mt-2">Đọc câu hỏi, bật micro và trả lời bằng tiếng Anh. Bản ghi được lưu dự phòng trong lúc thu; dừng và đợi lưu xong để AI đưa ra nhận xét tham khảo; giáo viên sẽ chấm Band chính thức.</p>
+                    </div>
+                    @foreach($groups as $speakingGroup)
+                        <article class="border-t border-slate-100 pt-4 space-y-2">
+                            <h3 class="font-bold text-slate-900">{{ $speakingGroup->title ?: 'Speaking topic' }}</h3>
+                            @if($speakingGroup->instruction)
+                                <p class="text-xs text-slate-600">{{ $speakingGroup->instruction }}</p>
+                            @endif
+                            @if($speakingGroup->image_url)
+                                <img src="{{ $speakingGroup->image_url }}" alt="{{ $speakingGroup->title }}" class="max-w-full max-h-80 object-contain">
+                            @endif
+                            @foreach($speakingGroup->questions as $speakingQuestion)
+                                <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                                    <span class="text-xs font-black text-purple-700">Question {{ $speakingQuestion->question_number }}</span>
+                                    <p class="text-sm text-slate-800 mt-1">{{ $speakingQuestion->prompt }}</p>
+                                </div>
+                            @endforeach
+                        </article>
+                    @endforeach
+                </section>
+
+                <section class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-5 md:p-7 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">Bản ghi Speaking</h2>
+                            <p class="text-xs text-slate-500 mt-1">Cho phép trình duyệt truy cập micro. Tệp âm thanh tối đa 12 MB.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button"
+                                    x-show="!['recording', 'stopping'].includes(recordingState)"
+                                    :disabled="!recordingReady || ['acquiring', 'uploading', 'stopping', 'deleting'].includes(recordingState) || isSubmitting || remainingSeconds <= 0"
+                                    @click="startSpeakingRecording()"
+                                    class="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-sm font-bold disabled:opacity-50">
+                                <span x-text="recordingState === 'saved' || recordingState === 'error' ? '🎙 Thu âm lại' : '🎙 Bắt đầu thu âm'"></span>
+                            </button>
+                            <button type="button"
+                                    x-show="recordingState === 'recording'"
+                                    @click="stopSpeakingRecording()"
+                                    class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold">
+                                ⏹ Dừng và lưu
+                            </button>
+                            <button type="button"
+                                    x-show="['saved', 'recoverable'].includes(recordingState)"
+                                    :disabled="isSubmitting || remainingSeconds <= 0"
+                                    @click="deleteSpeakingRecording()"
+                                    class="px-3 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold">
+                                Xóa bản ghi
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 text-sm">
+                        <span class="inline-flex w-3 h-3 rounded-full"
+                              :class="recordingState === 'recording' ? 'bg-red-500 animate-pulse' : (recordingState === 'saved' ? 'bg-emerald-500' : 'bg-slate-300')"></span>
+                        <strong x-text="recordingState === 'recording' ? 'Đang thu âm · ' + formatRecordingTime(recordingSeconds) : (recordingState === 'uploading' ? 'Đang lưu bản ghi...' : (recordingState === 'saved' ? 'Đã lưu · ' + formatRecordingTime(recordingSeconds) : (recordingState === 'recoverable' ? 'Bản thu cần lưu lại' : (recordingState === 'acquiring' ? 'Đang mở micro...' : (recordingState === 'stopping' ? 'Đang dừng và lưu...' : 'Chưa có bản ghi')))))">Chưa có bản ghi</strong>
+                    </div>
+                    <div class="flex gap-3 text-sm">
+                        <button type="button" x-show="recordingState === 'recoverable'" @click="retrySpeakingUpload()" :disabled="isSubmitting" class="text-purple-700 font-bold underline">Lưu lại bản thu</button>
+                        <a x-show="recordingRecoveryUrl" :href="recordingRecoveryUrl" download="speaking-recording.webm" class="text-blue-700 underline">Tải bản thu xuống</a>
+                    </div>
+                    <p x-show="recordingCheckpointAt" class="text-xs text-slate-500">Bản dự phòng trên server: <span x-text="recordingCheckpointAt"></span></p>
+                    <p x-show="recordingError" x-text="recordingError" class="text-xs text-red-600" role="alert"></p>
+                    <audio x-show="recordingPreviewUrl || speakingPlaybackUrl" :src="recordingPreviewUrl || speakingPlaybackUrl" controls class="w-full"></audio>
+                    <p class="text-[11px] text-slate-500">Bạn có thể nghe lại và thu âm lại trước khi nộp. Tệp chỉ người làm bài và giáo viên được phép xem.</p>
+                </section>
+            </div>
+        </main>
+
+    {{-- CASE D: READING WORKSPACE (AUTHENTIC SPLIT SCREEN: PASSAGE ON LEFT, QUESTIONS ON RIGHT) --}}
     @else
         <div class="flex-grow flex flex-col md:flex-row overflow-hidden relative"
              style="background-color: var(--bg-main);"
@@ -1244,6 +1356,9 @@
                                     {{ $group->instruction }}
                                 </div>
                             @endif
+                            @if($groupQuestionContent && !preg_match('/\[blank_\d+\]/', $groupQuestionContent))
+                                <div class="prose max-w-none mb-4">{!! $groupQuestionContent !!}</div>
+                            @endif
                             @if($groupQuestionContent && preg_match('/\[blank_\d+\]/', $groupQuestionContent))
                                 <div class="prose max-w-none mt-5 rounded-xl border border-slate-200 p-4" style="background-color: var(--bg-card); border-color: var(--border-color);">
                                     @include('ielts.partials.drag-drop-note', ['group' => $group, 'dragBank' => $dragBank, 'noteContent' => $groupQuestionContent])
@@ -1259,6 +1374,11 @@
                                     @include('ielts.partials.drag-drop-bank', ['group' => $group, 'dragBank' => $dragBank])
                                 </div>
                             @endif
+                        @elseif($group->question_type?->value === 'map_labeling' && $group->image_url)
+                            @if($group->instruction)
+                                <div class="mb-5 rounded-r-lg border-l-4 border-blue-500 bg-blue-50 p-3 text-xs font-medium text-blue-900">{{ $group->instruction }}</div>
+                            @endif
+                            @include('ielts.partials.map-standard', ['group' => $group])
                         @else
                         {{-- Instruction Box --}}
                         @if($group->instruction)
@@ -1268,7 +1388,28 @@
                             </div>
                         @endif
 
+                        @if($group->image_url)
+                            <div class="my-5 overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
+                                <img src="{{ $group->image_url }}" alt="{{ $group->title }}" class="mx-auto max-h-[32rem] w-auto max-w-full object-contain">
+                            </div>
+                        @endif
+
+                        @php
+                            $hasTypedSharedBlanks = $group->question_type?->value === 'fill_in_blanks'
+                                && preg_match('/\[blank_\d+\]/', $group->question_content ?? '');
+                        @endphp
+                        @if(filled($group->question_content))
+                            <div class="prose max-w-none my-5 rounded-xl border border-slate-200 p-4" style="background-color: var(--bg-card); border-color: var(--border-color);">
+                                @if($hasTypedSharedBlanks)
+                                    @include('ielts.partials.completion-note', ['group' => $group, 'noteContent' => $group->question_content])
+                                @else
+                                    {!! $group->question_content !!}
+                                @endif
+                            </div>
+                        @endif
+
                         {{-- Questions List --}}
+                        @unless($hasTypedSharedBlanks)
                         <div class="space-y-6">
                             @foreach($group->questions as $q)
                                 <div class="question-item pt-4 border-t border-slate-200 first:border-t-0 first:pt-0"
@@ -1298,7 +1439,7 @@
                                                     {!! $renderedPrompt !!}
 
                                                     @if($q->word_limit)
-                                                        <span class="inline-block text-[11px] text-slate-400 font-normal ml-2">(Tối đa {{ $q->word_limit }} từ)</span>
+                                                        <span class="inline-block text-[11px] text-slate-400 font-normal ml-2">({{ \App\Services\IeltsWordLimitService::label($q) }})</span>
                                                     @endif
                                                 @else
                                                     {{ $q->prompt }}
@@ -1389,7 +1530,7 @@
                                                        class="w-full px-3.5 py-2 text-xs font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-0 outline-none"
                                                        style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);">
                                                 @if($q->word_limit)
-                                                    <span class="text-[10px] text-slate-400 mt-1 block">Tối đa {{ $q->word_limit }} từ</span>
+                                                    <span class="text-[10px] text-slate-400 mt-1 block">{{ \App\Services\IeltsWordLimitService::label($q) }}</span>
                                                 @endif
                                             </div>
                                         </div>
@@ -1397,6 +1538,7 @@
                                 </div>
                             @endforeach
                         </div>
+                        @endunless
                         @endif
                     </div>
                 @endforeach
@@ -1457,7 +1599,7 @@
             <div class="flex items-center gap-2">
                 <button type="button" @click="currentTaskNumber = 1" class="px-3 py-1.5 rounded-lg border text-xs font-bold"
                         :class="currentTaskNumber === 1 ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 text-slate-700 border-slate-300'">
-                    Task 1 (Report)
+                    Task 1 ({{ $submission->test_type->value === 'general_training' ? 'Letter' : 'Report' }})
                 </button>
                 <button type="button" @click="currentTaskNumber = 2" class="px-3 py-1.5 rounded-lg border text-xs font-bold"
                         :class="currentTaskNumber === 2 ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 text-slate-700 border-slate-300'">
@@ -1467,10 +1609,18 @@
 
             <div class="flex items-center gap-2">
                 <button type="button" @click="confirmSubmitModal = true" class="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-blue-600/25 active:scale-95 transition-all">
-                    Nộp bài Writing (AI Chấm ngay)
+                    Nộp bài Writing (AI tham khảo)
                 </button>
             </div>
 
+        @elseif($isSpeaking)
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+                <span class="font-semibold">Bản ghi:</span>
+                <span x-text="recordingState === 'saved' ? 'Đã lưu' : (recordingState === 'recording' ? 'Đang thu âm' : (recordingState === 'uploading' ? 'Đang tải lên' : 'Chưa có'))">Chưa có</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="confirmSubmitModal = true" class="px-4 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs">Nộp bài Speaking</button>
+            </div>
         @else
             {{-- Reading & Listening Controls --}}
             <div class="flex items-center gap-3">
@@ -1491,7 +1641,8 @@
 
             {{-- Question Palette 1..40 buttons --}}
             <div class="flex items-center gap-2 overflow-x-auto max-w-full sm:max-w-3xl py-2 px-1 custom-scroll">
-                @for($i = 1; $i <= $submission->total_questions; $i++)
+                @foreach($submission->section->questions->sortBy('question_number') as $questionModel)
+                    @php $i = $questionModel->question_number; @endphp
                     @php
                         $questionModel = $submission->section->questions->where('question_number', $i)->first();
                         $qId = $questionModel?->id ?? 0;
@@ -1514,14 +1665,14 @@
                             x-cloak
                             class="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white shadow"></span>
                     </button>
-                @endfor
+                @endforeach
             </div>
 
             {{-- Right Controls: Prev, Next, Submit --}}
             <div class="flex items-center gap-2">
                 <button type="button"
                         @click="prevQuestion()"
-                        :disabled="currentQuestionNumber <= 1"
+                        :disabled="questionNumbers.indexOf(currentQuestionNumber) <= 0"
                         class="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 shadow-sm transition-all"
                         style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);">
                     &larr; Prev
@@ -1529,7 +1680,7 @@
 
                 <button type="button"
                         @click="nextQuestion()"
-                        :disabled="currentQuestionNumber >= {{ $submission->total_questions }}"
+                        :disabled="questionNumbers.indexOf(currentQuestionNumber) >= questionNumbers.length - 1"
                         class="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 shadow-sm transition-all"
                         style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);">
                     Next &rarr;
@@ -1588,9 +1739,11 @@
              @click.away="confirmSubmitModal = false">
             <h3 class="text-lg font-black text-slate-900 mb-2">Bạn có chắc chắn muốn nộp bài?</h3>
             <p class="text-xs text-slate-600 mb-4 leading-relaxed">
-                Sau khi nộp bài, hệ thống sẽ kết thúc lượt thi và tự động chấm điểm Band Score của bạn.
+                Sau khi nộp, AI sẽ tạo điểm tham khảo cho Writing/Speaking. Giáo viên sẽ chấm và cập nhật Band chính thức.
             </p>
+            <div x-show="submitError" x-cloak class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700" role="alert" x-text="submitError"></div>
 
+            @if(!$isSpeaking)
             <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-6 text-xs space-y-2">
                 <div class="flex justify-between">
                     <span class="text-slate-500">Phần thi:</span>
@@ -1605,9 +1758,14 @@
                     <strong class="text-red-500 font-bold" x-text="{{ $submission->total_questions }} - answeredCount">0</strong>
                 </div>
             </div>
+            @else
+                <div class="bg-purple-50 rounded-xl p-4 border border-purple-200 mb-6 text-xs text-purple-900">
+                    Nộp bài sẽ kết thúc lượt thi và gửi bản ghi đã lưu để tạo transcript cùng đánh giá AI tham khảo.
+                </div>
+            @endif
 
             <div class="flex items-center justify-end gap-3">
-                <button type="button" @click="confirmSubmitModal = false" class="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                <button type="button" @click="confirmSubmitModal = false; submitError = ''" class="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">
                     Tiếp tục làm bài
                 </button>
                 <button type="button" @click="submitExam()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/25">
@@ -1677,8 +1835,10 @@
             <h4 class="text-sm font-bold text-slate-900 mb-2">Ghi chú cho đoạn văn bản</h4>
             <textarea x-model="noteModal.text"
                       rows="3"
+                      maxlength="500"
                       placeholder="Nhập ghi chú của bạn tại đây..."
-                      class="w-full p-2.5 text-xs border border-slate-300 rounded-xl mb-4 focus:ring-0 focus:border-blue-500 outline-none"></textarea>
+                      class="w-full p-2.5 text-xs border border-slate-300 rounded-xl mb-1 focus:ring-0 focus:border-blue-500 outline-none"></textarea>
+            <div class="mb-4 text-right text-[10px] text-slate-400"><span x-text="noteModal.text.length"></span>/500</div>
             <div class="flex items-center justify-between">
                 <button type="button"
                         x-show="noteModal.targetMark && noteModal.targetMark.hasAttribute('data-note')"
@@ -1706,7 +1866,7 @@
             </div>
             <h3 class="text-lg font-black text-slate-900 mb-2">AUDIO BÀI THI ĐÃ KẾT THÚC</h3>
             <p class="text-xs text-slate-600 mb-4 leading-relaxed">
-                Phần phát âm thanh 30 phút đã hoàn tất. Bạn hiện có <strong>2 phút cuối cùng</strong> để rà soát toàn bộ đáp án từ Part 1 đến Part 4.
+                Audio đã kết thúc. Bạn hiện có <strong>2 phút cuối cùng</strong> để rà soát đáp án trước khi hệ thống tự nộp bài.
             </p>
             <button type="button" @click="audioEndedModal = false" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors shadow-md">
                 Bắt đầu kiểm tra đáp án (2 phút)
@@ -1720,6 +1880,11 @@
     <script>
         function ieltsSimulator(config) {
             const pendingMultiSaves = new Set();
+            const pendingDragSaves = new Set();
+            let saveTail = Promise.resolve();
+            let saveRevision = Number(config.saveRevision || 0);
+            let pendingSaveCount = 0;
+            const failedSaves = new Map();
             return {
                 submissionId: config.submissionId,
                 remainingSeconds: config.initialSeconds,
@@ -1730,7 +1895,8 @@
                 activePartId: {{ $groups->first()?->id ?? 1 }},
                 activeListeningPart: 1,
                 currentTaskNumber: 1,
-                currentQuestionNumber: 1,
+                currentQuestionNumber: config.questionNumbers[0] || 1,
+                questionNumbers: config.questionNumbers,
                 answers: {},
                 multiSaving: {},
                 multiSelectMessages: {},
@@ -1747,6 +1913,8 @@
                 fontSizeClass: 'font-size-standard',
                 isFullscreen: false,
                 saving: false,
+                ...window.ieltsRecording(config),
+                saveError: '',
                 confirmSubmitModal: false,
                 isSubmitting: false,
                 submitError: '',
@@ -1760,6 +1928,7 @@
                 highlightActionMenu: { show: false, top: 0, left: 0, targetMark: null },
                 noteModal: { show: false, text: '', range: null, targetMark: null },
                 timerInterval: null,
+                highlightSaveTimer: null,
 
                 // Listening Audio Stream State
                 audioElement: null,
@@ -1772,8 +1941,13 @@
                 audioPlaying: false,
                 isAnswerCheckPhase: false,
                 audioEndedModal: false,
+                audioProgressSeconds: Number(config.audioProgressSeconds || 0),
+                audioProgressSaveAt: Number(config.audioProgressSeconds || 0),
+                audioEndedSaved: !!config.audioCompleted,
+                audioEndSavePending: false,
+                audioEndSaveFailed: false,
 
-                init() {
+                async init() {
                     // Populate initial answers and flags
                     if (config.userAnswers) {
                         for (const [qId, data] of Object.entries(config.userAnswers)) {
@@ -1782,6 +1956,13 @@
                             this.notes[qId] = data.notes || '';
                         }
                     }
+                    if (config.speakingRecordingExists) {
+                        this.recordingPreviewUrl = config.speakingRecordingPlaybackUrl;
+                    }
+                    await this.restoreSpeakingDraft();
+                    this.currentQuestionNumber = config.questionNumbers[0] || 1;
+                    this.syncActiveSectionByQuestion(this.currentQuestionNumber);
+                    this.$nextTick(() => this.restoreHighlights(config.highlights || []));
 
                     // Khởi tạo audio nếu là Listening
                     if (this.skill === 'listening') {
@@ -1847,18 +2028,36 @@
                 // Audio player methods
                 initAudio() {
                     this.audioElement = this.$refs.audioPlayer;
-                    if (this.audioElement) {
-                        this.audioElement.volume = this.audioVolume / 100;
-                        const playPromise = this.audioElement.play();
-                        if (playPromise !== undefined) {
-                            playPromise.then(() => {
-                                this.audioPlaying = true;
-                                this.autoplayBlocked = false;
-                            }).catch(() => {
-                                this.autoplayBlocked = true;
-                                this.audioPlaying = false;
-                            });
+                    if (!this.audioElement) return;
+                    this.audioElement.volume = this.audioVolume / 100;
+                    const restoreProgress = () => {
+                        if (config.audioCompleted) {
+                            if (Number.isFinite(this.audioElement.duration)) {
+                                this.audioElement.currentTime = this.audioElement.duration;
+                            }
+                            this.isAnswerCheckPhase = true;
+                            return;
                         }
+                        if (this.audioProgressSeconds > 0) {
+                            const duration = Number.isFinite(this.audioElement.duration)
+                                ? this.audioElement.duration
+                                : this.audioProgressSeconds;
+                            this.audioElement.currentTime = Math.min(this.audioProgressSeconds, duration);
+                        }
+                    };
+                    if (this.audioElement.readyState >= 1) restoreProgress();
+                    else this.audioElement.addEventListener('loadedmetadata', restoreProgress, { once: true });
+                    if (config.audioCompleted) return;
+
+                    const playPromise = this.audioElement.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            this.audioPlaying = true;
+                            this.autoplayBlocked = false;
+                        }).catch(() => {
+                            this.autoplayBlocked = true;
+                            this.audioPlaying = false;
+                        });
                     }
                 },
 
@@ -1901,16 +2100,29 @@
                     this.audioCurrentTime = `${String(cm).padStart(2,'0')}:${String(cs).padStart(2,'0')}`;
                     this.audioDuration = `${String(dm).padStart(2,'0')}:${String(ds).padStart(2,'0')}`;
                     this.audioProgress = dur > 0 ? (cur / dur) * 100 : 0;
+                    this.audioProgressSeconds = cur;
+                    if (!this.isSubmitting && this.remainingSeconds > 0 && !this.audioEndedSaved && cur >= this.audioProgressSaveAt + 10) {
+                        this.audioProgressSaveAt = cur;
+                        this.saveAnswerData(null, { audio_progress_seconds: cur });
+                    }
                 },
 
                 onAudioEnded() {
-                    this.audioPlaying = false;
-                    this.isAnswerCheckPhase = true;
-                    this.audioEndedModal = true;
-                    if (this.remainingSeconds > 120) {
-                        this.remainingSeconds = 120;
-                        this.endTime = Date.now() + 120000;
-                    }
+                    if (this.isSubmitting || this.audioEndedSaved || this.audioEndSavePending) return;
+                    this.audioEndSavePending = true;
+                    this.saveAnswerData(null, { audio_ended: true }).then(result => {
+                        this.audioEndSavePending = false;
+                        if (!result || result.status !== 'success' || !result.deadline_at) {
+                            this.audioEndSaveFailed = true;
+                            return;
+                        }
+                        this.audioEndedSaved = true;
+                        this.audioPlaying = false;
+                        this.isAnswerCheckPhase = true;
+                        this.audioEndedModal = true;
+                        this.endTime = Date.parse(result.deadline_at);
+                        this.remainingSeconds = Math.max(0, Math.ceil((this.endTime - Date.now()) / 1000));
+                    });
                 },
 
                 getPartAnsweredCount(partIdx) {
@@ -1982,19 +2194,13 @@
                 },
 
                 nextQuestion() {
-                    if (this.currentQuestionNumber < this.totalQuestions) {
-                        this.setCurrentQuestion(this.currentQuestionNumber + 1);
-                        this.scrollToQuestion(this.currentQuestionNumber);
-                    }
+                    const next = this.questionNumbers[this.questionNumbers.indexOf(this.currentQuestionNumber) + 1];
+                    if (next !== undefined) { this.setCurrentQuestion(next); this.scrollToQuestion(next); }
                 },
-
                 prevQuestion() {
-                    if (this.currentQuestionNumber > 1) {
-                        this.setCurrentQuestion(this.currentQuestionNumber - 1);
-                        this.scrollToQuestion(this.currentQuestionNumber);
-                    }
+                    const previous = this.questionNumbers[this.questionNumbers.indexOf(this.currentQuestionNumber) - 1];
+                    if (previous !== undefined) { this.setCurrentQuestion(previous); this.scrollToQuestion(previous); }
                 },
-
                 scrollToQuestion(num) {
                     this.$nextTick(() => {
                         const el = document.getElementById(`question-block-${num}`);
@@ -2243,7 +2449,13 @@
                     this.draggedOption = null;
                 },
 
-                async assignDragOption(questionId, option, questionIds, usage, groupId = null) {
+                async assignDragOption(...args) {
+                    if (this.isSubmitting) return false;
+                    const action = this.performAssignDragOption(...args);
+                    pendingDragSaves.add(action);
+                    try { return await action; } finally { pendingDragSaves.delete(action); }
+                },
+                async performAssignDragOption(questionId, option, questionIds, usage, groupId = null) {
                     if (!option) return false;
                     if (groupId !== null && String(option.groupId ?? groupId) !== String(groupId)) {
                         this.draggedOption = null;
@@ -2265,19 +2477,35 @@
                         return false;
                     }
 
-                    if (isMovingExistingAnswer && String(option.sourceQuestionId) !== String(questionId)) {
-                        const cleared = await this.saveAnswer(option.sourceQuestionId, '');
-                        if (!cleared) {
-                            this.dragMessage = 'Chưa thể chuyển đáp án này. Hãy thử lại.';
+                    if (isMovingExistingAnswer && String(option.sourceQuestionId) === String(questionId)) {
+                        this.draggedOption = null;
+                        return true;
+                    }
+
+                    if (isMovingExistingAnswer) {
+                        const sourceId = String(option.sourceQuestionId);
+                        const result = await this.saveAnswerData(null, {
+                            drag_move: {
+                                group_id: Number(groupId),
+                                source_question_id: Number(sourceId),
+                                target_question_id: Number(questionId),
+                                answer: String(option.key),
+                            },
+                        });
+                        if (!result || result.status !== 'success') {
+                            this.dragMessage = result?.error || 'Chưa thể chuyển đáp án này. Hãy thử lại.';
+                            return false;
+                        }
+                        this.answers[sourceId] = '';
+                        this.answers[questionId] = String(option.key);
+                    } else {
+                        const saved = await this.saveAnswer(questionId, option.key);
+                        if (!saved) {
+                            this.dragMessage = 'Không thể lưu đáp án. Hãy thử lại.';
                             return false;
                         }
                     }
 
-                    const saved = await this.saveAnswer(questionId, option.key);
-                    if (!saved) {
-                        this.dragMessage = 'Không thể lưu đáp án. Hãy thử lại.';
-                        return false;
-                    }
                     this.draggedOption = null;
                     this.dragMessage = '';
                     return true;
@@ -2309,49 +2537,67 @@
                 },
 
                 async saveAnswer(questionId, value) {
-                    const previousValue = this.answers[questionId];
+                    if (this.isSubmitting) return false;
                     this.answers[questionId] = value;
                     const result = await this.saveAnswerData(questionId, { answer: value });
-                    if (!result || result.status !== 'success') {
-                        this.answers[questionId] = previousValue ?? '';
-                        return false;
-                    }
-                    return true;
+                    return !!result && result.status === 'success';
                 },
-
                 saveAnswerData(questionId, payload) {
+                    const subject = questionId ?? payload.multi_group_id ?? payload.drag_move?.group_id ?? 'session';
+                    const key = String(subject) + ':' + Object.keys(payload).sort().join(',');
+                    pendingSaveCount++;
                     this.saving = true;
-                    return fetch(config.saveUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        },
-                        body: JSON.stringify({
-                            question_id: questionId,
-                            ...payload,
-                        }),
-                    })
-                    .then(async res => {
-                        const data = await res.json();
-                        return res.ok ? data : null;
-                    })
-                    .catch(() => null)
-                    .finally(() => {
-                        setTimeout(() => this.saving = false, 300);
+                    const run = saveTail.catch(() => {}).then(async () => {
+                        const controller = new AbortController();
+                        const timeout = setTimeout(() => controller.abort(), 15000);
+                        try {
+                            const response = await fetch(config.saveUrl, {
+                                method: 'POST', signal: controller.signal,
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                                body: JSON.stringify({ question_id: questionId, ...payload, expected_revision: saveRevision }),
+                            });
+                            const data = await response.json().catch(() => ({}));
+                            if (!response.ok) throw new Error(data.message || data.error || 'Chưa lưu được thay đổi.');
+                            if (data.revision !== undefined) saveRevision = Number(data.revision);
+                            failedSaves.delete(key);
+                            this.saveError = failedSaves.size ? 'Một số thay đổi chưa được lưu. Bấm thử lưu lại.' : '';
+                            return data;
+                        } catch (error) {
+                            failedSaves.set(key, { questionId, payload });
+                            this.saveError = error.message;
+                            return null;
+                        } finally {
+                            clearTimeout(timeout);
+                            pendingSaveCount--;
+                            this.saving = pendingSaveCount > 0;
+                        }
                     });
+                    saveTail = run;
+                    return run;
                 },
-
+                async retrySaves() {
+                    if (this.isSubmitting || this.saving) return;
+                    for (const { questionId, payload } of [...failedSaves.values()]) {
+                        const previous = { ...this.answers };
+                        const result = await this.saveAnswerData(questionId, payload);
+                        if (!result) continue;
+                        for (const [id, value] of Object.entries(result.answers || {})) {
+                            if (this.answers[id] === previous[id]) this.answers[id] = value ?? '';
+                        }
+                        if (payload.audio_ended && result.deadline_at) {
+                            this.audioEndedSaved = true;
+                            this.audioEndSaveFailed = false;
+                            this.audioPlaying = false;
+                            this.isAnswerCheckPhase = true;
+                            this.audioEndedModal = true;
+                            this.endTime = Date.parse(result.deadline_at);
+                            this.remainingSeconds = Math.max(0, Math.ceil((this.endTime - Date.now()) / 1000));
+                        }
+                    }
+                },
                 notifyTabSwitched() {
-                    fetch(config.saveUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        },
-                        body: JSON.stringify({ tab_switched: true }),
-                    });
+                    if (!this.isSubmitting && this.remainingSeconds > 0) this.saveAnswerData(null, { tab_switched: true });
                 },
 
                 toggleFullscreen() {
@@ -2369,6 +2615,73 @@
                 // =========================================================
                 // HIGHLIGHT & NOTES ENGINE
                 // =========================================================
+                highlightTextBoundary(root, offset) {
+                    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+                    let node;
+                    let remaining = Math.max(0, Number(offset) || 0);
+                    let lastNode = null;
+                    while ((node = walker.nextNode())) {
+                        lastNode = node;
+                        const length = node.nodeValue.length;
+                        if (remaining <= length) return { node, offset: remaining };
+                        remaining -= length;
+                    }
+                    return lastNode ? { node: lastNode, offset: lastNode.nodeValue.length } : null;
+                },
+
+                restoreHighlights(highlights) {
+                    const grouped = {};
+                    (Array.isArray(highlights) ? highlights : []).forEach(item => {
+                        if (!item || typeof item.container !== 'string') return;
+                        (grouped[item.container] ||= []).push(item);
+                    });
+                    Object.entries(grouped).forEach(([containerId, items]) => {
+                        const root = document.getElementById(containerId);
+                        if (!root) return;
+                        items.sort((a, b) => Number(b.start) - Number(a.start)).forEach(item => {
+                            if (!Number.isFinite(Number(item.start)) || !Number.isFinite(Number(item.end))
+                                || Number(item.end) <= Number(item.start)) return;
+                            const start = this.highlightTextBoundary(root, item.start);
+                            const end = this.highlightTextBoundary(root, item.end);
+                            if (!start || !end) return;
+                            const range = document.createRange();
+                            try {
+                                range.setStart(start.node, start.offset);
+                                range.setEnd(end.node, end.offset);
+                                this.wrapRangeWithHighlight(range, item.note || null);
+                            } catch (_) {}
+                        });
+                    });
+                },
+
+                serializeHighlights() {
+                    const saved = [];
+                    document.querySelectorAll('#passage-container, #questions-container').forEach(root => {
+                        root.querySelectorAll('.ielts-highlight').forEach(mark => {
+                            const container = mark.closest('[id^="passage-content-"], [id^="question-content-"]');
+                            if (!container) return;
+                            const before = document.createRange();
+                            before.selectNodeContents(container);
+                            before.setEndBefore(mark);
+                            const start = before.toString().length;
+                            saved.push({
+                                container: container.id,
+                                start,
+                                end: start + mark.textContent.length,
+                                note: mark.getAttribute('data-note') || null,
+                            });
+                        });
+                    });
+                    return saved.filter(item => /^(passage|question)-content-[0-9]+$/.test(item.container));
+                },
+
+                scheduleHighlightSave() {
+                    clearTimeout(this.highlightSaveTimer);
+                    this.highlightSaveTimer = setTimeout(() => {
+                        this.saveAnswerData(null, { highlights: this.serializeHighlights() });
+                    }, 350);
+                },
+
                 handleGlobalClick(event) {
                     const mark = event.target.closest('.ielts-highlight');
                     if (mark) {
@@ -2476,6 +2789,7 @@
                 applyHighlight() {
                     if (!this.selectionMenu.range) return;
                     this.wrapRangeWithHighlight(this.selectionMenu.range, null);
+                    this.scheduleHighlightSave();
                     this.selectionMenu.show = false;
                     window.getSelection().removeAllRanges();
                 },
@@ -2516,6 +2830,7 @@
                         this.wrapRangeWithHighlight(this.noteModal.range, this.noteModal.text.trim());
                     }
                     this.noteModal.show = false;
+                    this.scheduleHighlightSave();
                 },
 
                 deleteNoteFromMark() {
@@ -2524,6 +2839,7 @@
                         this.noteModal.targetMark.title = 'Nhấp để xem tùy chọn xóa hoặc ghi chú';
                     }
                     this.noteModal.show = false;
+                    this.scheduleHighlightSave();
                 },
 
                 clearCurrentHighlight() {
@@ -2535,6 +2851,7 @@
                         parent.normalize();
                     }
                     this.highlightActionMenu.show = false;
+                    this.scheduleHighlightSave();
                 },
 
                 clearAllHighlights() {
@@ -2546,47 +2863,56 @@
                         parent.normalize();
                     });
                     this.highlightActionMenu.show = false;
+                    this.scheduleHighlightSave();
                 },
 
                 async submitExam() {
                     if (this.isSubmitting) return;
-                    // Show full-screen loading overlay while AI is scoring
                     this.isSubmitting = true;
-                    this.confirmSubmitModal = false;
-                    const submittedAnswers = { ...this.answers };
-                    await Promise.all([...pendingMultiSaves]);
-                    this.answers = submittedAnswers;
-
-                    fetch(config.submitUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({ answers: submittedAnswers }),
-                    })
-                    .then(res => {
-                        if (!res.ok) {
-                            return res.text().then(text => {
-                                throw new Error('HTTP ' + res.status + ': ' + text.substring(0, 200));
-                            });
+                    this.submitError = '';
+                    let timeout, submitted = false;
+                    try {
+                        if (this.skill === 'speaking') {
+                            await this.prepareSpeakingSubmission();
+                            if (this.recordingState !== 'saved' && !(this.remainingSeconds <= 0 && this.recordingState === 'empty')) {
+                                throw new Error('Bản thu chưa được lưu xong. Hãy lưu lại hoặc tải bản thu xuống trước khi rời trang.');
+                            }
                         }
-                        return res.json();
-                    })
-                    .then(data => {
-                        const url = data.redirect_url || config.resultUrl;
-                        window.location.href = url;
-                    })
-                    .catch(err => {
-                        console.error('Submit error:', err);
-                        this.isSubmitting = false;
-                        this.submitError = 'Chưa nộp được bài. Vui lòng thử lại; các đáp án vẫn được giữ trên màn hình.';
-                    });
+                        this.confirmSubmitModal = false;
+                        await Promise.all([...pendingMultiSaves, ...pendingDragSaves]);
+                        await saveTail;
+                        clearTimeout(this.highlightSaveTimer);
+                        if (this.remainingSeconds > 0) await this.saveAnswerData(null, { highlights: this.serializeHighlights() });
+                        await saveTail;
+                        const controller = new AbortController();
+                        timeout = setTimeout(() => controller.abort(), 30000);
+                        const response = await fetch(config.submitUrl, {
+                            method: 'POST', signal: controller.signal,
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ answers: { ...this.answers }, expected_revision: saveRevision }),
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(data.message || data.error || 'Chưa nộp được bài. Vui lòng thử lại.');
+                        submitted = true;
+                        window.location.href = data.redirect_url || config.resultUrl;
+                    } catch (error) {
+                        this.confirmSubmitModal = true;
+                        this.submitError = error.name === 'AbortError'
+                            ? 'Chưa nhận được xác nhận nộp bài. Hãy thử nộp lại; các đáp án vẫn được giữ trên màn hình.'
+                            : (error.message || 'Chưa nộp được bài. Vui lòng thử lại.');
+                    } finally {
+                        clearTimeout(timeout);
+                        if (!submitted) this.isSubmitting = false;
+                    }
                 },
 
                 autoSubmitOnTimeUp() {
-                    alert('Hết giờ làm bài! Hệ thống đang tự động nộp bài thi của bạn.');
+                    this.submitError = 'Hết giờ. Hệ thống đang lưu bản thu và nộp bài.';
+                    this.confirmSubmitModal = true;
                     this.submitExam();
                 }
             };
@@ -2594,7 +2920,7 @@
     </script>
 
     {{-- ========================================================================= --}}
-    {{-- MODAL: ĐANG CHẤM ĐIỂM (AI SCORING LOADING OVERLAY) --}}
+    {{-- MODAL: ĐANG LƯU VÀ NỘP BÀI --}}
     {{-- ========================================================================= --}}
     <div x-show="isSubmitting"
          x-cloak
@@ -2605,20 +2931,24 @@
                 <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
                 <div class="absolute inset-0 rounded-full border-4 border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
                 <div class="absolute inset-2 rounded-full bg-white flex items-center justify-center text-2xl">
-                    @if($isWriting) ✍️ @elseif($isListening) 🎧 @else 📖 @endif
+                    @if($isWriting) ✍️ @elseif($isListening) 🎧 @elseif($isSpeaking) 🎙️ @else 📖 @endif
                 </div>
             </div>
 
             <h3 class="text-lg font-black text-slate-900 mb-2">
                 @if($isWriting)
-                    Gemini AI đang chấm bài Writing...
+                    Đang lưu và nộp bài Writing...
+                @elseif($isSpeaking)
+                    Đang lưu bản thu và nộp bài Speaking...
                 @else
                     Đang tổng hợp & chấm điểm...
                 @endif
             </h3>
             <p class="text-sm text-slate-500 mb-4 leading-relaxed">
                 @if($isWriting)
-                    Hệ thống đang gửi bài viết của bạn đến Gemini AI để đánh giá theo 4 tiêu chí chuẩn IELTS (Task Achievement, Coherence, Lexical Resource, Grammar). Vui lòng không đóng trình duyệt.
+                    Sau khi nộp, AI sẽ tạo đánh giá tham khảo trên trang kết quả. Band chính thức do giáo viên chấm.
+                @elseif($isSpeaking)
+                    Vui lòng giữ trang đến khi bản thu được lưu và hệ thống xác nhận đã nộp. Đánh giá AI sẽ xuất hiện trên trang kết quả; Band chính thức do giáo viên chấm.
                 @else
                     Hệ thống đang chấm điểm và tính Band Score. Quá trình này diễn ra trong vài giây.
                 @endif
@@ -2635,7 +2965,7 @@
             <div x-show="submitError" x-cloak class="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 text-left">
                 <span class="font-bold text-red-600 block mb-1">⚠ Gặp sự cố:</span>
                 <span x-text="submitError"></span>
-                <span class="block mt-1 text-slate-400">Đang tự động chuyển về trang kết quả...</span>
+                <span class="block mt-1 text-slate-400">Hãy khắc phục thông báo rồi thử lại.</span>
             </div>
         </div>
     </div>

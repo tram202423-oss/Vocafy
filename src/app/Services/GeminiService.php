@@ -11,8 +11,10 @@ class GeminiService
 
     public function __construct()
     {
-        $this->apiKey = config('services.gemini.api_key');
+        $this->apiKey = (string) config('services.gemini.api_key', '');
     }
+
+    public function modelName(): string { return $this->model; }
 
     /**
      * Sinh câu ví dụ, pronunciation và nghĩa tiếng Việt (kèm từ loại) cho một từ vựng tiếng Anh.
@@ -148,6 +150,66 @@ PROMPT;
         }
 
         return $resultData;
+    }
+
+    /**
+     * Chấm bài Speaking từ audio. Điểm trả về chỉ là tham khảo, không thay điểm giáo viên.
+     *
+     * @return array<string, mixed>
+     */
+    public function evaluateSpeaking(string $audioBytes, string $mimeType, string $taskContext = ''): array
+    {
+        $systemPrompt = <<<'PROMPT'
+You are an IELTS Speaking practice evaluator. Analyze the attached candidate audio and provide a cautious, advisory estimate only. This is not an official IELTS score and must not be presented as one.
+Assess the four IELTS Speaking criteria: Fluency and Coherence, Lexical Resource, Grammatical Range and Accuracy, and Pronunciation. Give each criterion a band estimate from 0 to 9 in 0.5 increments, plus concise Vietnamese feedback. Transcribe the candidate's English speech as accurately as possible. Do not infer content that is not audible. If the recording is too short, silent, or unclear to assess, return gradable=false, overallScore=null, criteria=[], and explain why in limitations. Never invent a score or speech. Otherwise set gradable=true.
+Return valid JSON only with this schema:
+{"gradable":true,"overallScore":0.0,"transcript":"","criteria":[{"name":"Fluency and Coherence","score":0.0,"comment":""},{"name":"Lexical Resource","score":0.0,"comment":""},{"name":"Grammatical Range and Accuracy","score":0.0,"comment":""},{"name":"Pronunciation","score":0.0,"comment":""}],"strengths":[""],"improvements":[""],"limitations":""}
+PROMPT;
+
+        $userPrompt = "Evaluate this IELTS Speaking recording.\n\n";
+        if (trim($taskContext) !== '') {
+            $userPrompt .= "Saved speaking prompts and instructions:\n{$taskContext}\n\n";
+        }
+        $userPrompt .= 'Treat this as practice feedback only. Assess what can be heard in the attached recording.';
+
+        $response = Http::timeout(120)
+            ->retry(2, 1500, function (\Throwable $e, $request) {
+                if ($e instanceof \Illuminate\Http\Client\RequestException) {
+                    return in_array($e->response?->status(), [429, 500, 503]);
+                }
+                return true;
+            })
+            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", [
+                'system_instruction' => [
+                    'parts' => [['text' => $systemPrompt]],
+                ],
+                'contents' => [[
+                    'parts' => [
+                        ['inline_data' => [
+                            'mime_type' => explode(';', $mimeType)[0],
+                            'data' => base64_encode($audioBytes),
+                        ]],
+                        ['text' => $userPrompt],
+                    ],
+                ]],
+                'generationConfig' => [
+                    'response_mime_type' => 'application/json',
+                    'temperature' => 0.2,
+                ],
+            ]);
+
+        if (! $response->successful()) {
+            $errorMessage = $response->json('error.message') ?? $response->body();
+            throw new \RuntimeException('Gemini Speaking API error: ' . $errorMessage);
+        }
+
+        $jsonText = $response->json('candidates.0.content.parts.0.text');
+        $result = json_decode((string) $jsonText, true);
+        if (! is_array($result) || ! array_key_exists('overallScore', $result)) {
+            throw new \RuntimeException('Invalid JSON response from Gemini Speaking evaluator.');
+        }
+
+        return $result;
     }
 
     /**

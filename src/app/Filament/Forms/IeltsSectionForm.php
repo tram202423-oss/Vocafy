@@ -120,9 +120,19 @@ class IeltsSectionForm
                             ->default('repeat')->required()->visible(fn (Get $get): bool => Authoring::isDragDrop($get()))->dehydratedWhenHidden(),
                     ]),
                     C\Textarea::make('instruction')->label('Hướng dẫn cho nhóm câu hỏi')->placeholder('Choose the correct heading for each paragraph from the list below.')->rows(3),
+                    C\Select::make('settings.map_answer_mode')->label('Trả lời bản đồ')
+                        ->options(['choices' => 'Chọn từ danh sách', 'text' => 'Tự nhập từ'])->default('choices')->live()
+                        ->visible(fn (Get $get): bool => $get('question_type') === 'map_labeling' && ! Authoring::isDragDrop($get()))
+                        ->afterStateUpdated(function ($state, Get $get, Set $set): void {
+                            if ($state !== 'text') return;
+                            $questions = $get('questions') ?? [];
+                            foreach ($questions as &$question) $question['options'] = [];
+                            unset($question);
+                            $set('questions', $questions);
+                        }),
                     C\RichEditor::make('question_content')->label('Đề bài / ghi chú / bảng có ô trống')
                         ->toolbarButtons(['bold', 'italic', 'underline', 'bulletList', 'orderedList', 'h2', 'h3', 'link', 'blockquote', 'undo', 'redo'])
-                        ->helperText('Kéo thả trong đoạn văn: chèn [blank_1], [blank_2]… theo số câu. Với Matching Headings, có thể để trống và nhập Paragraph A, Paragraph B… trong từng câu.')
+                        ->helperText('Completion theo đoạn: chèn [blank_1], [blank_2]… khớp số câu; server sẽ nối từng ô với một câu. Kéo thả cần thêm ngân hàng. Matching Headings có thể để trống đề chung và nhập Paragraph A, Paragraph B… trong từng câu.')
                         ->visible(fn (Get $get): bool => in_array($get('../../skill'), ['reading', 'listening'], true))->dehydratedWhenHidden(),
                     C\TextInput::make('image_url')->label('Ảnh sơ đồ / bản đồ')->placeholder('/storage/images/map.png hoặc https://…')
                         ->maxLength(255)->visible(fn (Get $get): bool => $get('question_type') === 'map_labeling' || in_array($get('../../skill'), ['writing', 'speaking'], true))->dehydratedWhenHidden(),
@@ -285,13 +295,7 @@ class IeltsSectionForm
                         ->form([
                             C\TextInput::make('link')->label('Link audio hoặc Google Drive')->placeholder('https://…/listening.mp3 hoặc https://drive.google.com/file/d/…/view')
                                 ->required()->maxLength(2048)
-                                ->rules([function (string $attribute, mixed $value, \Closure $fail): void {
-                                    try {
-                                        app(IeltsAudioService::class)->validateLink($value);
-                                    } catch (\InvalidArgumentException $exception) {
-                                        $fail($exception->getMessage());
-                                    }
-                                }]),
+                                ->rules([new \App\Rules\ValidIeltsAudioLink]),
                             C\Placeholder::make('drive_audio_help')->label('Với Google Drive')->content('File cần bật Anyone with the link và cho phép tải xuống. Vocafy nhập file về storage để phát trong bài thi; tối đa 50 MB. Với link khác, hãy dùng đường dẫn trực tiếp tới file audio.'),
                         ])
                         ->action(function (array $data, Set $set, Action $action): void {
@@ -310,17 +314,7 @@ class IeltsSectionForm
                 ]),
                 C\TextInput::make('audio_url')->label('Link phát audio')->readOnly()->maxLength(255)
                     ->helperText('Dùng hai nút phía trên để thêm hoặc thay audio.')
-                    ->rules([function (string $attribute, mixed $value, \Closure $fail): void {
-                        try {
-                            $service = app(IeltsAudioService::class);
-                            $service->validateLink($value);
-                            if (filled($value) && $service->isGoogleDriveLink($value)) {
-                                $fail('Dùng nút Dán link audio để nhập file Google Drive trước khi lưu.');
-                            }
-                        } catch (\InvalidArgumentException $exception) {
-                            $fail($exception->getMessage());
-                        }
-                    }]),
+                    ->rules([new \App\Rules\ValidIeltsAudioLink(allowGoogleDrive: false)]),
                 C\Placeholder::make('audio_preview')->label('Nghe thử')->content(function (Get $get): HtmlString|string {
                     $url = $get('audio_url');
                     if (blank($url)) {
@@ -371,12 +365,16 @@ class IeltsSectionForm
             C\TextInput::make('correct_answer')->label('Đáp án đúng')->required()
                 ->visible(fn (Get $get): bool => in_array($get('../../../../skill'), ['reading', 'listening'], true) && self::answerChoices($get) === null)
                 ->helperText('Có thể chấp nhận nhiều cách viết: center / centre. Câu chưa có đáp án sẽ được báo lỗi khi lưu.'),
+            C\Select::make('word_limit_mode')->label('Quy tắc giới hạn')
+                ->options(['tokens' => 'Tối đa N từ/số', 'words' => 'Chỉ từ (WORDS ONLY)', 'words_and_number' => 'N từ và/hoặc một số'])
+                ->placeholder('Theo hướng dẫn nhóm, hoặc tổng từ/số')->nullable()
+                ->visible(fn (Get $get): bool => ! Authoring::isDragDrop($get('../../') ?? []) && in_array($get('../../question_type'), ['fill_in_blanks', 'short_answer', 'map_labeling'], true)),
             C\TextInput::make('word_limit')->label('Giới hạn số từ')->integer()->minValue(1)->maxValue(1000)
-                ->visible(fn (Get $get): bool => ! Authoring::isDragDrop($get('../../') ?? []) && in_array($get('../../question_type'), ['fill_in_blanks', 'short_answer'], true))
-                ->helperText('Reading/Listening: giới hạn từ được phép nhập. Writing: số từ yêu cầu.'),
-            C\Grid::make(2)->visible(fn (Get $get): bool => Authoring::isDragDrop($get('../../') ?? []) && $get('../../question_type') === 'map_labeling')->schema([
-                C\TextInput::make('drop_x')->label('Vị trí ô thả: X')->numeric()->minValue(0)->maxValue(100)->suffix('%')->required(),
-                C\TextInput::make('drop_y')->label('Vị trí ô thả: Y')->numeric()->minValue(0)->maxValue(100)->suffix('%')->required(),
+                ->visible(fn (Get $get): bool => ! Authoring::isDragDrop($get('../../') ?? []) && in_array($get('../../question_type'), ['fill_in_blanks', 'short_answer', 'map_labeling'], true))
+                ->helperText('Reading/Listening dạng nhập chữ: server từ chối câu trả lời vượt giới hạn. Writing hiện dùng mốc hiển thị cố định 150/250 từ; trường này chưa được scorer Writing áp dụng.'),
+            C\Grid::make(2)->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling')->schema([
+                C\TextInput::make('drop_x')->label('Vị trí trên ảnh: X')->numeric()->minValue(0)->maxValue(100)->suffix('%')->required(fn (Get $get): bool => Authoring::isDragDrop($get('../../') ?? [])),
+                C\TextInput::make('drop_y')->label('Vị trí trên ảnh: Y')->numeric()->minValue(0)->maxValue(100)->suffix('%')->required(fn (Get $get): bool => Authoring::isDragDrop($get('../../') ?? [])),
             ]),
             C\Section::make('Lời giải (tùy chọn)')->collapsible()->collapsed()->columns(2)->schema([
                 C\Textarea::make('quote_reference')->label('Trích dẫn chứa đáp án')->rows(3),

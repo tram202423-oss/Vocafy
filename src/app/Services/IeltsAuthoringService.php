@@ -24,7 +24,8 @@ class IeltsAuthoringService
     public static function needsOptions(array $group): bool
     {
         return ! static::isDragDrop($group)
-            && in_array($group['question_type'] ?? '', ['multiple_choice', 'matching_headings', 'matching_information', 'map_labeling'], true);
+            && (in_array($group['question_type'] ?? '', ['multiple_choice', 'matching_headings', 'matching_information'], true)
+                || (($group['question_type'] ?? '') === 'map_labeling' && data_get($group, 'settings.map_answer_mode', 'choices') !== 'text'));
     }
 
     public static function fixedAnswers(?string $type): array
@@ -103,10 +104,37 @@ class IeltsAuthoringService
     {
         $errors = [];
         $usedNumbers = [];
+        if ($skill === 'writing' && count($groups)) {
+            $writingQuestions = array_merge(...array_map(fn ($group) => array_values($group['questions'] ?? []), array_values($groups)));
+            $numbers = array_map(fn ($q) => (int) ($q['question_number'] ?? 0), $writingQuestions);
+            sort($numbers);
+            if (count($groups) !== 2 || $numbers !== [1, 2] || collect($groups)->contains(fn ($g) => count($g['questions'] ?? []) !== 1)) {
+                $errors[$path] = 'Writing cần hai nhóm Task 1/Task 2, mỗi nhóm một câu số 1/2.';
+            }
+        }
+        if ($skill === 'reading' && count($groups) && blank(reset($groups)['passage_content'] ?? null)) {
+            $errors[$path] = 'Nhập bài đọc nguồn ở nhóm đầu tiên của Reading.';
+        }
+
+        if ($skill === 'listening') {
+            $sharedAudioUrl = null;
+            foreach ($groups as $groupKey => $group) {
+                $audioUrl = trim((string) ($group['audio_url'] ?? ''));
+                if ($audioUrl === '') {
+                    continue;
+                }
+                if ($sharedAudioUrl !== null && $audioUrl !== $sharedAudioUrl) {
+                    $errors["{$path}.{$groupKey}.audio_url"] = 'Phần Listening hiện dùng một audio chung cho cả section. Hãy chọn cùng một URL ở các nhóm hoặc chỉ đặt audio ở một nhóm.';
+                } else {
+                    $sharedAudioUrl = $audioUrl;
+                }
+            }
+        }
         foreach ($groups as $groupKey => $group) {
             $base = "{$path}.{$groupKey}";
             $drag = static::isDragDrop($group);
             $type = $group['question_type'] ?? '';
+            if ($type === 'matching_headings' && $skill === 'listening') $errors["{$base}.question_type"] = 'Matching Headings dùng cho Reading.';
             $multi = IeltsMultiSelectService::enabled($group);
             $questions = IeltsMultiSelectService::questions($group);
             if ($multi) {
@@ -145,7 +173,11 @@ class IeltsAuthoringService
             }
             $blanks = static::blankNumbers($content);
             $numbers = array_map(fn ($question) => (int) ($question['question_number'] ?? 0), $questions);
-            if ($drag && count($blanks)) {
+            if ($skill === 'listening' && count($numbers)
+                && intdiv(min($numbers) - 1, 10) !== intdiv(max($numbers) - 1, 10)) {
+                $errors["{$base}.questions"] = 'Một nhóm Listening phải nằm trọn trong cùng Part (mỗi Part 10 câu).';
+            }
+            if (($drag || $type === 'fill_in_blanks') && count($blanks)) {
                 if (count($blanks) !== count(array_unique($blanks)) || array_diff($blanks, $numbers) || array_diff($numbers, $blanks)) {
                     $errors["{$base}.question_content"] = 'Mỗi [blank_N] phải khớp đúng một câu số N trong nhóm; không trùng hoặc thiếu ô.';
                 }
@@ -154,12 +186,13 @@ class IeltsAuthoringService
             foreach ($questions as $questionKey => $question) {
                 $qPath = $multi ? "{$base}.settings" : "{$base}.questions.{$questionKey}";
                 $number = (int) ($question['question_number'] ?? 0);
+                if ($skill === 'listening' && ($number < 1 || $number > 40)) $errors["{$qPath}.question_number"] = 'Listening dùng câu 1–40.';
                 if (isset($usedNumbers[$number])) {
                     $numberField = $multi ? 'start_number' : 'question_number';
                     $errors["{$qPath}.{$numberField}"] = "Câu {$number} đã có trong nhóm khác hoặc trong nhóm này.";
                 }
                 $usedNumbers[$number] = true;
-                if (trim($question['prompt'] ?? '') === '' && ! ($drag && in_array($number, $blanks, true))) {
+                if (trim($question['prompt'] ?? '') === '' && ! (($drag || $type === 'fill_in_blanks') && in_array($number, $blanks, true))) {
                     $errors["{$qPath}.prompt"] = 'Nhập nội dung câu hỏi, hoặc tạo ô [blank_N] tương ứng trong đề kéo thả.';
                 }
                 // Writing/Speaking are assessed separately; no answer key is needed.
@@ -167,6 +200,20 @@ class IeltsAuthoringService
                     continue;
                 }
                 $answer = trim($question['correct_answer'] ?? '');
+                if (! $drag && in_array($type, ['fill_in_blanks', 'short_answer', 'map_labeling'], true) && empty($question['options'])) {
+                    $questionModel = new \App\Models\IeltsQuestion($question);
+                    $groupModel = new \App\Models\IeltsQuestionGroup($group);
+                    $groupModel->setRelation('section', new \App\Models\IeltsSection(['skill' => $skill]));
+                    $questionModel->setRelation('questionGroup', $groupModel);
+                    $alternatives = json_decode($answer, true);
+                    if (! is_array($alternatives)) $alternatives = preg_split('/[\/|;]/', $answer) ?: [];
+                    foreach ($alternatives as $alternative) {
+                        if (! IeltsWordLimitService::isWithinLimit($questionModel, (string) $alternative)) {
+                            $errors["{$qPath}.correct_answer"] = 'Đáp án đúng không phù hợp giới hạn: '.IeltsWordLimitService::label($questionModel);
+                        }
+                    }
+                }
+
                 if ($drag) {
                     $normalized = mb_strtolower($answer);
                     if (! in_array($normalized, $bankKeys, true) || $normalized === '') {

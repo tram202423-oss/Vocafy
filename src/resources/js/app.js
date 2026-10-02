@@ -1,3 +1,4 @@
+import './ielts-recording';
 import './bootstrap';
 import Alpine from 'alpinejs';
 import vocabularyPlayer from './components/vocabularyPlayer';

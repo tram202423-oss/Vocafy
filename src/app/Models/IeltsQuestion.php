@@ -20,7 +20,7 @@ class IeltsQuestion extends Model
         'quote_reference',
         'options',
         'correct_answer',
-        'word_limit',
+        'word_limit', 'word_limit_mode',
         'points',
         'drop_x',
         'drop_y',

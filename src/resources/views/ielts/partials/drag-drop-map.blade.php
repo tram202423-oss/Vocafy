@@ -6,7 +6,7 @@
     $unpositionedQuestions = $group->questions->filter(fn ($question) => $question->drop_x === null || $question->drop_y === null);
 @endphp
 
-@if($mapQuestions->isNotEmpty())
+@if($group->image_url)
     <div class="relative mx-auto w-full max-w-4xl" aria-label="Sơ đồ có các ô thả đáp án">
         <img src="{{ $group->image_url }}" alt="{{ $group->title }}" class="block h-auto w-full rounded-xl">
         @foreach($mapQuestions as $question)
@@ -18,6 +18,9 @@
                  data-option-usage="{{ $dragOptionUsage }}"
                  draggable="false"
                  @pointerdown.stop="if (answers['{{ $question->id }}']) { const key = String(answers['{{ $question->id }}']); const textByKey = @js($dragTextByKey); startDragPointer(key, textByKey[key] || key, {{ $question->id }}, @js($dragQuestionIds), @js($dragOptionUsage), {{ $group->id }}, $event); }"
+                 @keydown.enter.prevent="if (draggedOption) assignDragOption({{ $question->id }}, draggedOption, @js($dragQuestionIds), @js($dragOptionUsage), {{ $group->id }})"
+                 @keydown.space.prevent="if (draggedOption) assignDragOption({{ $question->id }}, draggedOption, @js($dragQuestionIds), @js($dragOptionUsage), {{ $group->id }})"
+                 @keydown.delete.prevent="clearDragAnswer({{ $question->id }})"
                  @click.stop="setCurrentQuestion({{ $question->question_number }}); if (draggedOption) assignDragOption({{ $question->id }}, draggedOption, @js($dragQuestionIds), @js($dragOptionUsage), {{ $group->id }})"
                  style="left: {{ $question->drop_x }}%; top: {{ $question->drop_y }}%;"
                  class="absolute flex min-h-9 min-w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-1 rounded border-2 border-dashed border-slate-700 bg-white/90 px-2 py-1 text-xs font-bold shadow"
