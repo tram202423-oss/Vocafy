@@ -178,13 +178,13 @@ Form chặn số trùng và blank không khớp, nhưng chưa ép số liên t�
 
 ### IELTS-13 — Một số renderer/editor vẫn thiếu
 
-**Trạng thái sau sửa:** Đã sửa mất question_content của Reading drag, ảnh map không có tọa độ, bàn phím map và ảnh Speaking; có chọn standard map nhập chữ. Editor riêng Matching Features/Sentence Endings, bảng/flow-chart và click đặt tọa độ vẫn chưa có.
+**Trạng thái sau sửa:** Đã sửa mất question_content của Reading drag, ảnh map không có tọa độ, bàn phím map và ảnh Speaking; có chọn standard map nhập chữ. Admin đặt nhiều vị trí trên một ảnh chung của nhóm. Editor riêng Matching Features/Sentence Endings và bảng/flow-chart vẫn chưa có.
 
 - Drag Reading chỉ render `question_content` khi có token `[blank_N]`; đoạn hướng dẫn/nội dung chung không có token có thể bị bỏ qua.
 - Map kéo thả chỉ render ảnh nếu có ít nhất một câu đủ X/Y; map standard vẫn hiện ảnh khi thiếu tọa độ. Các ô map chưa có thao tác bàn phím tương đương target thường.
 - Matching Features và Matching Sentence Endings có thể mô phỏng bằng matching/bank nhưng chưa có editor/renderer chuyên biệt.
 - Table/Flow-chart đã có thể render HTML + blanks; chưa có công cụ tạo/sửa cấu trúc bảng/sơ đồ trong admin. Không nên ghi là hoàn toàn chưa hỗ trợ.
-- Tọa độ map nhập số; chưa có công cụ click ảnh để đặt ô.
+- Admin đặt các vị trí map bằng cách chọn câu rồi bấm trên một ảnh chung; cần nghiệm thu trực tiếp thao tác lưu và mở lại câu hỏi.
 
 **Bằng chứng:** [room](../../src/resources/views/ielts/room.blade.php), [drag-drop-map](../../src/resources/views/ielts/partials/drag-drop-map.blade.php), [form](../../src/app/Filament/Forms/IeltsSectionForm.php), [enum](../../src/app/Enums/IeltsQuestionTypeEnum.php).
 

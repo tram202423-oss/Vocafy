@@ -26,8 +26,8 @@
 | Summary / Note / Form Completion | `question_content` + `[blank_N]`, mỗi blank một question row | Có typed blanks và drag blanks ở Reading/Listening | Có luồng cơ bản; thiếu preset/editor theo cấu trúc từng dạng |
 | Table / Flow-chart Completion | HTML/ảnh + blanks dùng schema Completion | Đã render nội dung chung và ô trả lời, gồm bảng trong seeder Listening | Một phần; chưa có công cụ tạo/sửa bảng/flow-chart trong admin |
 | Short Answer | Prompt, đáp án thay thế, word_limit | Input Reading/Listening, kiểm tra giới hạn ở server, chấm chữ | Có luồng cơ bản; đã có cấu hình giới hạn từ/số; cần nghiệm thu đáp án biên |
-| Plan / Map / Diagram — standard | Ảnh, X/Y, options theo câu | Select/input trên ảnh; câu thiếu tọa độ ở danh sách | Một phần; nhập tọa độ bằng số, map nhập chữ đã áp dụng word-limit service |
-| Plan / Map / Diagram — drag | Ảnh, X/Y, bank chung | Drop targets trên ảnh; câu thiếu tọa độ ở danh sách | Một phần; đã hiện ảnh dù thiếu X/Y và thêm Enter/Space/Delete; cần nghiệm thu bàn phím |
+| Plan / Map / Diagram — standard | Một ảnh chung, chọn câu rồi bấm đặt vị trí, options theo câu | Select/input trên ảnh; câu thiếu vị trí ở danh sách | Một phần; admin hiển thị mọi marker trên một ảnh và lưu đáp án chọn/nhập chữ vào `correct_answer`; cần nghiệm thu giao diện |
+| Plan / Map / Diagram — drag | Một ảnh chung, chọn câu rồi bấm đặt vị trí, bank chung | Drop targets trên ảnh; câu thiếu vị trí ở danh sách | Một phần; câu mới bắt buộc có vị trí, đã có Enter/Space/Delete; cần nghiệm thu bàn phím |
 | Matching Features | Có thể dùng `matching_information` + bank, repeat khi đề cho phép | Tái sử dụng targets/scorer matching | Chưa có editor/preset chuyên biệt |
 | Matching Sentence Endings | Có thể nhập đầu câu ở prompt, cuối câu ở bank matching | Tái sử dụng chọn/kéo thả và chấm key | Chưa có editor/renderer chuyên biệt |
 | Writing Task 1 | Group, một câu số 1, ảnh tùy chọn | Essay, đếm từ, autosave, AI tham khảo và giáo viên chính thức | Một phần; đã gửi ảnh/instruction, phân Academic/General và validate hai Task; cần nghiệm thu AI |

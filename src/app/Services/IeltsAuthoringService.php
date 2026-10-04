@@ -37,8 +37,30 @@ class IeltsAuthoringService
         };
     }
 
-    public static function prepareQuestion(array $data, ?string $type): array
+    public static function answerUsesChoices(array $group): bool
     {
+        return static::isDragDrop($group)
+            || static::needsOptions($group)
+            || (bool) static::fixedAnswers($group['question_type'] ?? null);
+    }
+
+    public static function selectedAnswer(array $question, array $group): ?string
+    {
+        $field = static::answerUsesChoices($group) ? 'answer_choice' : 'answer_text';
+        $answer = array_key_exists($field, $question) ? $question[$field] : ($question['correct_answer'] ?? null);
+
+        return is_scalar($answer) ? (string) $answer : null;
+    }
+
+    public static function prepareQuestion(array $data, ?string $type, ?array $group = null, ?string $skill = null): array
+    {
+        if ($group !== null) {
+            $data['correct_answer'] = static::selectedAnswer($data, $group);
+        }
+        unset($data['answer_choice'], $data['answer_text']);
+        if (in_array($skill, ['reading', 'listening'], true) && blank($data['correct_answer'] ?? null)) {
+            throw ValidationException::withMessages(['correct_answer' => 'Nhập hoặc chọn đáp án đúng trước khi lưu.']);
+        }
         $data['prompt'] ??= '';
         $fixed = static::fixedAnswers($type);
         if ($fixed) {
@@ -86,11 +108,21 @@ class IeltsAuthoringService
             if (in_array((int) $number, $used, true)) {
                 continue;
             }
+            // Bulk insertion bypasses Repeater's add action and its field hydration.
+            // Alpine entanglement requires every editor field to exist up front.
             $existing[(string) Str::uuid()] = [
                 'question_number' => (int) $number,
                 'prompt' => '',
                 'correct_answer' => null,
+                'answer_choice' => null,
+                'answer_text' => null,
                 'options' => [],
+                'drop_x' => null,
+                'drop_y' => null,
+                'word_limit_mode' => null,
+                'word_limit' => null,
+                'quote_reference' => null,
+                'explanation' => null,
                 'points' => 1,
             ];
             $used[] = (int) $number;
@@ -135,6 +167,9 @@ class IeltsAuthoringService
             $drag = static::isDragDrop($group);
             $type = $group['question_type'] ?? '';
             if ($type === 'matching_headings' && $skill === 'listening') $errors["{$base}.question_type"] = 'Matching Headings dùng cho Reading.';
+            if ($type === 'map_labeling' && blank($group['image_url'] ?? null)) {
+                $errors["{$base}.image_url"] = 'Nhập ảnh bản đồ hoặc sơ đồ trước khi lưu nhóm này.';
+            }
             $multi = IeltsMultiSelectService::enabled($group);
             $questions = IeltsMultiSelectService::questions($group);
             if ($multi) {
@@ -195,11 +230,27 @@ class IeltsAuthoringService
                 if (trim($question['prompt'] ?? '') === '' && ! (($drag || $type === 'fill_in_blanks') && in_array($number, $blanks, true))) {
                     $errors["{$qPath}.prompt"] = 'Nhập nội dung câu hỏi, hoặc tạo ô [blank_N] tương ứng trong đề kéo thả.';
                 }
+                if ($type === 'map_labeling') {
+                    $missingX = blank($question['drop_x'] ?? null);
+                    $missingY = blank($question['drop_y'] ?? null);
+                    if ($missingX !== $missingY || ($drag && $missingX)) {
+                        $errors["{$base}.map_position_picker"] ??= "Bấm vào ảnh để chọn vị trí cho câu {$number}.";
+                    } elseif (! $missingX && (! is_numeric($question['drop_x']) || ! is_numeric($question['drop_y'])
+                        || (float) $question['drop_x'] < 0 || (float) $question['drop_x'] > 100
+                        || (float) $question['drop_y'] < 0 || (float) $question['drop_y'] > 100)) {
+                        $errors["{$base}.map_position_picker"] ??= "Vị trí câu {$number} không hợp lệ. Hãy bấm chọn lại trên ảnh.";
+                    }
+                }
                 // Writing/Speaking are assessed separately; no answer key is needed.
                 if (! in_array($skill, ['reading', 'listening'], true)) {
                     continue;
                 }
-                $answer = trim($question['correct_answer'] ?? '');
+                $answer = trim(static::selectedAnswer($question, $group) ?? '');
+                $answerField = static::answerUsesChoices($group) ? 'answer_choice' : 'answer_text';
+                if ($answer === '') {
+                    $errors["{$qPath}.{$answerField}"] = 'Nhập hoặc chọn đáp án đúng trước khi lưu.';
+                    continue;
+                }
                 if (! $drag && in_array($type, ['fill_in_blanks', 'short_answer', 'map_labeling'], true) && empty($question['options'])) {
                     $questionModel = new \App\Models\IeltsQuestion($question);
                     $groupModel = new \App\Models\IeltsQuestionGroup($group);
@@ -209,7 +260,7 @@ class IeltsAuthoringService
                     if (! is_array($alternatives)) $alternatives = preg_split('/[\/|;]/', $answer) ?: [];
                     foreach ($alternatives as $alternative) {
                         if (! IeltsWordLimitService::isWithinLimit($questionModel, (string) $alternative)) {
-                            $errors["{$qPath}.correct_answer"] = 'Đáp án đúng không phù hợp giới hạn: '.IeltsWordLimitService::label($questionModel);
+                            $errors["{$qPath}.{$answerField}"] = 'Đáp án đúng không phù hợp giới hạn: '.IeltsWordLimitService::label($questionModel);
                         }
                     }
                 }
@@ -217,10 +268,10 @@ class IeltsAuthoringService
                 if ($drag) {
                     $normalized = mb_strtolower($answer);
                     if (! in_array($normalized, $bankKeys, true) || $normalized === '') {
-                        $errors["{$qPath}.correct_answer"] = 'Chọn đáp án có trong ngân hàng của nhóm này.';
+                        $errors["{$qPath}.{$answerField}"] = 'Chọn đáp án có trong ngân hàng của nhóm này.';
                     }
                     if (($group['option_usage'] ?? 'repeat') === 'once' && isset($usedAnswers[$normalized])) {
-                        $errors["{$qPath}.correct_answer"] = 'Đáp án này đã dùng cho câu khác. Chọn đáp án khác hoặc cho phép dùng lại.';
+                        $errors["{$qPath}.{$answerField}"] = 'Đáp án này đã dùng cho câu khác. Chọn đáp án khác hoặc cho phép dùng lại.';
                     }
                     $usedAnswers[$normalized] = true;
                 } elseif (static::needsOptions($group)) {
@@ -229,8 +280,8 @@ class IeltsAuthoringService
                         $errors["{$qPath}.options"] = 'Thêm các lựa chọn có ký hiệu khác nhau.';
                     }
                     if (! in_array($answer, $optionKeys, true)) {
-                        $answerField = $multi ? 'correct_keys' : 'correct_answer';
-                        $errors["{$qPath}.{$answerField}"] = 'Chọn đáp án trong các lựa chọn của câu hỏi.';
+                        $optionAnswerField = $multi ? 'correct_keys' : $answerField;
+                        $errors["{$qPath}.{$optionAnswerField}"] = 'Chọn đáp án trong các lựa chọn của câu hỏi.';
                     }
                 }
             }

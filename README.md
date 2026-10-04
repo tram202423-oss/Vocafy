@@ -59,6 +59,9 @@ Toàn bộ môi trường phát triển được đóng gói qua Docker Compose:
 > 📌 **Admin Panel**: [http://localhost:8080/admin](http://localhost:8080/admin)  
 > 📌 **MySQL từ máy Host (DBeaver, TablePlus, Navicat)**: `127.0.0.1:3307`
 
+> **macOS:** dùng [Compose riêng và hướng dẫn chạy trên Mac](docs/docker-macos.md). File mặc định hiện cần các biến `UID`/`GID` từ shell.
+> **Sau khi clone hoặc pull code:** xem [checklist setup và cập nhật](docs/SETUP-AFTER-CLONE.md), đặc biệt các bước migrate, build frontend, storage link và queue.
+
 ---
 
 ## 📋 Yêu cầu hệ thống (Prerequisites)

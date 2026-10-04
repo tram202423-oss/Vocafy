@@ -122,11 +122,16 @@ class IeltsSectionForm
                     C\Textarea::make('instruction')->label('Hướng dẫn cho nhóm câu hỏi')->placeholder('Choose the correct heading for each paragraph from the list below.')->rows(3),
                     C\Select::make('settings.map_answer_mode')->label('Trả lời bản đồ')
                         ->options(['choices' => 'Chọn từ danh sách', 'text' => 'Tự nhập từ'])->default('choices')->live()
+                        ->helperText('Đổi chế độ trả lời sẽ xóa đáp án đúng của các câu trong nhóm; hãy chọn lại trước khi lưu.')
                         ->visible(fn (Get $get): bool => $get('question_type') === 'map_labeling' && ! Authoring::isDragDrop($get()))
                         ->afterStateUpdated(function ($state, Get $get, Set $set): void {
-                            if ($state !== 'text') return;
                             $questions = $get('questions') ?? [];
-                            foreach ($questions as &$question) $question['options'] = [];
+                            foreach ($questions as &$question) {
+                                if ($state === 'text') $question['options'] = [];
+                                $question['correct_answer'] = null;
+                                $question['answer_choice'] = null;
+                                $question['answer_text'] = null;
+                            }
                             unset($question);
                             $set('questions', $questions);
                         }),
@@ -135,7 +140,9 @@ class IeltsSectionForm
                         ->helperText('Completion theo đoạn: chèn [blank_1], [blank_2]… khớp số câu; server sẽ nối từng ô với một câu. Kéo thả cần thêm ngân hàng. Matching Headings có thể để trống đề chung và nhập Paragraph A, Paragraph B… trong từng câu.')
                         ->visible(fn (Get $get): bool => in_array($get('../../skill'), ['reading', 'listening'], true))->dehydratedWhenHidden(),
                     C\TextInput::make('image_url')->label('Ảnh sơ đồ / bản đồ')->placeholder('/storage/images/map.png hoặc https://…')
-                        ->maxLength(255)->visible(fn (Get $get): bool => $get('question_type') === 'map_labeling' || in_array($get('../../skill'), ['writing', 'speaking'], true))->dehydratedWhenHidden(),
+                        ->maxLength(255)->live(onBlur: true)->required(fn (Get $get): bool => $get('question_type') === 'map_labeling')
+                        ->helperText('Nhập URL ảnh, sau đó mở tab Câu hỏi & đáp án để đặt vị trí các câu trên cùng một ảnh.')
+                        ->visible(fn (Get $get): bool => $get('question_type') === 'map_labeling' || in_array($get('../../skill'), ['writing', 'speaking'], true))->dehydratedWhenHidden(),
                 ]),
                 C\Tabs\Tab::make('Ngân hàng đáp án')->icon('heroicon-o-queue-list')->visible(fn (Get $get): bool => Authoring::isDragDrop($get()))->schema([
                     C\Placeholder::make('bank_guide')->label('Lựa chọn dùng chung')->content('Nhập cả đáp án đúng và đáp án nhiễu. Sau đó chọn đáp án đúng cho từng câu ở tab Câu hỏi & đáp án.'),
@@ -200,15 +207,29 @@ class IeltsSectionForm
                             }),
                       ])->visible(fn (Get $get): bool => Authoring::isDragDrop($get())),
                     ])->visible(fn (Get $get): bool => ! MultiSelect::enabled($get())),
+                    C\ViewField::make('map_position_picker')->label('Đặt vị trí các câu trên ảnh')->dehydrated(false)
+                        ->visible(fn (Get $get): bool => $get('question_type') === 'map_labeling' && filled($get('image_url')))
+                        ->view('filament.forms.components.ielts-map-position-picker', fn (Get $get, C\ViewField $component): array => [
+                            'imagePath' => $component->generateRelativeStatePath('image_url'),
+                            'questionsPath' => $component->generateRelativeStatePath('questions'),
+                        ]),
                     C\Repeater::make('questions')->relationship('questions')->label('Các câu hỏi của nhóm')->orderColumn('order')->reorderable(false)->defaultItems(0)->collapsed()->live(onBlur: true)
+                        ->mutateRelationshipDataBeforeFillUsing(fn (array $data): array => [
+                            ...$data,
+                            'answer_choice' => $data['correct_answer'] ?? null,
+                            'answer_text' => $data['correct_answer'] ?? null,
+                        ])
                         ->visible(fn (Get $get): bool => ! MultiSelect::enabled($get()))
                         ->helperText('Câu hỏi hiển thị theo số câu. Sửa số câu để thay đổi vị trí trong phần thi.')
                         ->addActionLabel('Thêm một câu hỏi')->deleteAction(fn (Action $action) => $action->label('Xóa câu hỏi')->requiresConfirmation())
                         ->collapseAllAction(fn (Action $action) => $action->label('Thu gọn tất cả'))
                         ->expandAllAction(fn (Action $action) => $action->label('Mở tất cả'))
-                        ->itemLabel(fn (array $state): string => 'Câu '.($state['question_number'] ?? '?').(filled($state['prompt'] ?? null) ? ' · '.Str::limit(strip_tags($state['prompt']), 70) : '').(filled($state['correct_answer'] ?? null) ? ' → '.$state['correct_answer'] : ' · Chưa có đáp án'))
-                        ->mutateRelationshipDataBeforeCreateUsing(fn (array $data, Get $get): array => Authoring::prepareQuestion($data, $get('question_type')))
-                        ->mutateRelationshipDataBeforeSaveUsing(fn (array $data, Get $get): array => Authoring::prepareQuestion($data, $get('question_type')))
+                        ->itemLabel(function (array $state, Get $get): string {
+                            $answer = Authoring::selectedAnswer($state, $get() ?? []);
+                            return 'Câu '.($state['question_number'] ?? '?').(filled($state['prompt'] ?? null) ? ' · '.Str::limit(strip_tags($state['prompt']), 70) : '').(filled($answer) ? ' → '.$answer : ' · Chưa có đáp án');
+                        })
+                        ->mutateRelationshipDataBeforeCreateUsing(fn (array $data, Get $get): array => Authoring::prepareQuestion($data, $get('question_type'), $get() ?? [], $get('../../skill')))
+                        ->mutateRelationshipDataBeforeSaveUsing(fn (array $data, Get $get): array => Authoring::prepareQuestion($data, $get('question_type'), $get() ?? [], $get('../../skill')))
                         ->schema(self::questionSchema()),
                 ]),
                 C\Tabs\Tab::make('Bài đọc nguồn')->icon('heroicon-o-book-open')->visible(fn (Get $get): bool => $get('../../skill') === 'reading')->schema([
@@ -353,7 +374,7 @@ class IeltsSectionForm
                     C\TextInput::make('key')->label('Ký hiệu')->placeholder('A')->required()->maxLength(50)->distinct()->live(onBlur: true),
                     C\TextInput::make('text')->label('Nội dung lựa chọn')->required()->columnSpan(3)->live(onBlur: true),
                 ]),
-            C\Select::make('correct_answer')->label('Đáp án đúng')->searchable()->required()
+            C\Select::make('answer_choice')->label('Đáp án đúng')->searchable()->required()
                 ->visible(fn (Get $get): bool => in_array($get('../../../../skill'), ['reading', 'listening'], true) && self::answerChoices($get) !== null)
                 ->options(fn (Get $get): array => self::answerChoices($get) ?? [])
                 ->formatStateUsing(function (?string $state, Get $get): ?string {
@@ -362,7 +383,7 @@ class IeltsSectionForm
                     }
                     return $state;
                 }),
-            C\TextInput::make('correct_answer')->label('Đáp án đúng')->required()
+            C\TextInput::make('answer_text')->label('Đáp án đúng')->required()
                 ->visible(fn (Get $get): bool => in_array($get('../../../../skill'), ['reading', 'listening'], true) && self::answerChoices($get) === null)
                 ->helperText('Có thể chấp nhận nhiều cách viết: center / centre. Câu chưa có đáp án sẽ được báo lỗi khi lưu.'),
             C\Select::make('word_limit_mode')->label('Quy tắc giới hạn')
@@ -372,10 +393,8 @@ class IeltsSectionForm
             C\TextInput::make('word_limit')->label('Giới hạn số từ')->integer()->minValue(1)->maxValue(1000)
                 ->visible(fn (Get $get): bool => ! Authoring::isDragDrop($get('../../') ?? []) && in_array($get('../../question_type'), ['fill_in_blanks', 'short_answer', 'map_labeling'], true))
                 ->helperText('Reading/Listening dạng nhập chữ: server từ chối câu trả lời vượt giới hạn. Writing hiện dùng mốc hiển thị cố định 150/250 từ; trường này chưa được scorer Writing áp dụng.'),
-            C\Grid::make(2)->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling')->schema([
-                C\TextInput::make('drop_x')->label('Vị trí trên ảnh: X')->numeric()->minValue(0)->maxValue(100)->suffix('%')->required(fn (Get $get): bool => Authoring::isDragDrop($get('../../') ?? [])),
-                C\TextInput::make('drop_y')->label('Vị trí trên ảnh: Y')->numeric()->minValue(0)->maxValue(100)->suffix('%')->required(fn (Get $get): bool => Authoring::isDragDrop($get('../../') ?? [])),
-            ]),
+            C\Hidden::make('drop_x')->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling'),
+            C\Hidden::make('drop_y')->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling'),
             C\Section::make('Lời giải (tùy chọn)')->collapsible()->collapsed()->columns(2)->schema([
                 C\Textarea::make('quote_reference')->label('Trích dẫn chứa đáp án')->rows(3),
                 C\Textarea::make('explanation')->label('Giải thích')->rows(3),
@@ -404,7 +423,8 @@ class IeltsSectionForm
     public static function summary(array $groups): string
     {
         $questions = collect($groups)->flatMap(fn ($group) => MultiSelect::questions($group));
-        $answered = $questions->filter(fn ($question) => filled($question['correct_answer'] ?? null))->count();
+        $answered = collect($groups)->sum(fn ($group) => collect(MultiSelect::questions($group))
+            ->filter(fn ($question) => filled(Authoring::selectedAnswer($question, $group)))->count());
         return $questions->count().' câu · '.count($groups).' nhóm · '.$answered.' câu có đáp án';
     }
 

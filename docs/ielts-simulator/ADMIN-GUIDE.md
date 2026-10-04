@@ -69,7 +69,7 @@ Dùng tab **Đề bài**:
 
 - **Hướng dẫn cho nhóm câu hỏi:** yêu cầu như Choose TWO, NO MORE THAN TWO WORDS, Match headings…
 - **Đề bài / ghi chú / bảng có ô trống:** nội dung chung, đặc biệt hữu ích cho kéo thả với `[blank_N]`.
-- **Ảnh sơ đồ / bản đồ:** dùng cho map hoặc ảnh đề Writing. Với Map Labeling, mỗi câu có thể đặt X/Y phần trăm để gắn lựa chọn ngay trên ảnh; tọa độ còn nhập bằng số trong editor.
+- **Ảnh sơ đồ / bản đồ:** dùng cho map hoặc ảnh đề Writing. Với Map Labeling, nhập URL ảnh trước rồi mở tab **Câu hỏi & đáp án** để đặt tất cả vị trí trên một ảnh chung. Tọa độ được tính từ điểm bấm; bấm **Lưu thay đổi** để ghi vào database.
 
 Reading standard giữ bài đọc ở cột Passage và hiện question_content ở cột câu hỏi. Completion theo đoạn dùng [blank_N] khớp số câu để tạo ô nhập inline; nội dung không có blank vẫn được hiển thị cùng danh sách câu. Với kéo thả, nhập bank và dùng cùng token trong nội dung nhóm.
 
@@ -244,20 +244,22 @@ Toolbar rich editor hiện không có công cụ tạo bảng/flow-chart chuyên
 
 ## 10. Plan / Map / Diagram Labeling
 
-Luồng đã có nhiều chức năng nhất là **kéo thả trên ảnh**:
+Có thể dùng **chọn đáp án, nhập chữ hoặc kéo thả trên ảnh**:
 
 1. Chọn **Plan / Map / Diagram Labeling**.
 2. Chọn cách trả lời kéo thả.
 3. Nhập `image_url` trỏ đến ảnh truy cập được.
 4. Thêm bank A/B/C… hoặc các nhãn cần gán.
 5. Tạo từng câu, chọn đáp án đúng.
-6. Nhập **X** và **Y** theo phần trăm ảnh, 0–100.
+6. Mở tab **Câu hỏi & đáp án**, tạo các câu hỏi rồi chọn câu trong danh sách phía trên ảnh. Bấm ảnh để đặt vị trí; sau mỗi lần đặt, form tự chọn câu tiếp theo chưa có vị trí. Bấm marker hoặc tên câu để chọn lại và đổi vị trí; dùng nút × cạnh câu để xóa vị trí.
 
 Ví dụ X = 25, Y = 60 đặt tâm ô ở vị trí 25% chiều ngang và 60% chiều cao ảnh. Vị trí sẽ thay đổi theo kích thước hiển thị ảnh.
 
-Chưa có công cụ bấm lên ảnh để tự điền tọa độ. Với dữ liệu thiếu tọa độ, các ô không có cả X và Y rơi về danh sách trả lời; map standard vẫn hiện ảnh kể cả khi chưa đặt điểm nào. Map kéo thả vẫn hiện ảnh khi thiếu X/Y; câu chưa có tọa độ nằm trong danh sách. Dữ liệu mới qua form vẫn yêu cầu tọa độ drag.
+Tất cả marker của nhóm hiển thị trên cùng một ảnh. Khi bấm ảnh, vị trí của câu đang chọn được lưu theo tỉ lệ phần trăm; không cần nhập X/Y. Câu standard chưa chọn vị trí được hiển thị trong danh sách phía trên ảnh; câu kéo thả phải chọn vị trí trước khi lưu. Ảnh và đáp án đúng là bắt buộc với nhóm map.
 
-Chế độ standard có tùy chọn **Trả lời bản đồ**: chọn từ danh sách hoặc tự nhập từ; có thể đặt select/input tại tọa độ trên ảnh; các câu chưa đặt tọa độ vẫn có control trong danh sách bên dưới. Trong repeater câu hỏi, đặt X/Y cho standard hoặc drag_drop. Tọa độ hiện nhập bằng số, chưa có công cụ click ảnh để tự điền.
+Chế độ standard có tùy chọn **Trả lời bản đồ**: chọn từ danh sách hoặc tự nhập từ; select/input nằm tại tọa độ trên ảnh. Đổi chế độ trả lời sẽ xóa đáp án đúng đã chọn để tránh lưu key cũ vào dạng mới; nhập lại đáp án rồi lưu. Form lưu một `correct_answer` cho mỗi câu dù admin dùng ô chọn hay ô nhập chữ.
+
+Các câu đã được tạo trước bản sửa này mà `correct_answer` đang `NULL` cần mở lại trong admin, nhập đáp án đúng và lưu. Hệ thống không thể suy ra đáp án từ vị trí X/Y.
 
 ## 11. Nhập Listening và audio
 
@@ -305,6 +307,8 @@ AI cần `GEMINI_API_KEY` ở môi trường server. Điểm AI chỉ tham khả
 ### Tạo dãy câu
 
 Nút **Tạo dãy câu hỏi** yêu cầu số bắt đầu và số lượng. Nó thêm row chưa có số tương ứng trong group; không tự điền prompt/đáp án. Validation khi lưu kiểm tra trùng giữa các group.
+
+Các dòng tạo hàng loạt phải khởi tạo cả `answer_choice`, `answer_text`, `drop_x`, `drop_y` và các trường lời giải/giới hạn từ, kể cả khi giá trị là `null`. Luồng này không chạy bước hydrate của nút thêm từng câu trong Filament. Nếu thiếu trường, Alpine có thể hiển thị đáp án đã chọn nhưng không đồng bộ vào Livewire. Bộ chọn điểm dùng `wire:ignore` cho vùng Alpine và cập nhật riêng từng tọa độ vào form; không thay toàn bộ danh sách câu hỏi.
 
 ### Dán ngân hàng
 
