@@ -153,7 +153,7 @@ Khi chọn type này ở Reading/Listening, form tự đặt:
 - **Cách trả lời:** kéo thả.
 - **Sử dụng đáp án:** mỗi đáp án chỉ dùng một lần.
 
-Vào **Ngân hàng đáp án**, thêm cả headings đúng và headings nhiễu:
+Trong tab **Ngân hàng đáp án**, có thể nhập **Tiêu đề ngân hàng từ** (ví dụ `List of headings`); để trống thì phòng thi hiển thị **Ngân hàng từ**. Sau đó thêm cả headings đúng và headings nhiễu:
 
 ```text
 i | A change in flood prevention
@@ -171,7 +171,9 @@ Chọn type **Matching Information**. Có thể:
 - Dùng standard với lựa chọn riêng cho mỗi câu.
 - Dùng kéo thả để nhập một bank chung.
 
-Ví dụ bank là A–G, prompt là thông tin cần tìm, đáp án đúng là ký hiệu đoạn. Trong tab **Đề bài**, chọn **Sử dụng đáp án** theo hướng dẫn: **Một đáp án được dùng nhiều lần** hoặc **Mỗi đáp án chỉ dùng một lần**. Tùy chọn này áp dụng cho cả cách trả lời standard và kéo thả.
+Ví dụ bank là A–G, prompt là thông tin cần tìm, đáp án đúng là ký hiệu đoạn. Nếu dùng kéo thả, đặt **Tiêu đề ngân hàng từ** trong tab **Ngân hàng đáp án** (ví dụ `List of paragraphs`); để trống sẽ hiện **Ngân hàng từ**. Trong tab **Đề bài**, chọn **Sử dụng đáp án** theo hướng dẫn: **Một đáp án được dùng nhiều lần** hoặc **Mỗi đáp án chỉ dùng một lần**. Tùy chọn này áp dụng cho cả cách trả lời standard và kéo thả.
+
+Ở phòng thi, nhóm Matching Information kéo thả hiển thị ô trả lời cùng hàng với số câu và nội dung từng câu.
 
 Nếu chọn **chỉ dùng một lần**, các câu trong cùng nhóm phải có đáp án đúng khác nhau. Trong phòng thi, lựa chọn đã dùng ở câu khác sẽ bị khóa; thí sinh có thể **Xóa đáp án** ở câu cũ rồi chọn lại. Autosave, nộp bài và chấm điểm đều áp dụng cùng giới hạn. Với kéo thả, chuyển ô nguồn/đích được lưu trong một transaction; vẫn cần nghiệm thu drag/auto-scroll trên trình duyệt mục tiêu.
 
@@ -224,7 +226,7 @@ Chọn **Quy tắc giới hạn**: tổng N từ/số, chỉ từ, hoặc N từ
    These areas protect [blank_10] from flooding.
    ```
 
-5. Nhập bank trong tab **Ngân hàng đáp án**:
+5. Trong tab **Ngân hàng đáp án**, nhập **Tiêu đề ngân hàng từ** nếu muốn thay nhãn mặc định **Ngân hàng từ**, rồi nhập bank:
 
    ```text
    A | reservoirs

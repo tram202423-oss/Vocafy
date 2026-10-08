@@ -182,6 +182,7 @@
           submissionId: '{{ $submission->id }}',
           saveRevision: {{ (int) $submission->save_revision }},
           questionNumbers: {{ Js::from($submission->section->questions->pluck('question_number')->sort()->values()) }},
+          readingPassageIds: {{ Js::from(array_values(array_unique($readingPassageIds))) }},
           speakingSession: {{ Js::from(data_get($submission->metadata, 'speaking_session', [])) }},
           speakingDraftExists: {{ filled(data_get($submission->metadata, 'speaking_draft.path')) ? 'true' : 'false' }},
           speakingRecordingStartUrl: '{{ route('ielts.exam.speaking-recording.start', $submission->id) }}',
@@ -2002,8 +2003,9 @@
                         this.recordingPreviewUrl = config.speakingRecordingPlaybackUrl;
                     }
                     await this.restoreSpeakingDraft();
-                    this.currentQuestionNumber = config.questionNumbers[0] || 1;
-                    this.syncActiveSectionByQuestion(this.currentQuestionNumber);
+                    this.restoreExamPosition();
+                    ['currentQuestionNumber', 'activeListeningPart', 'activePassageId', 'currentTaskNumber']
+                        .forEach(field => this.$watch(field, () => this.saveExamPosition()));
                     this.$nextTick(() => this.restoreHighlights(config.highlights || []));
 
                     // Khởi tạo audio nếu là Listening
@@ -2228,6 +2230,58 @@
 
                 isFlagged(questionId) {
                     return !!this.flags[questionId];
+                },
+
+                examPositionKey() {
+                    return `ielts:exam-position:${this.submissionId}`;
+                },
+
+                saveExamPosition() {
+                    try {
+                        sessionStorage.setItem(this.examPositionKey(), JSON.stringify({
+                            skill: this.skill,
+                            questionNumber: this.currentQuestionNumber,
+                            listeningPart: this.activeListeningPart,
+                            passageId: this.activePassageId,
+                            taskNumber: this.currentTaskNumber,
+                        }));
+                    } catch (_) {
+                        // Browser storage may be unavailable; navigation still works for this page.
+                    }
+                },
+
+                restoreExamPosition() {
+                    this.currentQuestionNumber = this.questionNumbers[0] || 1;
+                    this.syncActiveSectionByQuestion(this.currentQuestionNumber);
+
+                    try {
+                        const saved = JSON.parse(sessionStorage.getItem(this.examPositionKey()) || 'null');
+                        if (!saved || saved.skill !== this.skill) return;
+
+                        if (this.skill === 'writing') {
+                            const taskNumber = Number(saved.taskNumber);
+                            if (this.questionNumbers.includes(taskNumber)) this.currentTaskNumber = taskNumber;
+                            return;
+                        }
+                        if (this.skill !== 'reading' && this.skill !== 'listening') return;
+
+                        const questionNumber = Number(saved.questionNumber);
+                        if (this.questionNumbers.includes(questionNumber)) {
+                            this.currentQuestionNumber = questionNumber;
+                            this.syncActiveSectionByQuestion(questionNumber);
+                            return;
+                        }
+
+                        if (this.skill === 'listening') {
+                            const part = Number(saved.listeningPart);
+                            if ([1, 2, 3, 4].includes(part)) this.activeListeningPart = part;
+                        } else {
+                            const passageId = Number(saved.passageId);
+                            if (config.readingPassageIds.includes(passageId)) this.activePassageId = passageId;
+                        }
+                    } catch (_) {
+                        // Ignore malformed or inaccessible browser storage.
+                    }
                 },
 
                 setCurrentQuestion(num) {
@@ -2954,6 +3008,7 @@
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) throw new Error(data.message || data.error || 'Chưa nộp được bài. Vui lòng thử lại.');
                         submitted = true;
+                        try { sessionStorage.removeItem(this.examPositionKey()); } catch (_) {}
                         window.location.href = data.redirect_url || config.resultUrl;
                     } catch (error) {
                         this.confirmSubmitModal = true;

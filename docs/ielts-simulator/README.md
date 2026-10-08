@@ -225,7 +225,7 @@ Mỗi group Writing chỉ hiển thị câu đầu; đặt một câu trong mỗ
 
 - Save yêu cầu quyền của chủ lượt thi (hoặc admin); khách cần secret khớp trong session.
 - Submission phải còn in_progress và chưa quá deadline.
-- Notes, flag và câu trả lời được ghi qua endpoint autosave. Highlight/ghi chú passage được lưu theo text offsets trong metadata và khôi phục khi reload. Snapshot nội dung giữ prompt, passage, ngân hàng, đáp án và cấu hình khi admin sửa đề; FK RESTRICT bảo vệ khi xóa test/section; binary media bên ngoài vẫn phụ thuộc URL.
+- Notes, flag và câu trả lời được ghi qua endpoint autosave. Part/Passage đang mở và câu đang chọn được giữ trong sessionStorage theo từng lượt thi khi reload cùng tab; vị trí này được xóa sau khi nộp bài thành công. Highlight/ghi chú passage được lưu theo text offsets trong metadata và khôi phục khi reload. Snapshot nội dung giữ prompt, passage, ngân hàng, đáp án và cấu hình khi admin sửa đề; FK RESTRICT bảo vệ khi xóa test/section; binary media bên ngoài vẫn phụ thuộc URL.
 - Drag & Drop kiểm tra ngân hàng và quy tắc once/repeat trên autosave và submit. Chuyển đáp án hiện được ghi nguyên tử cho ô nguồn/đích.
 - Autosave frontend xếp hàng tuần tự và gửi expected_revision; server trả 409 nếu cửa sổ khác đã thay đổi lượt. UI giữ thông báo lỗi/retry; submit chờ cả multi-select và drag đang lưu.
 - Speaking lưu Blob dự phòng bằng IndexedDB và checkpoint server khoảng 5 giây; dừng thu gửi bản cuối. Có khôi phục, thử lưu lại và tải file xuống khi upload chưa thành công.

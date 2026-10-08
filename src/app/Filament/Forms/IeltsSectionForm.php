@@ -151,6 +151,9 @@ class IeltsSectionForm
                         ->visible(fn (Get $get): bool => $get('question_type') === 'map_labeling' || in_array($get('../../skill'), ['writing', 'speaking'], true))->dehydratedWhenHidden(),
                 ]),
                 C\Tabs\Tab::make('Ngân hàng đáp án')->icon('heroicon-o-queue-list')->visible(fn (Get $get): bool => Authoring::isDragDrop($get()))->schema([
+                    C\TextInput::make('settings.bank_title')->label('Tiêu đề ngân hàng từ')
+                        ->placeholder('Ngân hàng từ')->maxLength(255)
+                        ->helperText('Tiêu đề hiển thị phía trên các lựa chọn trong phòng thi. Để trống sẽ hiển thị “Ngân hàng từ”.'),
                     C\Placeholder::make('bank_guide')->label('Lựa chọn dùng chung')->content('Nhập cả đáp án đúng và đáp án nhiễu. Sau đó chọn đáp án đúng cho từng câu ở tab Câu hỏi & đáp án.'),
                     C\Actions::make([
                         Action::make('importBank')->label('Dán danh sách đáp án')->icon('heroicon-o-clipboard-document')->modalHeading('Nhập nhiều lựa chọn')->modalSubmitActionLabel('Thêm vào ngân hàng')->modalCancelActionLabel('Hủy')
