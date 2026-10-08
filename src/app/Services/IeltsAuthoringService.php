@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\IeltsQuestionTypeEnum;
+use App\Models\IeltsQuestion;
 use App\Models\IeltsSection;
 use App\Models\IeltsTest;
 use Illuminate\Support\Str;
@@ -52,8 +53,16 @@ class IeltsAuthoringService
         return is_scalar($answer) ? (string) $answer : null;
     }
 
-    public static function prepareQuestion(array $data, ?string $type, ?array $group = null, ?string $skill = null): array
+    public static function prepareQuestion(array $data, ?string $type, ?array $group = null, ?string $skill = null, ?IeltsQuestion $record = null): array
     {
+        if ($type === 'map_labeling' && $record !== null
+            && ! filter_var($data['map_position_cleared'] ?? false, FILTER_VALIDATE_BOOLEAN)
+            && (blank($data['drop_x'] ?? null) || blank($data['drop_y'] ?? null))
+            && is_numeric($record->drop_x) && is_numeric($record->drop_y)) {
+            $data['drop_x'] = $record->drop_x;
+            $data['drop_y'] = $record->drop_y;
+        }
+        unset($data['map_position_cleared']);
         if ($group !== null) {
             $data['correct_answer'] = static::selectedAnswer($data, $group);
         }
@@ -70,9 +79,32 @@ class IeltsAuthoringService
         return $data;
     }
 
+    private static function mapPositionForValidation(array $question, string|int $groupKey, string|int $questionKey): array
+    {
+        if (! blank($question['drop_x'] ?? null) && ! blank($question['drop_y'] ?? null)) {
+            return $question;
+        }
+        if (filter_var($question['map_position_cleared'] ?? false, FILTER_VALIDATE_BOOLEAN)
+            || ! preg_match('/^record-(\d+)$/', (string) $groupKey, $groupMatch)
+            || ! preg_match('/^record-(\d+)$/', (string) $questionKey, $questionMatch)) {
+            return $question;
+        }
+
+        $saved = IeltsQuestion::query()
+            ->whereKey((int) $questionMatch[1])
+            ->where('ielts_question_group_id', (int) $groupMatch[1])
+            ->first(['drop_x', 'drop_y']);
+
+        if (! $saved || ! is_numeric($saved->drop_x) || ! is_numeric($saved->drop_y)) {
+            return $question;
+        }
+
+        return [...$question, 'drop_x' => $saved->drop_x, 'drop_y' => $saved->drop_y];
+    }
+
     public static function blankNumbers(?string $content): array
     {
-        preg_match_all('/\[blank_(\d+)\]/', $content ?? '', $matches);
+        preg_match_all('/\[blank_(\d+)\]/', IeltsQuestionContentService::forDisplay($content), $matches);
 
         return array_map('intval', $matches[1]);
     }
@@ -170,6 +202,11 @@ class IeltsAuthoringService
             if ($type === 'map_labeling' && blank($group['image_url'] ?? null)) {
                 $errors["{$base}.image_url"] = 'Nhập ảnh bản đồ hoặc sơ đồ trước khi lưu nhóm này.';
             }
+            if ($type === 'map_labeling' && in_array($skill, ['reading', 'listening'], true)
+                && blank(trim(strip_tags(html_entity_decode((string) ($group['question_content'] ?? '')))))
+                && blank(trim((string) ($group['instruction'] ?? '')))) {
+                $errors["{$base}.question_content"] = 'Nhập nội dung hoặc hướng dẫn chung cho sơ đồ.';
+            }
             $multi = IeltsMultiSelectService::enabled($group);
             $questions = IeltsMultiSelectService::questions($group);
             if ($multi) {
@@ -227,17 +264,18 @@ class IeltsAuthoringService
                     $errors["{$qPath}.{$numberField}"] = "Câu {$number} đã có trong nhóm khác hoặc trong nhóm này.";
                 }
                 $usedNumbers[$number] = true;
-                if (trim($question['prompt'] ?? '') === '' && ! (($drag || $type === 'fill_in_blanks') && in_array($number, $blanks, true))) {
+                if ($type !== 'map_labeling' && trim($question['prompt'] ?? '') === '' && ! (($drag || $type === 'fill_in_blanks') && in_array($number, $blanks, true))) {
                     $errors["{$qPath}.prompt"] = 'Nhập nội dung câu hỏi, hoặc tạo ô [blank_N] tương ứng trong đề kéo thả.';
                 }
                 if ($type === 'map_labeling') {
-                    $missingX = blank($question['drop_x'] ?? null);
-                    $missingY = blank($question['drop_y'] ?? null);
+                    $position = static::mapPositionForValidation($question, $groupKey, $questionKey);
+                    $missingX = blank($position['drop_x'] ?? null);
+                    $missingY = blank($position['drop_y'] ?? null);
                     if ($missingX !== $missingY || ($drag && $missingX)) {
                         $errors["{$base}.map_position_picker"] ??= "Bấm vào ảnh để chọn vị trí cho câu {$number}.";
-                    } elseif (! $missingX && (! is_numeric($question['drop_x']) || ! is_numeric($question['drop_y'])
-                        || (float) $question['drop_x'] < 0 || (float) $question['drop_x'] > 100
-                        || (float) $question['drop_y'] < 0 || (float) $question['drop_y'] > 100)) {
+                    } elseif (! $missingX && (! is_numeric($position['drop_x']) || ! is_numeric($position['drop_y'])
+                        || (float) $position['drop_x'] < 0 || (float) $position['drop_x'] > 100
+                        || (float) $position['drop_y'] < 0 || (float) $position['drop_y'] > 100)) {
                         $errors["{$base}.map_position_picker"] ??= "Vị trí câu {$number} không hợp lệ. Hãy bấm chọn lại trên ảnh.";
                     }
                 }
@@ -275,6 +313,13 @@ class IeltsAuthoringService
                     }
                     $usedAnswers[$normalized] = true;
                 } elseif (static::needsOptions($group)) {
+                    if ($type === 'matching_information' && ($group['option_usage'] ?? 'repeat') === 'once') {
+                        $normalized = mb_strtolower($answer, 'UTF-8');
+                        if (isset($usedAnswers[$normalized])) {
+                            $errors["{$qPath}.{$answerField}"] = 'Đáp án này đã dùng cho câu khác. Chọn đáp án khác hoặc cho phép dùng lại.';
+                        }
+                        $usedAnswers[$normalized] = true;
+                    }
                     $optionKeys = array_column($question['options'] ?? [], 'key');
                     if (! count($optionKeys) || count($optionKeys) !== count(array_unique(array_map(fn ($key) => mb_strtolower(trim($key)), $optionKeys)))) {
                         $errors["{$qPath}.options"] = 'Thêm các lựa chọn có ký hiệu khác nhau.';

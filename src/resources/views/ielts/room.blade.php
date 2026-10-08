@@ -81,6 +81,16 @@
             border-bottom-color: #ca8a04 !important;
         }
 
+        .ielts-numbered-answer::placeholder {
+            color: var(--text-main);
+            font-weight: 800;
+            opacity: 1;
+            text-align: center;
+        }
+        .ielts-numbered-answer:focus::placeholder {
+            color: transparent;
+        }
+
         /* Custom Scrollbars */
         .custom-scroll::-webkit-scrollbar {
             width: 8px;
@@ -613,7 +623,7 @@
                             $isDragDropGroup = $partGroup->response_mode === 'drag_drop' || $partGroup->question_type?->value === 'drag_drop';
                             $dragBank = $dragBanksByGroup->get($partGroup->id, collect());
                             $partNumber = min(4, max(1, (int) ceil(($partGroup->questions->first()?->question_number ?? 1) / 10)));
-                            $partQuestionContent = $partGroup->question_content ?: $partGroup->passage_content;
+                            $partQuestionContent = \App\Services\IeltsQuestionContentService::forDisplay($partGroup->question_content ?: $partGroup->passage_content);
                         @endphp
                         <section x-show="activeListeningPart === {{ $partNumber }}" x-cloak
                                  class="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-5 md:p-7 space-y-5"
@@ -629,6 +639,10 @@
                                 </div>
                             @endif
 
+                            @if($partGroup->question_type?->value === 'map_labeling' && filled($partQuestionContent))
+                                <div class="prose max-w-none rounded-xl border border-slate-200 bg-slate-50 p-4">{!! $partQuestionContent !!}</div>
+                            @endif
+
                             @if($partGroup->image_url && !$isDragDropGroup && $partGroup->question_type?->value !== 'map_labeling')
                                 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
                                     <img src="{{ $partGroup->image_url }}" alt="{{ $partGroup->title }}" class="mx-auto max-h-[32rem] w-auto max-w-full object-contain">
@@ -639,12 +653,12 @@
                                 @include('ielts.partials.multi-choice-bank', ['group' => $partGroup])
                             @elseif($isDragDropGroup)
                                 <div class="space-y-5">
-                                    @if(preg_match('/\[blank_\d+\]/', $partQuestionContent ?? ''))
+                                    @if($partGroup->question_type?->value === 'map_labeling' && $partGroup->image_url)
+                                        @include('ielts.partials.drag-drop-map', ['group' => $partGroup, 'dragBank' => $dragBank])
+                                    @elseif(preg_match('/\[blank_\d+\]/', $partQuestionContent ?? ''))
                                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 md:p-7 text-sm leading-loose" style="color: var(--text-main);">
                                             @include('ielts.partials.drag-drop-note', ['group' => $partGroup, 'dragBank' => $dragBank, 'noteContent' => $partQuestionContent])
                                         </div>
-                                    @elseif($partGroup->question_type?->value === 'map_labeling' && $partGroup->image_url)
-                                        @include('ielts.partials.drag-drop-map', ['group' => $partGroup, 'dragBank' => $dragBank])
                                     @else
                                         @include('ielts.partials.drag-drop-question-targets', ['group' => $partGroup, 'dragBank' => $dragBank])
                                     @endif
@@ -672,13 +686,25 @@
                                                     @foreach($q->options as $option)
                                                         @php $optionKey = $option['key'] ?? ''; $optionText = $option['text'] ?? ''; @endphp
                                                         <label class="flex gap-2 items-center rounded-lg border border-slate-200 p-2 text-xs cursor-pointer">
-                                                            <input type="radio" name="listening_q_{{ $q->id }}" value="{{ $optionKey }}" x-model="answers['{{ $q->id }}']" @change="saveAnswer({{ $q->id }}, @js((string) $optionKey))">
+                                                            <input type="radio" name="listening_q_{{ $q->id }}" value="{{ $optionKey }}"
+                                                                   @if($partGroup->question_type?->value === 'matching_information')
+                                                                       :checked="String(answers['{{ $q->id }}'] ?? '') === @js((string) $optionKey)"
+                                                                       :disabled="@js($partGroup->option_usage === 'once') && matchingOptionUnavailable(@js($partGroup->questions->pluck('id')->values()->all()), {{ $q->id }}, @js((string) $optionKey))"
+                                                                       @change="chooseMatchingInformationAnswer({{ $q->id }}, @js((string) $optionKey), @js($partGroup->questions->pluck('id')->values()->all()), @js($partGroup->option_usage === 'once'))"
+                                                                   @else
+                                                                       x-model="answers['{{ $q->id }}']" @change="saveAnswer({{ $q->id }}, @js((string) $optionKey))"
+                                                                   @endif>
                                                             <span>{{ $optionKey }}. {{ $optionText }}</span>
                                                         </label>
                                                     @endforeach
                                                 </div>
+                                                @if($partGroup->question_type?->value === 'matching_information')
+                                                    <button type="button" x-show="answers['{{ $q->id }}']" x-cloak
+                                                            @click="chooseMatchingInformationAnswer({{ $q->id }}, '', @js($partGroup->questions->pluck('id')->values()->all()), @js($partGroup->option_usage === 'once'))"
+                                                            class="text-xs font-semibold text-blue-700 hover:underline">Xóa đáp án</button>
+                                                @endif
                                             @else
-                                                <input type="text" x-model="answers['{{ $q->id }}']" @input.debounce.300ms="saveAnswer({{ $q->id }}, answers['{{ $q->id }}'])" class="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Nhập câu trả lời">
+                                                <input type="text" x-model="answers['{{ $q->id }}']" @input.debounce.300ms="saveAnswer({{ $q->id }}, answers['{{ $q->id }}'])" class="ielts-numbered-answer w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-center text-sm" placeholder="{{ $q->question_number }}" aria-label="Câu {{ $q->question_number }}" @focus="setCurrentQuestion({{ $q->question_number }})">
                                             @endif
                                         </div>
                                     @endforeach
@@ -744,7 +770,7 @@
                                                     </span>
                                                     <div class="text-sm font-medium leading-relaxed flex-grow" style="color: var(--text-main);">
                                                         @php
-                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '..." class="inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
+                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '" class="ielts-numbered-answer inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
                                                             $renderedPrompt = preg_replace('/\[blank(_\d+)?\]|__{2,}/', $inputHtml, e($q->prompt));
                                                         @endphp
                                                         {!! $renderedPrompt !!}
@@ -775,7 +801,7 @@
                                                     </span>
                                                     <div class="text-sm font-medium leading-relaxed flex-grow" style="color: var(--text-main);">
                                                         @php
-                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '..." class="inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
+                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '" class="ielts-numbered-answer inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
                                                             $renderedPrompt = preg_replace('/\[blank(_\d+)?\]|__{2,}/', $inputHtml, e($q->prompt));
                                                         @endphp
                                                         {!! $renderedPrompt !!}
@@ -806,7 +832,7 @@
                                                     </span>
                                                     <div class="text-sm font-medium leading-relaxed flex-grow" style="color: var(--text-main);">
                                                         @php
-                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '..." class="inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
+                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '" class="ielts-numbered-answer inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
                                                             $renderedPrompt = preg_replace('/\[blank(_\d+)?\]|__{2,}/', $inputHtml, e($q->prompt));
                                                         @endphp
                                                         {!! $renderedPrompt !!}
@@ -1082,7 +1108,7 @@
                                                     </span>
                                                     <div class="text-sm font-medium leading-relaxed flex-grow" style="color: var(--text-main);">
                                                         @php
-                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '..." class="inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
+                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '" class="ielts-numbered-answer inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
                                                             $renderedPrompt = preg_replace('/\[blank(_\d+)?\]|__{2,}/', $inputHtml, e($q->prompt));
                                                         @endphp
                                                         {!! $renderedPrompt !!}
@@ -1113,7 +1139,7 @@
                                                     </span>
                                                     <div class="text-sm font-medium leading-relaxed flex-grow" style="color: var(--text-main);">
                                                         @php
-                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '..." class="inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
+                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '" class="ielts-numbered-answer inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
                                                             $renderedPrompt = preg_replace('/\[blank(_\d+)?\]|__{2,}/', $inputHtml, e($q->prompt));
                                                         @endphp
                                                         {!! $renderedPrompt !!}
@@ -1144,7 +1170,7 @@
                                                     </span>
                                                     <div class="text-sm font-medium leading-relaxed flex-grow" style="color: var(--text-main);">
                                                         @php
-                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '..." class="inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
+                                                            $inputHtml = '<span class="inline-flex items-center mx-1.5 align-middle"><input type="text" tabindex="' . $q->question_number . '" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '" class="ielts-numbered-answer inline-block px-3 py-1.5 text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none w-44 sm:w-56 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
                                                             $renderedPrompt = preg_replace('/\[blank(_\d+)?\]|__{2,}/', $inputHtml, e($q->prompt));
                                                         @endphp
                                                         {!! $renderedPrompt !!}
@@ -1342,8 +1368,8 @@
                         @php
                             $isDragDropGroup = $group->response_mode === 'drag_drop' || $group->question_type?->value === 'drag_drop';
                             $dragBank = $dragBanksByGroup->get($group->id, collect());
-                            $groupQuestionContent = $group->question_content
-                                ?: (preg_match('/\[blank_\d+\]/', $group->passage_content ?? '') ? $group->passage_content : null);
+                            $groupQuestionContent = \App\Services\IeltsQuestionContentService::forDisplay($group->question_content
+                                ?: (preg_match('/\[blank_\d+\]/', $group->passage_content ?? '') ? $group->passage_content : null));
                         @endphp
                         @if(\App\Services\IeltsMultiSelectService::enabled($group))
                             @if($group->instruction)
@@ -1356,10 +1382,10 @@
                                     {{ $group->instruction }}
                                 </div>
                             @endif
-                            @if($groupQuestionContent && !preg_match('/\[blank_\d+\]/', $groupQuestionContent))
+                            @if($groupQuestionContent && ($group->question_type?->value === 'map_labeling' || !preg_match('/\[blank_\d+\]/', $groupQuestionContent)))
                                 <div class="prose max-w-none mb-4">{!! $groupQuestionContent !!}</div>
                             @endif
-                            @if($groupQuestionContent && preg_match('/\[blank_\d+\]/', $groupQuestionContent))
+                            @if($groupQuestionContent && $group->question_type?->value !== 'map_labeling' && preg_match('/\[blank_\d+\]/', $groupQuestionContent))
                                 <div class="prose max-w-none mt-5 rounded-xl border border-slate-200 p-4" style="background-color: var(--bg-card); border-color: var(--border-color);">
                                     @include('ielts.partials.drag-drop-note', ['group' => $group, 'dragBank' => $dragBank, 'noteContent' => $groupQuestionContent])
                                 </div>
@@ -1377,6 +1403,9 @@
                         @elseif($group->question_type?->value === 'map_labeling' && $group->image_url)
                             @if($group->instruction)
                                 <div class="mb-5 rounded-r-lg border-l-4 border-blue-500 bg-blue-50 p-3 text-xs font-medium text-blue-900">{{ $group->instruction }}</div>
+                            @endif
+                            @if(filled($groupQuestionContent))
+                                <div class="prose max-w-none mb-5 rounded-xl border border-slate-200 p-4" style="background-color: var(--bg-card); border-color: var(--border-color);">{!! $groupQuestionContent !!}</div>
                             @endif
                             @include('ielts.partials.map-standard', ['group' => $group])
                         @else
@@ -1401,9 +1430,9 @@
                         @if(filled($group->question_content))
                             <div class="prose max-w-none my-5 rounded-xl border border-slate-200 p-4" style="background-color: var(--bg-card); border-color: var(--border-color);">
                                 @if($hasTypedSharedBlanks)
-                                    @include('ielts.partials.completion-note', ['group' => $group, 'noteContent' => $group->question_content])
+                                    @include('ielts.partials.completion-note', ['group' => $group, 'noteContent' => \App\Services\IeltsQuestionContentService::forDisplay($group->question_content)])
                                 @else
-                                    {!! $group->question_content !!}
+                                    {!! \App\Services\IeltsQuestionContentService::forDisplay($group->question_content) !!}
                                 @endif
                             </div>
                         @endif
@@ -1433,7 +1462,7 @@
                                             <div class="font-medium text-sm leading-loose flex-grow" style="color: var(--text-main);">
                                                 @if(!$hasOptions && $hasBlank)
                                                     @php
-                                                        $inputHtml = '<span class="inline-flex items-center mx-1 align-middle"><input type="text" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '..." class="inline-block px-3 py-1 text-sm font-semibold rounded-lg border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none w-36 sm:w-44 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
+                                                        $inputHtml = '<span class="inline-flex items-center mx-1 align-middle"><input type="text" x-model="answers[\'' . $q->id . '\']" @input.debounce.300ms="saveAnswer(' . $q->id . ', answers[\'' . $q->id . '\'])" @focus="setCurrentQuestion(' . $q->question_number . ')" placeholder="' . $q->question_number . '" class="ielts-numbered-answer inline-block px-3 py-1 text-sm font-semibold rounded-lg border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none w-36 sm:w-44 shadow-inner transition-all text-center" style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);" /></span>';
                                                         $renderedPrompt = preg_replace('/\[blank(_\d+)?\]|__{2,}/', $inputHtml, e($q->prompt));
                                                     @endphp
                                                     {!! $renderedPrompt !!}
@@ -1509,8 +1538,14 @@
                                                         <input type="radio"
                                                                name="question_{{ $q->id }}"
                                                                value="{{ $optKey }}"
-                                                               x-model="answers['{{ $q->id }}']"
-                                                               @change="saveAnswer({{ $q->id }}, '{{ $optKey }}')"
+                                                               @if($group->question_type?->value === 'matching_information')
+                                                                   :checked="String(answers['{{ $q->id }}'] ?? '') === @js((string) $optKey)"
+                                                                   :disabled="@js($group->option_usage === 'once') && matchingOptionUnavailable(@js($group->questions->pluck('id')->values()->all()), {{ $q->id }}, @js((string) $optKey))"
+                                                                   @change="chooseMatchingInformationAnswer({{ $q->id }}, @js((string) $optKey), @js($group->questions->pluck('id')->values()->all()), @js($group->option_usage === 'once'))"
+                                                               @else
+                                                                   x-model="answers['{{ $q->id }}']"
+                                                                   @change="saveAnswer({{ $q->id }}, @js((string) $optKey))"
+                                                               @endif
                                                                class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300">
                                                         <span class="text-xs" style="color: var(--text-main);">
                                                             <strong>{{ $optKey }}.</strong> {{ $optText }}
@@ -1518,6 +1553,11 @@
                                                     </label>
                                                 @endforeach
                                             </div>
+                                            @if($group->question_type?->value === 'matching_information')
+                                                <button type="button" x-show="answers['{{ $q->id }}']" x-cloak
+                                                        @click="chooseMatchingInformationAnswer({{ $q->id }}, '', @js($group->questions->pluck('id')->values()->all()), @js($group->option_usage === 'once'))"
+                                                        class="ml-9 mt-2 text-xs font-semibold text-blue-700 hover:underline">Xóa đáp án</button>
+                                            @endif
                                         </div>
                                     @elseif(!$hasBlank)
                                         {{-- Fallback: Fill in blank without [blank] token in prompt --}}
@@ -1526,8 +1566,10 @@
                                                 <input type="text"
                                                        x-model="answers['{{ $q->id }}']"
                                                        @input.debounce.400ms="saveAnswer({{ $q->id }}, answers['{{ $q->id }}'])"
-                                                       placeholder="Nhập câu trả lời của bạn..."
-                                                       class="w-full px-3.5 py-2 text-xs font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-0 outline-none"
+                                                       placeholder="{{ $q->question_number }}"
+                                                       aria-label="Câu {{ $q->question_number }}"
+                                                       @focus="setCurrentQuestion({{ $q->question_number }})"
+                                                       class="ielts-numbered-answer w-full px-3.5 py-2 text-center text-xs font-semibold rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-0 outline-none"
                                                        style="background-color: var(--bg-card); color: var(--text-main); border-color: var(--border-color);">
                                                 @if($q->word_limit)
                                                     <span class="text-[10px] text-slate-400 mt-1 block">{{ \App\Services\IeltsWordLimitService::label($q) }}</span>
@@ -2534,6 +2576,20 @@
                     })();
                     pendingMultiSaves.add(save);
                     try { await save; } finally { pendingMultiSaves.delete(save); }
+                },
+
+                matchingOptionUnavailable(questionIds, questionId, key) {
+                    const normalized = String(key).trim().toLocaleLowerCase();
+                    return questionIds.some(id => String(id) !== String(questionId)
+                        && String(this.answers[id] ?? '').trim().toLocaleLowerCase() === normalized);
+                },
+
+                async chooseMatchingInformationAnswer(questionId, key, questionIds, once) {
+                    if (once && key !== '' && this.matchingOptionUnavailable(questionIds, questionId, key)) return false;
+                    const previous = this.answers[questionId] ?? '';
+                    const saved = await this.saveAnswer(questionId, key);
+                    if (!saved) this.answers[questionId] = previous;
+                    return saved;
                 },
 
                 async saveAnswer(questionId, value) {

@@ -1,7 +1,7 @@
 @php
     $dragQuestionIds = $group->questions->pluck('id')->values()->all();
     $dragOptionUsage = $group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat');
-    $passageParts = preg_split('/(\[blank_\d+\])/', $noteContent ?? $group->question_content ?? $group->passage_content ?? '', -1, PREG_SPLIT_DELIM_CAPTURE);
+    $passageParts = preg_split('/(\[blank_\d+\])/', \App\Services\IeltsQuestionContentService::forDisplay($noteContent ?? $group->question_content ?? $group->passage_content ?? ''), -1, PREG_SPLIT_DELIM_CAPTURE);
 @endphp
 
 <div class="passage-html-body leading-loose" id="question-content-{{ $group->id }}">

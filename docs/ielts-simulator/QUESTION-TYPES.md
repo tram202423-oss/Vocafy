@@ -1,6 +1,6 @@
 # IELTS Simulator — Trạng thái các dạng câu hỏi
 
-**Rà soát:** 02/10/2026, WSL `/home/tram/Study/Vocafy`, branch `feature/IELTS-Simulator-System-Blueprint`, HEAD `761e76d` và thay đổi chưa commit.
+**Rà soát:** 05/10/2026, WSL `/home/tram/Study/Vocafy`, branch `feature/IELTS-Simulator-System-Blueprint`, HEAD `14e6ea5` và thay đổi chưa commit.
 
 - [Tổng quan kỹ thuật](README.md)
 - [Hướng dẫn admin](ADMIN-GUIDE.md)
@@ -21,13 +21,13 @@
 | True / False / Not Given | Ba lựa chọn cố định; chuẩn hóa alias cũ khi lưu | Chọn đáp án, scorer có T/F/NG | Có luồng cơ bản; dữ liệu legacy thiếu options cần rà renderer/lưu lại |
 | Yes / No / Not Given | Ba lựa chọn cố định | Chọn đáp án, scorer có Y/N/NG | Có luồng cơ bản; cần nghiệm thu cả dữ liệu legacy |
 | Matching Headings | Type riêng, mặc định drag + once; chỉ dùng cho Reading | Bank dưới targets, key nối từng Paragraph | Một phần; đã hiển thị nội dung không có blank và chặn Matching Headings ở Listening; cần nghiệm thu |
-| Matching Information | Standard options theo câu hoặc bank drag chung | Chọn/kéo thả, once/repeat, chấm key | Có luồng cơ bản; thiếu nghiệm thu nhiều group và bàn phím |
+| Matching Information | Standard options theo câu hoặc bank drag chung; cấu hình once/repeat ở group | Chọn/kéo thả; giới hạn dùng lại ở admin, autosave, submit và scorer | Có luồng cơ bản; thiếu nghiệm thu nhiều group và bàn phím |
 | Sentence Completion | `fill_in_blanks`, prompt và đáp án chữ | Reading có inline blank trong prompt; Listening câu đơn vẫn có input riêng | Một phần; renderer hai skill chưa đồng nhất; đã có rule từ/số/AND-OR; cần nghiệm thu đáp án biên |
 | Summary / Note / Form Completion | `question_content` + `[blank_N]`, mỗi blank một question row | Có typed blanks và drag blanks ở Reading/Listening | Có luồng cơ bản; thiếu preset/editor theo cấu trúc từng dạng |
 | Table / Flow-chart Completion | HTML/ảnh + blanks dùng schema Completion | Đã render nội dung chung và ô trả lời, gồm bảng trong seeder Listening | Một phần; chưa có công cụ tạo/sửa bảng/flow-chart trong admin |
 | Short Answer | Prompt, đáp án thay thế, word_limit | Input Reading/Listening, kiểm tra giới hạn ở server, chấm chữ | Có luồng cơ bản; đã có cấu hình giới hạn từ/số; cần nghiệm thu đáp án biên |
-| Plan / Map / Diagram — standard | Một ảnh chung, chọn câu rồi bấm đặt vị trí, options theo câu | Select/input trên ảnh; câu thiếu vị trí ở danh sách | Một phần; admin hiển thị mọi marker trên một ảnh và lưu đáp án chọn/nhập chữ vào `correct_answer`; cần nghiệm thu giao diện |
-| Plan / Map / Diagram — drag | Một ảnh chung, chọn câu rồi bấm đặt vị trí, bank chung | Drop targets trên ảnh; câu thiếu vị trí ở danh sách | Một phần; câu mới bắt buộc có vị trí, đã có Enter/Space/Delete; cần nghiệm thu bàn phím |
+| Plan / Map / Diagram — standard | Một nội dung câu hỏi và ảnh chung cho cả nhóm; mỗi row có số câu, đáp án, tọa độ | Select/input trên ảnh; kết quả đánh dấu vị trí đúng và đáp án trên ảnh | Có luồng cơ bản; câu thiếu vị trí ở danh sách, cần nghiệm thu trình duyệt |
+| Plan / Map / Diagram — drag | Một nội dung câu hỏi và ảnh chung; bank chung, once/repeat; mỗi row có số câu, đáp án, tọa độ | Drop targets trên ảnh; kết quả đánh dấu vị trí đúng và giải nghĩa nhãn | Có luồng cơ bản; câu mới bắt buộc có vị trí, đã có Enter/Space/Delete; cần nghiệm thu kéo thả và bàn phím |
 | Matching Features | Có thể dùng `matching_information` + bank, repeat khi đề cho phép | Tái sử dụng targets/scorer matching | Chưa có editor/preset chuyên biệt |
 | Matching Sentence Endings | Có thể nhập đầu câu ở prompt, cuối câu ở bank matching | Tái sử dụng chọn/kéo thả và chấm key | Chưa có editor/renderer chuyên biệt |
 | Writing Task 1 | Group, một câu số 1, ảnh tùy chọn | Essay, đếm từ, autosave, AI tham khảo và giáo viên chính thức | Một phần; đã gửi ảnh/instruction, phân Academic/General và validate hai Task; cần nghiệm thu AI |
@@ -70,7 +70,7 @@ Nhóm đúng B và D, hai slot Questions 7–8:
 
 [IeltsWordLimitService](../../src/app/Services/IeltsWordLimitService.php) áp dụng ở autosave/submit/scorer cho Reading/Listening standard Completion và Short Answer. Bank key và Writing không áp dụng. Từ có dấu nháy/gạch nối tính một token, số cũng là token.
 
-Đã thêm word_limit_mode cho tổng từ/số, chỉ từ và N từ AND/OR một số; có thể suy từ instruction rõ ràng. Email/số thập phân không bị tách theo dấu chấm, điện thoại có khoảng trắng tính một số. Map nhập chữ cũng dùng validator này.
+Đã thêm word_limit_mode cho tổng từ/số, chỉ từ và N từ AND/OR một số; có thể suy từ instruction rõ ràng. Email/số thập phân không bị tách theo dấu chấm, giờ `3:40 pm` tính một số và một từ, điện thoại có khoảng trắng tính một số. Map nhập chữ cũng dùng validator này.
 
 Đáp án thay thế vẫn dùng slash/pipe/semicolon hoặc JSON array. Band objective chỉ tra bảng đúng hệ cho đề 40 câu; thiếu bảng hoặc đề ngắn để null và hiện lý do, không tạo band 0 dự phòng.
 

@@ -1,6 +1,6 @@
 # IELTS Simulator — Hướng dẫn admin nhập đề
 
-**Cập nhật:** 02/10/2026, code WSL trên branch `feature/IELTS-Simulator-System-Blueprint`, HEAD `761e76d` và thay đổi chưa commit.
+**Cập nhật:** 05/10/2026, code WSL trên branch `feature/IELTS-Simulator-System-Blueprint`, HEAD `14e6ea5` và thay đổi chưa commit.
 
 - [Tổng quan module](README.md)
 - [Dạng câu đã có và còn thiếu](QUESTION-TYPES.md)
@@ -171,9 +171,9 @@ Chọn type **Matching Information**. Có thể:
 - Dùng standard với lựa chọn riêng cho mỗi câu.
 - Dùng kéo thả để nhập một bank chung.
 
-Ví dụ bank là A–G, prompt là thông tin cần tìm, đáp án đúng là ký hiệu đoạn. Nếu một đoạn được dùng cho nhiều câu, đặt **Một đáp án được dùng nhiều lần**.
+Ví dụ bank là A–G, prompt là thông tin cần tìm, đáp án đúng là ký hiệu đoạn. Trong tab **Đề bài**, chọn **Sử dụng đáp án** theo hướng dẫn: **Một đáp án được dùng nhiều lần** hoặc **Mỗi đáp án chỉ dùng một lần**. Tùy chọn này áp dụng cho cả cách trả lời standard và kéo thả.
 
-Chọn đúng `once/repeat` theo đề. Autosave/submit dùng chung validator bank và quy tắc dùng lại; chuyển ô nguồn/đích ghi cùng transaction. Frontend chờ các thao tác drag đang lưu trước khi nộp; vẫn cần nghiệm thu drag/auto-scroll trên trình duyệt mục tiêu.
+Nếu chọn **chỉ dùng một lần**, các câu trong cùng nhóm phải có đáp án đúng khác nhau. Trong phòng thi, lựa chọn đã dùng ở câu khác sẽ bị khóa; thí sinh có thể **Xóa đáp án** ở câu cũ rồi chọn lại. Autosave, nộp bài và chấm điểm đều áp dụng cùng giới hạn. Với kéo thả, chuyển ô nguồn/đích được lưu trong một transaction; vẫn cần nghiệm thu drag/auto-scroll trên trình duyệt mục tiêu.
 
 ## 8. Completion và Short Answer nhập chữ
 
@@ -210,7 +210,7 @@ colour; color
 
 Đây vẫn là một câu, thí sinh chỉ cần trả lời một cách viết phù hợp. Nếu đáp án thực tế có dấu `/`, `|` hoặc `;`, lưu ý parser đang coi chúng là dấu phân cách; cần xem xét trước khi dùng cho nội dung như phân số.
 
-Chọn **Quy tắc giới hạn**: tổng N từ/số, chỉ từ, hoặc N từ và/hoặc một số; để trống để suy theo hướng dẫn rõ ràng của nhóm. Server dùng cùng rule cho key đúng, autosave và chấm. Email/số thập phân không bị tách theo dấu chấm; số điện thoại có khoảng trắng được tính một số. Với Writing vẫn dùng nhắc 150/250 từ, không chặn bài viết.
+Chọn **Quy tắc giới hạn**: tổng N từ/số, chỉ từ, hoặc N từ và/hoặc một số; để trống để suy theo hướng dẫn rõ ràng của nhóm. Server dùng cùng rule cho key đúng, autosave và chấm. Email/số thập phân không bị tách theo dấu chấm; giờ như `3:40 pm` được tính là một số và một từ trong quy tắc “N từ và/hoặc một số”; số điện thoại có khoảng trắng được tính một số. Với Writing vẫn dùng nhắc 150/250 từ, không chặn bài viết.
 
 ## 9. Completion kéo thả trong đoạn ghi chú
 
@@ -240,26 +240,24 @@ Khi có blank tương ứng, prompt riêng của row có thể để trống. M�
 
 `[blank]` không có số dùng cho prompt nhập chữ; `[blank_N]` có số dùng để nối blank của nội dung chung tới row câu. Hai trường hợp này không nên trộn lẫn.
 
-Toolbar rich editor hiện không có công cụ tạo bảng/flow-chart chuyên biệt. Dạng nội dung đó chỉ được hỗ trợ một phần qua HTML/ảnh và các thành phần có sẵn.
+Trong **Đề bài / ghi chú / bảng có ô trống**, bấm **▦ Bảng** trên thanh công cụ, chọn số hàng/cột (tối đa 12 × 8), nhập từng ô rồi bấm **Chèn bảng**. Có thể đặt `[blank_N]` trong ô để tạo vị trí trả lời tương ứng với câu N. Bảng được chèn vào nội dung như một khối của editor; muốn thay đổi cấu trúc hoặc nội dung ô, hãy xóa khối bảng và chèn lại. Flow-chart vẫn có thể nhập bằng văn bản hoặc ảnh.
 
 ## 10. Plan / Map / Diagram Labeling
 
-Có thể dùng **chọn đáp án, nhập chữ hoặc kéo thả trên ảnh**:
+Mỗi nhóm Map dùng **một nội dung câu hỏi chung** cho toàn bộ ảnh và các vị trí. Mỗi dòng câu hỏi chỉ chứa số câu, đáp án đúng và vị trí; không cần nhập lại nội dung cho từng câu.
 
-1. Chọn **Plan / Map / Diagram Labeling**.
-2. Chọn cách trả lời kéo thả.
-3. Nhập `image_url` trỏ đến ảnh truy cập được.
-4. Thêm bank A/B/C… hoặc các nhãn cần gán.
-5. Tạo từng câu, chọn đáp án đúng.
-6. Mở tab **Câu hỏi & đáp án**, tạo các câu hỏi rồi chọn câu trong danh sách phía trên ảnh. Bấm ảnh để đặt vị trí; sau mỗi lần đặt, form tự chọn câu tiếp theo chưa có vị trí. Bấm marker hoặc tên câu để chọn lại và đổi vị trí; dùng nút × cạnh câu để xóa vị trí.
+1. Chọn **Plan / Map / Diagram Labeling** trong Reading hoặc Listening.
+2. Ở tab **Đề bài**, nhập **Nội dung câu hỏi chung cho sơ đồ** một lần, ví dụ “Label the plan below. Choose the correct letter, A–H.”. Nhóm Map cần có nội dung này hoặc **Hướng dẫn cho nhóm câu hỏi**; các nhóm cũ chỉ có hướng dẫn vẫn lưu được vị trí.
+3. Nhập ảnh sơ đồ/bản đồ dùng chung. Có thể chọn chế độ trả lời **chọn đáp án**, **nhập chữ** hoặc **kéo thả**.
+4. Với chế độ kéo thả, nhập ngân hàng A/B/C… hoặc các nhãn cần gán và chọn quy tắc dùng một lần/nhiều lần. Với chế độ chọn đáp án, nhập lựa chọn cho từng câu.
+5. Ở tab **Câu hỏi & đáp án**, thêm mỗi số câu và đáp án đúng. Chọn câu trong danh sách phía trên ảnh rồi bấm ảnh để đặt vị trí. Sau mỗi lần đặt, form tự chọn câu tiếp theo chưa có vị trí. Bấm marker hoặc tên câu để chọn lại và đổi vị trí; dùng nút × cạnh câu để xóa vị trí.
+6. Lưu phần thi và mở phòng thi để xem ảnh cùng nội dung chung. Reading giữ bài đọc ở cột Passage, nội dung câu hỏi và ảnh ở cột câu hỏi; Listening hiển thị nội dung và ảnh trong cùng trang.
 
-Ví dụ X = 25, Y = 60 đặt tâm ô ở vị trí 25% chiều ngang và 60% chiều cao ảnh. Vị trí sẽ thay đổi theo kích thước hiển thị ảnh.
+Ví dụ X = 25, Y = 60 đặt tâm ô ở vị trí 25% chiều ngang và 60% chiều cao ảnh. Tất cả marker của nhóm nằm trên cùng một ảnh; không cần nhập X/Y thủ công. Câu standard chưa chọn vị trí được hiển thị trong danh sách phía trên ảnh; câu kéo thả phải chọn vị trí trước khi lưu. Ảnh và đáp án đúng là bắt buộc với nhóm Map.
 
-Tất cả marker của nhóm hiển thị trên cùng một ảnh. Khi bấm ảnh, vị trí của câu đang chọn được lưu theo tỉ lệ phần trăm; không cần nhập X/Y. Câu standard chưa chọn vị trí được hiển thị trong danh sách phía trên ảnh; câu kéo thả phải chọn vị trí trước khi lưu. Ảnh và đáp án đúng là bắt buộc với nhóm map.
+Trong **Kết quả bài thi**, nhóm Map hiện lại ảnh chung và đánh dấu từng **vị trí đúng** bằng số câu cùng đáp án đúng. Chú giải bên dưới ảnh giải nghĩa nhãn đáp án. Câu chưa có tọa độ được liệt kê riêng, không đặt marker suy đoán trên ảnh. Kết quả từng câu vẫn hiển thị đáp án thí sinh và đáp án đúng.
 
-Chế độ standard có tùy chọn **Trả lời bản đồ**: chọn từ danh sách hoặc tự nhập từ; select/input nằm tại tọa độ trên ảnh. Đổi chế độ trả lời sẽ xóa đáp án đúng đã chọn để tránh lưu key cũ vào dạng mới; nhập lại đáp án rồi lưu. Form lưu một `correct_answer` cho mỗi câu dù admin dùng ô chọn hay ô nhập chữ.
-
-Các câu đã được tạo trước bản sửa này mà `correct_answer` đang `NULL` cần mở lại trong admin, nhập đáp án đúng và lưu. Hệ thống không thể suy ra đáp án từ vị trí X/Y.
+Các nhóm Map cũ đang nhập nhiều nội dung riêng cho từng câu có thể chuyển phần đề chung vào **Nội dung câu hỏi chung cho sơ đồ** khi chỉnh sửa; nội dung cũ của từng row vẫn được giữ trong dữ liệu. Nhóm cũ đã có hướng dẫn chung nhưng chưa có nội dung chung vẫn được sửa và lưu tọa độ. Khi chỉnh câu hỏi ở nhóm khác rồi lưu section, tọa độ Map đã đặt được giữ nguyên, kể cả khi trình duyệt gửi tọa độ rỗng của câu không thay đổi; không cần bấm lại từng vị trí. Nếu chủ động bấm × để xóa vị trí của câu kéo thả, phải đặt vị trí mới trước khi lưu. Các câu cũ có `correct_answer = NULL` cần nhập lại đáp án đúng vì hệ thống không thể suy ra đáp án từ X/Y.
 
 ## 11. Nhập Listening và audio
 

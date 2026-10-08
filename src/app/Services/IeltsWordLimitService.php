@@ -66,7 +66,8 @@ class IeltsWordLimitService
         if (! static::appliesTo($question) || trim((string) $answer) === '') return true;
         $rule = static::rule($question);
         $tokens = static::tokens($answer);
-        $numbers = count(array_filter($tokens, fn ($token) => preg_match('/^[£$€]?[+-]?[0-9][0-9., ()%-]*$/u', $token)));
+        // A clock time such as 3:40 is one number; am/pm remains one optional word.
+        $numbers = count(array_filter($tokens, fn ($token) => preg_match('/^[£$€]?[+-]?[0-9][0-9.,: ()%-]*$/u', $token)));
         return match ($rule['mode']) {
             'words' => $numbers === 0 && count($tokens) <= $rule['limit'],
             'words_and_number' => $numbers <= 1 && count($tokens) - $numbers <= $rule['limit'],

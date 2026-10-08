@@ -807,12 +807,23 @@
                     <span>🔍</span> Giải thích chi tiết & trích dẫn từng câu hỏi
                 </h2>
 
+                @php $renderedMapGroups = []; @endphp
                 @foreach($answers as $ans)
                     @php
                         $q = $ans->question;
                         $isCorrect = (bool) $ans->is_correct;
                         $partNum = ceil($q->question_number / 10);
+                        $mapGroup = $q->questionGroup;
+                        $showMap = $mapGroup?->question_type?->value === 'map_labeling'
+                            && filled($mapGroup->image_url)
+                            && ! in_array($mapGroup->id, $renderedMapGroups, true);
+                        if ($showMap) {
+                            $renderedMapGroups[] = $mapGroup->id;
+                        }
                     @endphp
+                    @if($showMap)
+                        @include('ielts.partials.map-result', ['group' => $mapGroup])
+                    @endif
                     <div class="border rounded-2xl p-6 transition-all shadow-sm {{ $isCorrect ? 'bg-emerald-50/40 border-emerald-200' : 'bg-red-50/40 border-red-200' }}"
                          x-show="filter === 'all' || (filter === 'correct' && {{ $isCorrect ? 'true' : 'false' }}) || (filter === 'incorrect' && {{ !$isCorrect ? 'true' : 'false' }})"
                          x-cloak>
@@ -839,7 +850,9 @@
                         </div>
 
                         <div class="text-sm font-semibold text-slate-900 mb-4 pl-11 leading-loose">
-                            @if(preg_match('/\[blank(_\d+)?\]|_{2,}/', $q->prompt))
+                            @if($q->questionGroup?->question_type?->value === 'map_labeling' && filled($q->questionGroup?->image_url))
+                                Câu {{ $q->question_number }} · Xem vị trí trên sơ đồ phía trên.
+                            @elseif(preg_match('/\[blank(_\d+)?\]|_{2,}/', $q->prompt))
                                 @php
                                     $userAns = $ans->user_answer ?: '(Bỏ trống)';
                                     $badgeColor = $isCorrect

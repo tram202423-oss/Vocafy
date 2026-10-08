@@ -37,6 +37,7 @@
                 // Keep the repeater's other fields intact and update form state before Save.
                 $wire.$set(`${this.questionsPath}.${key}.drop_x`, x, false);
                 $wire.$set(`${this.questionsPath}.${key}.drop_y`, y, false);
+                $wire.$set(`${this.questionsPath}.${key}.map_position_cleared`, x === null || y === null, false);
             },
             place(event) {
                 const key = this.selectedKey;

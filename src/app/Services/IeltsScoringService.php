@@ -51,7 +51,7 @@ class IeltsScoringService
             $group = $question?->questionGroup;
             $answerKey = trim((string) $userAnswer->user_answer);
 
-            if ($this->usesDragDrop($group)
+            if (($this->usesDragDrop($group) || $group?->question_type?->value === 'matching_information')
                 && ($group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat')) === 'once'
                 && $answerKey !== '') {
                 $normalizedKey = mb_strtolower($answerKey, 'UTF-8');
@@ -78,7 +78,7 @@ class IeltsScoringService
                     && ! isset($multiUsedKeys[$group->id][$key]);
                 $multiUsedKeys[$group->id][$key] = true;
             }
-            if ($this->usesDragDrop($group)
+            if (($this->usesDragDrop($group) || $group?->question_type?->value === 'matching_information')
                 && ($group->option_usage ?? data_get($group->settings, 'drag_option_usage', 'repeat')) === 'once') {
                 $normalizedKey = mb_strtolower(trim((string) $userAnswer->user_answer), 'UTF-8');
                 if ($normalizedKey !== '' && ($oneUseAnswerCounts[$group->id][$normalizedKey] ?? 0) > 1) {

@@ -117,7 +117,9 @@ class IeltsSectionForm
                             ->disableOptionWhen(fn (string $value, Get $get): bool => $value === 'drag_drop' && ! Authoring::supportsDragDrop($get('question_type')))
                             ->default('standard')->required()->live()->visible(fn (Get $get): bool => in_array($get('../../skill'), ['reading', 'listening'], true))->dehydratedWhenHidden(),
                         C\Select::make('option_usage')->label('Sử dụng đáp án')->options(['repeat' => 'Một đáp án được dùng nhiều lần', 'once' => 'Mỗi đáp án chỉ dùng một lần'])
-                            ->default('repeat')->required()->visible(fn (Get $get): bool => Authoring::isDragDrop($get()))->dehydratedWhenHidden(),
+                            ->default('repeat')->required()->live()
+                            ->helperText('Matching Information: chọn theo hướng dẫn đề. Áp dụng cho cả chọn đáp án và kéo thả.')
+                            ->visible(fn (Get $get): bool => Authoring::isDragDrop($get()) || $get('question_type') === 'matching_information')->dehydratedWhenHidden(),
                     ]),
                     C\Textarea::make('instruction')->label('Hướng dẫn cho nhóm câu hỏi')->placeholder('Choose the correct heading for each paragraph from the list below.')->rows(3),
                     C\Select::make('settings.map_answer_mode')->label('Trả lời bản đồ')
@@ -135,9 +137,13 @@ class IeltsSectionForm
                             unset($question);
                             $set('questions', $questions);
                         }),
-                    C\RichEditor::make('question_content')->label('Đề bài / ghi chú / bảng có ô trống')
+                    C\RichEditor::make('question_content')
+                        ->view('filament.forms.components.ielts-table-rich-editor')
+                        ->label(fn (Get $get): string => $get('question_type') === 'map_labeling' ? 'Nội dung câu hỏi chung cho sơ đồ' : 'Đề bài / ghi chú / bảng có ô trống')
                         ->toolbarButtons(['bold', 'italic', 'underline', 'bulletList', 'orderedList', 'h2', 'h3', 'link', 'blockquote', 'undo', 'redo'])
-                        ->helperText('Completion theo đoạn: chèn [blank_1], [blank_2]… khớp số câu; server sẽ nối từng ô với một câu. Kéo thả cần thêm ngân hàng. Matching Headings có thể để trống đề chung và nhập Paragraph A, Paragraph B… trong từng câu.')
+                        ->helperText(fn (Get $get): string => $get('question_type') === 'map_labeling'
+                            ? 'Nhập đề bài dùng chung cho tất cả vị trí trên ảnh; có thể dùng Hướng dẫn cho nhóm câu hỏi ở trên. Từng câu chỉ cần số câu, đáp án đúng và vị trí.'
+                            : 'Completion theo đoạn: chèn [blank_1], [blank_2]… khớp số câu; server sẽ nối từng ô với một câu. Kéo thả cần thêm ngân hàng. Matching Headings có thể để trống đề chung và nhập Paragraph A, Paragraph B… trong từng câu.')
                         ->visible(fn (Get $get): bool => in_array($get('../../skill'), ['reading', 'listening'], true))->dehydratedWhenHidden(),
                     C\TextInput::make('image_url')->label('Ảnh sơ đồ / bản đồ')->placeholder('/storage/images/map.png hoặc https://…')
                         ->maxLength(255)->live(onBlur: true)->required(fn (Get $get): bool => $get('question_type') === 'map_labeling')
@@ -226,10 +232,10 @@ class IeltsSectionForm
                         ->expandAllAction(fn (Action $action) => $action->label('Mở tất cả'))
                         ->itemLabel(function (array $state, Get $get): string {
                             $answer = Authoring::selectedAnswer($state, $get() ?? []);
-                            return 'Câu '.($state['question_number'] ?? '?').(filled($state['prompt'] ?? null) ? ' · '.Str::limit(strip_tags($state['prompt']), 70) : '').(filled($answer) ? ' → '.$answer : ' · Chưa có đáp án');
+                            return 'Câu '.($state['question_number'] ?? '?').(($get('question_type') !== 'map_labeling' && filled($state['prompt'] ?? null)) ? ' · '.Str::limit(strip_tags($state['prompt']), 70) : '').(filled($answer) ? ' → '.$answer : ' · Chưa có đáp án');
                         })
                         ->mutateRelationshipDataBeforeCreateUsing(fn (array $data, Get $get): array => Authoring::prepareQuestion($data, $get('question_type'), $get() ?? [], $get('../../skill')))
-                        ->mutateRelationshipDataBeforeSaveUsing(fn (array $data, Get $get): array => Authoring::prepareQuestion($data, $get('question_type'), $get() ?? [], $get('../../skill')))
+                        ->mutateRelationshipDataBeforeSaveUsing(fn (array $data, Get $get, \App\Models\IeltsQuestion $record): array => Authoring::prepareQuestion($data, $get('question_type'), $get() ?? [], $get('../../skill'), $record))
                         ->schema(self::questionSchema()),
                 ]),
                 C\Tabs\Tab::make('Bài đọc nguồn')->icon('heroicon-o-book-open')->visible(fn (Get $get): bool => $get('../../skill') === 'reading')->schema([
@@ -367,7 +373,8 @@ class IeltsSectionForm
         return [
             C\TextInput::make('question_number')->label('Số câu trong toàn phần thi')->integer()->minValue(1)->maxValue(200)->required()->live(onBlur: true),
             C\Textarea::make('prompt')->label('Nội dung câu hỏi')->placeholder('Paragraph A / nội dung câu hỏi / câu có [blank]')->rows(3)->live(onBlur: true)
-                ->helperText('Có thể để trống nếu đề kéo thả đã có [blank_N] đúng với số câu này.'),
+                ->helperText('Có thể để trống nếu đề kéo thả đã có [blank_N] đúng với số câu này.')
+                ->visible(fn (Get $get): bool => $get('../../question_type') !== 'map_labeling'),
             C\Repeater::make('options')->label('Các lựa chọn của câu này')->defaultItems(0)->columns(4)->live(onBlur: true)->addActionLabel('Thêm lựa chọn')
                 ->visible(fn (Get $get): bool => Authoring::needsOptions($get('../../') ?? []))
                 ->schema([
@@ -393,8 +400,10 @@ class IeltsSectionForm
             C\TextInput::make('word_limit')->label('Giới hạn số từ')->integer()->minValue(1)->maxValue(1000)
                 ->visible(fn (Get $get): bool => ! Authoring::isDragDrop($get('../../') ?? []) && in_array($get('../../question_type'), ['fill_in_blanks', 'short_answer', 'map_labeling'], true))
                 ->helperText('Reading/Listening dạng nhập chữ: server từ chối câu trả lời vượt giới hạn. Writing hiện dùng mốc hiển thị cố định 150/250 từ; trường này chưa được scorer Writing áp dụng.'),
-            C\Hidden::make('drop_x')->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling'),
-            C\Hidden::make('drop_y')->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling'),
+            C\Hidden::make('drop_x')->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling')->dehydratedWhenHidden(),
+            C\Hidden::make('drop_y')->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling')->dehydratedWhenHidden(),
+            C\Hidden::make('map_position_cleared')->default(false)
+                ->visible(fn (Get $get): bool => $get('../../question_type') === 'map_labeling')->dehydratedWhenHidden(),
             C\Section::make('Lời giải (tùy chọn)')->collapsible()->collapsed()->columns(2)->schema([
                 C\Textarea::make('quote_reference')->label('Trích dẫn chứa đáp án')->rows(3),
                 C\Textarea::make('explanation')->label('Giải thích')->rows(3),

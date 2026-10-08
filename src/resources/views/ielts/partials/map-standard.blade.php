@@ -29,8 +29,9 @@
                     <input id="map-answer-{{ $question->id }}" type="text"
                            x-model="answers['{{ $question->id }}']"
                            @input.debounce.300ms="saveAnswer({{ $question->id }}, answers['{{ $question->id }}'])"
-                           class="w-24 rounded border-0 px-2 py-1 text-xs font-semibold focus:ring-2 focus:ring-blue-500"
-                           placeholder="{{ $question->question_number }}">
+                           class="ielts-numbered-answer w-24 rounded border-0 px-2 py-1 text-center text-xs font-semibold focus:ring-2 focus:ring-blue-500"
+                           placeholder="{{ $question->question_number }}"
+                           @focus="setCurrentQuestion({{ $question->question_number }})">
                 @endif
             </div>
         @endforeach
@@ -61,8 +62,10 @@
                         <input id="map-answer-list-{{ $question->id }}" type="text"
                                x-model="answers['{{ $question->id }}']"
                                @input.debounce.300ms="saveAnswer({{ $question->id }}, answers['{{ $question->id }}'])"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                               placeholder="Nhập đáp án">
+                               class="ielts-numbered-answer w-full rounded-lg border border-slate-300 px-3 py-2 text-center text-sm"
+                               placeholder="{{ $question->question_number }}"
+                               aria-label="Câu {{ $question->question_number }}"
+                               @focus="setCurrentQuestion({{ $question->question_number }})">
                     @endif
                 </div>
             @endforeach

@@ -11,6 +11,7 @@ use App\Models\IeltsUserAnswer;
 use App\Services\IeltsScoringService;
 use App\Services\IeltsMultiSelectService;
 use App\Services\IeltsDragDropService;
+use App\Services\IeltsMatchingInformationService;
 use App\Services\IeltsWordLimitService;
 use App\Services\IeltsSpeakingRecordingService;
 use Illuminate\Support\Facades\Gate;
@@ -335,6 +336,10 @@ class IeltsExamController extends Controller
                 if ($request->has('answer') && IeltsDragDropService::enabled($userAnswer->question?->questionGroup)) {
                     app(IeltsDragDropService::class)->validateAnswers($submission, [$questionId => $answer]);
                 }
+                if ($request->has('answer') && $userAnswer->question?->questionGroup?->question_type?->value === 'matching_information'
+                    && $userAnswer->question->questionGroup->response_mode !== 'drag_drop') {
+                    app(IeltsMatchingInformationService::class)->validateAnswers($submission, [$questionId => $answer]);
+                }
                 $dataToUpdate = [];
                 if ($request->has('answer')) $dataToUpdate['user_answer'] = $answer;
                 if ($request->has('is_flagged')) $dataToUpdate['is_flagged_for_review'] = (bool) $request->input('is_flagged');
@@ -446,6 +451,7 @@ class IeltsExamController extends Controller
                 }
                 app(IeltsMultiSelectService::class)->validateAnswers($submission, $request->input('answers', []));
                 app(IeltsDragDropService::class)->validateAnswers($submission, $request->input('answers', []));
+                app(IeltsMatchingInformationService::class)->validateAnswers($submission, $request->input('answers', []));
                 app(IeltsWordLimitService::class)->validateAnswers($submission, $request->input('answers', []));
                 if ($request->has('answers') && is_array($request->input('answers'))) {
                     foreach ($request->input('answers') as $questionId => $answer) {
