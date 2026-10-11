@@ -16,12 +16,6 @@ class IeltsMapAuthoringTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function beforeRefreshingDatabase(): void
-    {
-        // Docker's application environment points at MySQL. Isolate these saves.
-        config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:']);
-    }
-
     protected function setUp(): void
     {
         parent::setUp();

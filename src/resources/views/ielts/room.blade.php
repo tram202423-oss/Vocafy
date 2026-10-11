@@ -1941,6 +1941,7 @@
                 currentQuestionNumber: config.questionNumbers[0] || 1,
                 questionNumbers: config.questionNumbers,
                 answers: {},
+                matchingConfirmedAnswers: {},
                 multiSaving: {},
                 multiSelectMessages: {},
                 flags: {},
@@ -2640,9 +2641,12 @@
 
                 async chooseMatchingInformationAnswer(questionId, key, questionIds, once) {
                     if (once && key !== '' && this.matchingOptionUnavailable(questionIds, questionId, key)) return false;
-                    const previous = this.answers[questionId] ?? '';
+                    if (!Object.prototype.hasOwnProperty.call(this.matchingConfirmedAnswers, questionId)) {
+                        this.matchingConfirmedAnswers[questionId] = this.answers[questionId] ?? '';
+                    }
                     const saved = await this.saveAnswer(questionId, key);
-                    if (!saved) this.answers[questionId] = previous;
+                    if (saved) this.matchingConfirmedAnswers[questionId] = key;
+                    else if (this.answers[questionId] === key) this.answers[questionId] = this.matchingConfirmedAnswers[questionId];
                     return saved;
                 },
 
@@ -2692,6 +2696,12 @@
                         const previous = { ...this.answers };
                         const result = await this.saveAnswerData(questionId, payload);
                         if (!result) continue;
+                        if (questionId !== null && Object.prototype.hasOwnProperty.call(payload, 'answer')) {
+                            if (this.answers[questionId] === previous[questionId]) this.answers[questionId] = payload.answer ?? '';
+                            if (Object.prototype.hasOwnProperty.call(this.matchingConfirmedAnswers, questionId)) {
+                                this.matchingConfirmedAnswers[questionId] = payload.answer ?? '';
+                            }
+                        }
                         for (const [id, value] of Object.entries(result.answers || {})) {
                             if (this.answers[id] === previous[id]) this.answers[id] = value ?? '';
                         }
@@ -2980,6 +2990,7 @@
                     if (this.isSubmitting) return;
                     this.isSubmitting = true;
                     this.submitError = '';
+                    const answersAtSubmission = { ...this.answers };
                     let timeout, submitted = false;
                     try {
                         if (this.skill === 'speaking') {
@@ -3003,7 +3014,7 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                                 'Accept': 'application/json',
                             },
-                            body: JSON.stringify({ answers: { ...this.answers }, expected_revision: saveRevision }),
+                            body: JSON.stringify({ answers: answersAtSubmission, expected_revision: saveRevision }),
                         });
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) throw new Error(data.message || data.error || 'Chưa nộp được bài. Vui lòng thử lại.');

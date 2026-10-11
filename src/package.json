@@ -3,7 +3,8 @@
     "type": "module",
     "scripts": {
         "build": "rm -f public/hot && vite build",
-        "dev": "vite"
+    "dev": "vite",
+    "test:frontend": "node --test tests/Frontend/*.test.mjs"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",

@@ -51,9 +51,9 @@ class IeltsExamController extends Controller
         $test = IeltsTest::where('slug', $slug)->when(! $preview, fn ($query) => $query->where('is_published', true))
             ->with(['sections' => fn ($query) => $query->where('is_active', true)->whereHas('questionGroups.questions')->with('questionGroups.questions')])
             ->firstOrFail();
-        abort_if($test->sections->isEmpty(), 404);
+        abort_if($test->sections->isEmpty() && ! $preview, 404);
 
-        return view('ielts.show', compact('test'));
+        return view('ielts.show', compact('test', 'preview'));
     }
 
     public function start(Request $request, string $slug)
@@ -153,7 +153,7 @@ class IeltsExamController extends Controller
         }
         abort_unless($submission->section, 404);
 
-        if ($this->deadlinePassed($submission) && ! IeltsSpeakingRecordingService::canFinalize($submission)) {
+        if ($this->finalSubmissionWindowPassed($submission) && ! IeltsSpeakingRecordingService::canFinalize($submission)) {
             $submission = DB::transaction(function () use ($submissionId) {
                 $locked = IeltsSubmission::lockForUpdate()->findOrFail($submissionId);
                 $this->authorizeSubmission($locked);
@@ -443,7 +443,7 @@ class IeltsExamController extends Controller
             }
 
             app(\App\Services\IeltsExamSnapshotService::class)->apply($submission);
-            if (!$this->deadlinePassed($submission)) {
+            if (! $this->finalSubmissionWindowPassed($submission)) {
                 foreach ($request->input('answers', []) as $questionId => $answer) {
                     $question = $submission->section->questionGroups->flatMap(fn ($group) => $group->questions)->firstWhere('id', (int) $questionId);
                     abort_unless($question, 422, 'Câu hỏi không thuộc lượt thi này.');
@@ -485,7 +485,7 @@ class IeltsExamController extends Controller
         app(\App\Services\IeltsExamSnapshotService::class)->apply($submission);
 
         if ($submission->status === IeltsSubmissionStatusEnum::IN_PROGRESS) {
-            if (!$this->deadlinePassed($submission) || IeltsSpeakingRecordingService::canFinalize($submission)) return redirect()->route('ielts.exam.room', $submission->id);
+            if (!$this->finalSubmissionWindowPassed($submission) || IeltsSpeakingRecordingService::canFinalize($submission)) return redirect()->route('ielts.exam.room', $submission->id);
             DB::transaction(function () use ($submissionId): void {
                 $locked = IeltsSubmission::lockForUpdate()->findOrFail($submissionId);
                 $this->authorizeSubmission($locked);
@@ -553,5 +553,14 @@ class IeltsExamController extends Controller
     private function deadlinePassed(IeltsSubmission $submission): bool
     {
         return now()->greaterThanOrEqualTo($this->deadlineAt($submission));
+    }
+
+    private function finalSubmissionWindowPassed(IeltsSubmission $submission): bool
+    {
+        if ($submission->skill === 'speaking') return $this->deadlinePassed($submission);
+
+        return now()->greaterThanOrEqualTo(
+            $this->deadlineAt($submission)->addSeconds(IeltsSubmission::FINAL_SUBMISSION_GRACE_SECONDS)
+        );
     }
 }

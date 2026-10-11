@@ -19,6 +19,12 @@
             </p>
         </div>
 
+        @if($preview && ! $test->is_published)
+            <div class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                Đây là bản xem trước. Học viên chỉ có thể bắt đầu khi bộ đề được xuất bản.
+            </div>
+        @endif
+
         {{-- Thông tin thí sinh dự thi --}}
         <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 mb-6">
             <h2 class="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2">
@@ -101,9 +107,9 @@
             </div>
 
             {{-- Nút bắt đầu thi --}}
-            <button type="submit" class="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base rounded-2xl shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+            <button type="submit" @disabled(! $test->is_published || $test->sections->isEmpty()) class="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base rounded-2xl shadow-lg shadow-blue-600/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 transition-all flex items-center justify-center gap-3">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span>Tôi đã sẵn sàng — bắt đầu bài thi</span>
+                <span>{{ $test->is_published && $test->sections->isNotEmpty() ? 'Tôi đã sẵn sàng — bắt đầu bài thi' : 'Bộ đề chưa sẵn sàng để thi' }}</span>
             </button>
         </form>
     </div>

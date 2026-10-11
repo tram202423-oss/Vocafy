@@ -206,10 +206,10 @@ room() nạp section, groups, questions, answerOptions, userAnswers và user, sa
 - Nếu đã completed: chuyển đến result.
 - Dựng section, group và câu hỏi từ snapshot tại thời điểm start; dùng snapshot để hiển thị, autosave, validate và chấm điểm.
 - Dùng deadline server đã lưu; submission cũ không có deadline dùng started_at + time_limit_minutes.
-- Khi hết giờ: khóa lượt, chấm các câu đã autosave và chuyển đến result.
+- Khi hết giờ: frontend tự nộp bài; server dành thêm 30 giây để nhận payload nộp cuối cùng, rồi tự chấm các câu đã lưu nếu chưa có request nộp.
 - Trước deadline: truyền câu trả lời/flags/notes đã lưu để khôi phục giao diện.
 
-Frontend đếm ngược theo deadline và tự gọi submit. Save từ chối ghi quá hạn; submit sau hạn bỏ payload mới và chấm trạng thái đã lưu ở server.
+Frontend đếm ngược theo deadline và tự gọi submit. Khi đồng hồ về 0, frontend chụp đáp án hiện có trước khi chờ các request đang lưu. Autosave từ chối ghi quá hạn; submit nhận payload cuối cùng trong 30 giây sau deadline (có kiểm tra đáp án và revision). Quá khoảng này, server bỏ payload mới và chấm trạng thái đã lưu.
 
 ### 5.3. Phân nhóm nội dung
 
@@ -232,7 +232,7 @@ Mỗi group Writing chỉ hiển thị câu đầu; đặt một câu trong mỗ
 
 ### 5.5. Nộp bài và kết quả
 
-Submit xác thực quyền và khóa lượt trong transaction. Nếu còn hạn, dùng payload cuối cùng, chấm rồi hoàn tất. Nếu đã hết hạn, bỏ qua payload gửi muộn và chấm các câu đã lưu trước đó. Submission đang làm không được xem đáp án qua trang result; người dùng được chuyển lại phòng thi. Khi hết giờ, result có thể tự hoàn tất việc chấm phần đã lưu. Lượt đã hoàn tất không bị chấm lại.
+Submit xác thực quyền và khóa lượt trong transaction. Trước deadline hoặc trong khoảng nhận bài cuối 30 giây, server kiểm tra payload cuối, chấm rồi hoàn tất. Sau khoảng nhận bài cuối, server bỏ payload mới và chấm các câu đã lưu trước đó. Submission đang làm không được xem đáp án qua trang result; người dùng được chuyển lại phòng thi. Scheduler và result chỉ tự hoàn tất lượt Reading/Listening/Writing sau khoảng nhận bài cuối. Speaking giữ quy trình checkpoint riêng. Lượt đã hoàn tất không bị chấm lại.
 
 Các lượt guest cũ được tạo trước cơ chế session secret không thể được mở chỉ bằng UUID; admin vẫn có thể truy cập để quản trị.
 

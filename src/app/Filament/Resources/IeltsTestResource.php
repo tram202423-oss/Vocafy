@@ -146,7 +146,7 @@ class IeltsTestResource extends Resource
                     ->label('Xem bộ đề')
                     ->icon('heroicon-o-eye')
                     ->color('success')
-                    ->url(fn (IeltsTest $record): string => route('ielts.tests.show', $record->slug))
+                    ->url(fn (IeltsTest $record): string => route('ielts.tests.show', ['slug' => $record->slug, 'preview' => 1]))
                     ->openUrlInNewTab(),
                 Tables\Actions\EditAction::make()->label('Chỉnh sửa'),
                 Tables\Actions\DeleteAction::make()->label('Xóa'),

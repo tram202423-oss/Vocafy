@@ -14,6 +14,8 @@ class IeltsSubmission extends Model
 {
     use HasFactory, HasUuids;
 
+    public const FINAL_SUBMISSION_GRACE_SECONDS = 30;
+
     public $incrementing = false;
     protected $keyType = 'string';
 

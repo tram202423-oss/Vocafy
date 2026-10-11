@@ -117,7 +117,7 @@ class IeltsReadingListeningTest extends TestCase
             if ($idx < 30) {
                 $answersPayload[$q->id] = $q->correct_answer;
             } else {
-                $answersPayload[$q->id] = 'wrong';
+                $answersPayload[$q->id] = '';
             }
         }
 
@@ -181,7 +181,7 @@ class IeltsReadingListeningTest extends TestCase
                     $answersPayload[$q->id] = $q->correct_answer;
                 }
             } else {
-                $answersPayload[$q->id] = 'incorrect';
+                $answersPayload[$q->id] = '';
             }
         }
 
@@ -202,6 +202,6 @@ class IeltsReadingListeningTest extends TestCase
         $resultResponse->assertStatus(200);
         $resultResponse->assertSee('8.0');
         $resultResponse->assertSee('35');
-        $resultResponse->assertSee('Audio Transcript');
+        $resultResponse->assertSee('Toàn văn audio transcript');
     }
 }
