@@ -347,7 +347,7 @@
     {{-- LISTENING AUDIO STREAM BAR (NẾU ĐANG THI LISTENING) --}}
     {{-- ========================================================================= --}}
     @if($isListening)
-        @php $firstAudio = $groups->first(fn ($group) => filled($group->audio_url))?->audio_url; @endphp
+        @php $firstAudio = \App\Services\IeltsListeningMediaService::audioUrl($submission->section); @endphp
         @if(!$firstAudio)
             <div class="bg-amber-50 text-amber-900 px-4 py-3 text-sm border-b border-amber-200" role="status">Bài Listening này chưa có audio. File nghe sẽ được bổ sung sau.</div>
         @else
@@ -1346,7 +1346,7 @@
                                 </div>
                             @endif
                             <div class="text-xs text-slate-500 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                💡 <strong>Hướng dẫn:</strong> Audio sẽ tự động phát nội dung cuộc trò chuyện / bài giảng của Part này. Bạn hãy theo dõi câu hỏi ở cột bên phải và nhập câu trả lời trực tiếp.
+                                💡 <strong>Hướng dẫn:</strong> Một audio phát liên tục cho cả 4 Part. Bạn hãy theo dõi câu hỏi ở cột bên phải và nhập câu trả lời trực tiếp.
                             </div>
                         </div>
                     @endforeach

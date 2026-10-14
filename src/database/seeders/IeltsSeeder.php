@@ -952,6 +952,15 @@ TEXT,
             );
         }
 
+        if ($listeningSection->wasRecentlyCreated) {
+            $listeningSection->load('questionGroups');
+            $listeningSection->update([
+                'audio_url' => $listeningSection->questionGroups->first(fn ($group) => filled($group->audio_url))?->audio_url,
+                'transcript' => $listeningSection->questionGroups->pluck('transcript')
+                    ->filter(fn ($value) => filled($value))->implode("\n\n"),
+            ]);
+        }
+
         // ==========================================
         // 4. TẠO SECTION WRITING (2 TASKS - 60 PHÚT)
         // ==========================================

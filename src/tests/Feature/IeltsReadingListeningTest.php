@@ -202,6 +202,6 @@ class IeltsReadingListeningTest extends TestCase
         $resultResponse->assertStatus(200);
         $resultResponse->assertSee('8.0');
         $resultResponse->assertSee('35');
-        $resultResponse->assertSee('Toàn văn audio transcript');
+        $resultResponse->assertSee('Transcript toàn bài Listening');
     }
 }

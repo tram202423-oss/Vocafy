@@ -89,10 +89,10 @@ Speaking lưu draft trên thiết bị, checkpoint server và file cuối khi d�
 
 ## 5. Listening và dữ liệu mẫu
 
-- Một audio chung cho section; authoring chặn các URL khác nhau giữa group. Upload/link trực tiếp/Drive đã có.
+- Một audio và một transcript chung ở cấp section Listening cho cả 4 Part. Form có upload/link trực tiếp/Drive và ô transcript tại tab Audio & transcript của section.
 - Thiếu audio: room hiện thông báo, không dùng âm thanh demo làm fallback. Seeder demo cũ vẫn có thể cấu hình âm thanh môi trường như URL của chính đề.
 - Tiến độ lưu khoảng 10 giây và khôi phục khi reload. Audio-end gửi về server, rút deadline còn tối đa 120 giây.
-- Part trong room/transcript lấy từ số câu theo từng khoảng 10; group không được trải qua hai Part. Chưa có mapping Part độc lập số câu.
+- Part trong room lấy từ số câu theo từng khoảng 10; group không được trải qua hai Part. Chưa có mapping Part độc lập số câu.
 - Có seeder Reading Tea/Transport/Innovation 40 câu và Listening Call Unlimited/London Eye 40 câu; seeder cũ Flood/Gifted/Museums 35 câu chỉ là dữ liệu luyện tập.
 - Seeder và việc có đủ câu không chứng minh tất cả tương tác đã nghiệm thu. Chi tiết nhập và lưu giữ media ở [ADMIN-GUIDE](ADMIN-GUIDE.md).
 

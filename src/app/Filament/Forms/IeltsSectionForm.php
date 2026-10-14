@@ -51,10 +51,17 @@ class IeltsSectionForm
                         C\Textarea::make('description')->label('Mô tả / hướng dẫn chung')->rows(3)->columnSpanFull(),
                     ]),
                 ]),
+                C\Tabs\Tab::make('Audio & transcript')->icon('heroicon-o-speaker-wave')
+                    ->visible(fn (Get $get): bool => $get('skill') === 'listening')
+                    ->schema([
+                        ...self::audioSchema(),
+                        C\Textarea::make('transcript')->label('Transcript toàn bài Listening')->rows(18)
+                            ->helperText('Một transcript cho cả 4 Part. Có thể dùng (Q1), (Q2)… để đánh dấu câu trong trang kết quả.'),
+                    ]),
                 C\Tabs\Tab::make('Nội dung & câu hỏi')->icon('heroicon-o-document-text')->schema([
                     C\Placeholder::make('authoring_guide')->label('Cách nhập đề')->content(fn (Get $get): string => match ($get('skill')) {
                         'reading' => 'Mỗi nhóm có một dạng câu hỏi. Nhập bài đọc nguồn ở nhóm đầu của mỗi Passage; các nhóm tiếp theo của Passage để trống bài đọc nguồn. Nhập đề có ô trống ở tab Đề bài của nhóm, không chèn ô vào bài đọc nguồn.',
-                        'listening' => 'Nhập câu hỏi, file nghe và transcript theo từng nhóm. Part 1: câu 1–10; Part 2: 11–20; Part 3: 21–30; Part 4: 31–40. Với đề kéo thả, nhập nội dung có [blank_N] rồi tạo câu hỏi từ các ô trống.',
+                        'listening' => 'Nhập một audio và transcript chung ở tab Audio & transcript; từng nhóm chỉ nhập câu hỏi. Part 1: câu 1–10; Part 2: 11–20; Part 3: 21–30; Part 4: 31–40. Với đề kéo thả, nhập nội dung có [blank_N] rồi tạo câu hỏi từ các ô trống.',
                         default => 'Mỗi nhóm là một Task / Part. Nhập đề bài trong từng câu; lời giải và trích dẫn là tùy chọn.',
                     }),
                     C\Repeater::make('questionGroups')->relationship('questionGroups')->label('Các nhóm câu hỏi')->orderColumn('order')
@@ -245,10 +252,6 @@ class IeltsSectionForm
                     C\RichEditor::make('passage_content')->label('Nội dung Reading Passage')->toolbarButtons(['bold', 'italic', 'underline', 'bulletList', 'orderedList', 'h2', 'h3', 'link', 'blockquote', 'undo', 'redo'])
                         ->helperText('Đây là bài đọc ở khung bên trái. Nhập toàn bộ Passage tại nhóm đầu của bài đọc; các nhóm còn lại của cùng Passage để trống trường này. Đề câu hỏi và ô kéo thả nhập ở tab Đề bài.'),
                 ]),
-                C\Tabs\Tab::make('Audio & transcript')->icon('heroicon-o-speaker-wave')->visible(fn (Get $get): bool => $get('../../skill') === 'listening')->schema([
-                    ...self::audioSchema(),
-                    C\Textarea::make('transcript')->label('Transcript / lời bài nghe')->rows(12)->helperText('Hiển thị khi xem lại kết quả, không hiển thị cho thí sinh đang làm bài.'),
-                ]),
             ]),
         ];
     }
@@ -299,7 +302,7 @@ class IeltsSectionForm
     private static function audioSchema(): array
     {
         return [
-            C\Section::make('Audio Listening')->description('Dùng audio chung cho toàn bài Listening; chỉ cần chọn audio ở một nhóm. Chọn file từ máy hoặc dán link audio / Google Drive, rồi lưu phần thi.')->schema([
+            C\Section::make('Một audio cho toàn bài Listening')->description('Audio phát liên tục cho cả 4 Part. Chọn file từ máy hoặc dán link audio / Google Drive, rồi lưu phần thi.')->schema([
                 C\Actions::make([
                     Action::make('uploadAudio')->label('Tải audio lên')->icon('heroicon-o-arrow-up-tray')
                         ->modalHeading('Tải file audio Listening')->modalSubmitActionLabel('Dùng file audio')->modalCancelActionLabel('Hủy')

@@ -180,20 +180,6 @@ class IeltsAuthoringService
             $errors[$path] = 'Nhập bài đọc nguồn ở nhóm đầu tiên của Reading.';
         }
 
-        if ($skill === 'listening') {
-            $sharedAudioUrl = null;
-            foreach ($groups as $groupKey => $group) {
-                $audioUrl = trim((string) ($group['audio_url'] ?? ''));
-                if ($audioUrl === '') {
-                    continue;
-                }
-                if ($sharedAudioUrl !== null && $audioUrl !== $sharedAudioUrl) {
-                    $errors["{$path}.{$groupKey}.audio_url"] = 'Phần Listening hiện dùng một audio chung cho cả section. Hãy chọn cùng một URL ở các nhóm hoặc chỉ đặt audio ở một nhóm.';
-                } else {
-                    $sharedAudioUrl = $audioUrl;
-                }
-            }
-        }
         foreach ($groups as $groupKey => $group) {
             $base = "{$path}.{$groupKey}";
             $drag = static::isDragDrop($group);

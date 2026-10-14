@@ -20,6 +20,8 @@ class IeltsSection extends Model
         'time_limit_minutes',
         'total_questions',
         'description',
+        'audio_url',
+        'transcript',
         'is_active',
     ];
 

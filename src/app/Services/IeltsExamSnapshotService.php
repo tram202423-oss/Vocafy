@@ -34,6 +34,8 @@ class IeltsExamSnapshotService
                 'time_limit_minutes' => $section->time_limit_minutes,
                 'total_questions' => $section->total_questions,
                 'description' => $section->description,
+                'audio_url' => $section->audio_url,
+                'transcript' => $section->transcript,
                 'is_active' => $section->is_active,
             ],
             'groups' => $groups->map(fn (IeltsQuestionGroup $group) => [

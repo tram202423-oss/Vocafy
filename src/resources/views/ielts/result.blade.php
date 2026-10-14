@@ -12,18 +12,17 @@
     $isGeneral = $submission->test_type->value === 'general_training';
     $officialBand = $isSubjective ? $submission->teacher_band_score : $submission->band_score;
     $groups = $submission->section?->questionGroups ?? collect();
-    $firstAudio = $groups->first(fn ($group) => filled($group->audio_url))?->audio_url;
+    $firstAudio = \App\Services\IeltsListeningMediaService::audioUrl($submission->section);
+    $fullTranscript = \App\Services\IeltsListeningMediaService::transcript($submission->section);
 @endphp
 
 @section('content')
 <div class="bg-gradient-to-b from-blue-50/70 via-white to-slate-50 py-12 px-4 sm:px-6 lg:px-8 min-h-screen text-slate-800"
      x-data="{
          filter: 'all',
-         activeTranscriptPart: 1,
          activeWritingTask: 1,
          writingTab: 'overview',
-         scrollToTranscriptQuestion(partNum, qNum) {
-             this.activeTranscriptPart = partNum;
+         scrollToTranscriptQuestion(qNum) {
              this.$nextTick(() => {
                  const el = document.getElementById('transcript-target-q-' + qNum);
                  if (el) {
@@ -236,51 +235,29 @@
                 </div>
             @endif
 
-            {{-- Transcript Viewer --}}
+            {{-- One transcript for the complete Listening section. --}}
             <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                    <div>
-                        <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-                            <span>📜</span> Toàn văn audio transcript &amp; điểm chốt đáp án
-                        </h2>
-                        <p class="text-xs text-slate-500 mt-1">Các đoạn hội thoại được gắn thẻ câu hỏi [Qx: Đáp án] nổi bật tương ứng</p>
-                    </div>
-                    <div class="flex items-center gap-2 overflow-x-auto pb-1">
-                        @foreach([1, 2, 3, 4] as $pIdx)
-                            <button type="button" @click="activeTranscriptPart = {{ $pIdx }}"
-                                    class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border"
-                                    :class="activeTranscriptPart === {{ $pIdx }} ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'">
-                                Part {{ $pIdx }}
-                            </button>
-                        @endforeach
-                    </div>
+                <div class="border-b border-slate-100 pb-4">
+                    <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <span>📜</span> Transcript toàn bài Listening
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Các mốc (Q1), (Q2)… liên kết với đáp án tương ứng.</p>
                 </div>
+                @php
+                    $formattedTranscript = preg_replace_callback('/\(Q(\d+)\)/', function ($match) use ($answers) {
+                        $number = (int) $match[1];
+                        $answer = $answers->firstWhere('question.question_number', $number);
+                        $correct = $answer?->question?->correct_answer ?? '';
+                        if (\App\Services\IeltsMultiSelectService::enabled($answer?->question?->questionGroup)) {
+                            $correct = implode(', ', \App\Services\IeltsMultiSelectService::correctKeys($answer->question->questionGroup)).' (any order)';
+                        }
 
-                @foreach($groups as $idx => $group)
-                    @php
-                        $firstQuestionNumber = $group->questions->first()?->question_number ?? (($idx * 10) + 1);
-                        $partNumber = min(4, max(1, (int) ceil($firstQuestionNumber / 10)));
-                        $rawTranscript = $group->transcript ?? 'Chưa có bản ghi âm thanh cho phần này.';
-                        $formattedTranscript = preg_replace_callback('/\(Q(\d+)\)/', function($m) use ($answers) {
-                            $qNum = (int)$m[1];
-                            $ans = $answers->firstWhere('question.question_number', $qNum);
-                            $correct = $ans?->question?->correct_answer ?? '';
-                            if (\App\Services\IeltsMultiSelectService::enabled($ans?->question?->questionGroup)) {
-                                $correct = implode(', ', \App\Services\IeltsMultiSelectService::correctKeys($ans->question->questionGroup)).' (any order)';
-                            }
-                            return '<span id="transcript-target-q-' . $qNum . '" class="inline-flex items-center gap-1 mx-1 px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-bold font-mono text-xs border border-amber-300 shadow-sm transition-all duration-300 cursor-pointer"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> [Q' . $qNum . ': ' . e($correct) . ']</span>';
-                        }, e($rawTranscript));
-                    @endphp
-                    <div x-show="activeTranscriptPart === {{ $partNumber }}" x-cloak class="space-y-4">
-                        <div class="flex items-center justify-between text-xs text-slate-500 border-b border-slate-100 pb-2">
-                            <span class="font-bold uppercase text-blue-600">{{ $group->title }}</span>
-                            <span class="font-mono text-[11px]">Questions {{ ($partNumber - 1) * 10 + 1 }}–{{ $partNumber * 10 }}</span>
-                        </div>
-                        <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-sm font-sans leading-relaxed text-slate-700 whitespace-pre-line custom-scroll max-h-[480px] overflow-y-auto">
-                            {!! $formattedTranscript !!}
-                        </div>
-                    </div>
-                @endforeach
+                        return '<span id="transcript-target-q-'.$number.'" class="inline-flex items-center gap-1 mx-1 px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-bold font-mono text-xs border border-amber-300 shadow-sm transition-all duration-300 cursor-pointer"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> [Q'.$number.': '.e($correct).']</span>';
+                    }, e($fullTranscript ?: 'Chưa có transcript cho bài Listening này.'));
+                @endphp
+                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-sm font-sans leading-relaxed text-slate-700 whitespace-pre-line custom-scroll max-h-[600px] overflow-y-auto">
+                    {!! $formattedTranscript !!}
+                </div>
             </div>
         @endif
 
@@ -841,7 +818,7 @@
                                 <span class="text-xs text-slate-500 font-mono">{{ $q->questionGroup?->title }}</span>
                                 @if($isListening)
                                     <button type="button"
-                                            @click="scrollToTranscriptQuestion({{ $partNum }}, {{ $q->question_number }})"
+                                            @click="scrollToTranscriptQuestion({{ $q->question_number }})"
                                             class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95">
                                         <span>🎧 Xem trong Transcript</span>
                                     </button>

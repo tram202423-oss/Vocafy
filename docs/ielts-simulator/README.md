@@ -114,9 +114,9 @@ erDiagram
 | Bảng | Trường chính | Ghi chú |
 | --- | --- | --- |
 | `ielts_tests` | `title`, `slug`, `type`, `description`, `duration_minutes`, `is_published`, `total_questions` | Bộ đề ghép một hoặc nhiều kỹ năng; slug unique |
-| `ielts_sections` | `title`, `skill`, `test_type`, `time_limit_minutes`, `total_questions`, `is_active` | Section được tái sử dụng trong nhiều bộ đề |
+| `ielts_sections` | `title`, `skill`, `test_type`, `time_limit_minutes`, `total_questions`, `audio_url`, `transcript`, `is_active` | Audio và transcript của Listening thuộc toàn section; section có thể tái sử dụng trong nhiều bộ đề |
 | `ielts_test_sections` | `ielts_test_id`, `ielts_section_id`, `order` | Pivot; thứ tự do authoring đồng bộ |
-| `ielts_question_groups` | Section FK, `title`, `order`, `question_type`, `response_mode`, `option_usage`, `instruction`, `passage_content`, `question_content`, `audio_url`, `transcript`, `image_url`, `settings` | Một group chứa một dạng câu; Passage có thể gồm nhiều group |
+| `ielts_question_groups` | Section FK, `title`, `order`, `question_type`, `response_mode`, `option_usage`, `instruction`, `passage_content`, `question_content`, `audio_url`, `transcript`, `image_url`, `settings` | Một group chứa một dạng câu; Passage có thể gồm nhiều group. `audio_url`/`transcript` ở group chỉ giữ để đọc snapshot cũ |
 | `ielts_questions` | Group FK, `question_number`, `order`, `prompt`, `options`, `correct_answer`, `points`, `word_limit`, `explanation`, `quote_reference`, `drop_x`, `drop_y` | Một row = một số câu/ô đáp án; options là JSON |
 | `ielts_answer_options` | Group FK, `option_key`, `label`, `order` | Ngân hàng quan hệ; unique group + option key |
 | `ielts_submissions` | UUID, User/Test/Section FK, `skill`, `test_type`, `status`, timestamps, `raw_score`, `band_score`, `ai_band_score`, `teacher_band_score`, `teacher_scored_at`, `total_questions`, `metadata`, `examiner_notes` | Một lượt thi của một section; Writing/Speaking có điểm AI và giáo viên riêng |
@@ -403,13 +403,13 @@ Reading/Listening chỉ quy đổi band cho đề 40 câu, tra đúng skill + te
 
 ### 8.2. Player và Part hiện tại
 
-Player dùng audio đầu tiên của các group; nên cấu hình một audio cho cả section Listening. Nếu trình duyệt chặn autoplay, thí sinh bấm để phát. Tiến độ audio được lưu tăng dần vào metadata mỗi khoảng 10 giây và được khôi phục sau reload.
+Player dùng `ielts_sections.audio_url`: một audio phát cho cả 4 Part. Nếu trình duyệt chặn autoplay, thí sinh bấm để phát. Tiến độ audio được lưu tăng dần vào metadata mỗi khoảng 10 giây và được khôi phục sau reload.
 
 Khi audio kết thúc, client gửi sự kiện lên server. Server lưu audio_completed_at và rút deadline còn tối đa 120 giây; room khôi phục đúng deadline khi mở lại. Nếu request lưu sự kiện lỗi, giao diện báo lỗi và timer server giữ deadline ban đầu.
 
-Room và transcript cùng suy ra Part từ số câu đầu của group: câu 1–10 là Part 1, 11–20 là Part 2, 21–30 là Part 3, 31–40 là Part 4. Form từ chối group có câu trải qua hai Part. Tạo các group sao cho mỗi group nằm trọn trong một khoảng 10 câu.
+Room suy ra Part từ số câu đầu của group: câu 1–10 là Part 1, 11–20 là Part 2, 21–30 là Part 3, 31–40 là Part 4. Form từ chối group có câu trải qua hai Part. Tạo các group sao cho mỗi group nằm trọn trong một khoảng 10 câu.
 
-Playlist nhiều audio và mapping Part nhập riêng chưa có. Xem các giới hạn còn lại tại [trạng thái Listening](QUESTION-TYPES.md#5-listening-và-dữ-liệu-mẫu).
+Trang kết quả dùng `ielts_sections.transcript` để hiển thị một transcript cho toàn bài; marker `(Qn)` liên kết đến đáp án. Migration chuyển audio đầu tiên và nối transcript cũ theo thứ tự group lên section. Snapshot cũ vẫn đọc media từ group để giữ nguyên kết quả đã nộp. Xem các giới hạn còn lại tại [trạng thái Listening](QUESTION-TYPES.md#5-listening-và-dữ-liệu-mẫu).
 
 
 ## 9. Tương thích dữ liệu cũ

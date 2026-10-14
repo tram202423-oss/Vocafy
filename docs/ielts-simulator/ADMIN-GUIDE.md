@@ -270,11 +270,11 @@ Các nhóm Map cũ đang nhập nhiều nội dung riêng cho từng câu có th
 - Part 3: câu 21–30.
 - Part 4: câu 31–40.
 
-Một Part có thể có nhiều group; form chặn group trải qua hai khoảng. Room và transcript đều suy Part từ số câu đầu group theo từng khoảng 10, không dùng group.order làm số Part. Chưa có mapping Part độc lập số câu.
+Một Part có thể có nhiều group; form chặn group trải qua hai khoảng. Room suy Part từ số câu đầu group theo từng khoảng 10, không dùng group.order làm số Part. Chưa có mapping Part độc lập số câu.
 
 ### 11.2. Audio
 
-Trong tab **Audio & transcript**:
+Trong tab **Audio & transcript** của **phần thi Listening** (cùng cấp với tab Nội dung & câu hỏi):
 
 - **Tải audio lên:** MP3, WAV, OGG, M4A; tối đa 50 MB.
 - **Dán link audio:** link trực tiếp đến file hoặc link Google Drive công khai.
@@ -282,11 +282,11 @@ Trong tab **Audio & transcript**:
 - Nghe thử trong admin rồi lưu phần thi.
 - **Bỏ chọn audio** chỉ bỏ URL đã chọn trong form.
 
-Chuẩn bị một audio cho toàn section: đặt URL ở một group hoặc dùng cùng URL cho các group; form chặn URL khác nhau vì player chỉ phát audio đầu tiên. Chưa có playlist. Khi chưa cấu hình, phòng thi báo “chưa có audio”; không còn fallback âm thanh demo. Đề mẫu cũ có thể vẫn lưu sẵn URL âm thanh môi trường, cần thay bằng bài nghe thật.
+Chỉ nhập một audio cho cả 4 Part ở cấp phần thi; các nhóm câu hỏi không còn trường audio riêng. Lượt thi bắt đầu sau khi lưu dùng audio mới; kết quả lượt thi trước đó giữ media tại thời điểm bắt đầu nhờ snapshot. Khi chưa cấu hình, phòng thi báo “chưa có audio”; không còn fallback âm thanh demo. Đề mẫu cũ có thể vẫn lưu sẵn URL âm thanh môi trường, cần thay bằng bài nghe thật.
 
 ### 11.3. Transcript
 
-Nhập lời bài nghe vào trường transcript. Có thể thêm các marker `(Q1)`, `(Q2)`… để trang kết quả gắn liên kết đến câu. Transcript được hiển thị trong kết quả, không phải nội dung phòng thi.
+Nhập một transcript cho toàn bộ 4 Part ở tab **Audio & transcript**. Có thể thêm các marker `(Q1)`, `(Q2)`… để trang kết quả gắn liên kết đến câu. Trang kết quả hiển thị một audio và một transcript; transcript không hiện trong phòng thi. Migration chuyển media cũ ở group lên section, còn snapshot của lượt thi cũ vẫn đọc media từ group.
 
 Tiến độ audio được lưu khoảng 10 giây một lần và khôi phục khi reload. Khi audio kết thúc, server rút deadline còn tối đa 120 giây; không cộng thêm nếu thời gian còn ít hơn. Cần nghiệm thu mất mạng khi lưu tiến độ/audio-end và autoplay trên trình duyệt mục tiêu.
 
