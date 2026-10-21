@@ -10,6 +10,8 @@ services:
     user: "${UID}:${GID}"
     volumes:
       - ./src:/var/www
+      # Apply upload limits on every start, including when reusing an older PHP image.
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/zz-uploads.ini:ro
     ports:
       - "5173:5173"
     depends_on:

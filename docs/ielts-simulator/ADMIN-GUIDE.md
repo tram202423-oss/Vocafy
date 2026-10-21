@@ -174,6 +174,7 @@ Chọn type **Matching Information**. Có thể:
 Ví dụ bank là A–G, prompt là thông tin cần tìm, đáp án đúng là ký hiệu đoạn. Nếu dùng kéo thả, đặt **Tiêu đề ngân hàng từ** trong tab **Ngân hàng đáp án** (ví dụ `List of paragraphs`); để trống sẽ hiện **Ngân hàng từ**. Trong tab **Đề bài**, chọn **Sử dụng đáp án** theo hướng dẫn: **Một đáp án được dùng nhiều lần** hoặc **Mỗi đáp án chỉ dùng một lần**. Tùy chọn này áp dụng cho cả cách trả lời standard và kéo thả.
 
 Ở phòng thi, nhóm Matching Information kéo thả hiển thị ô trả lời cùng hàng với số câu và nội dung từng câu.
+Trong kết quả, từng dòng đề của Matching Information/Matching Headings hiển thị `prompt` cùng đáp án đã chọn; nếu sai, đáp án đúng và nội dung lựa chọn nằm cùng dòng. Ngân hàng lựa chọn nằm ngay dưới danh sách đề. Khi đáp án đã hiện ngay trong đề (Matching hoặc ô `[blank_N]`), trang không lặp lại thẻ đáp án từng câu; lời giải/trích dẫn nếu có nằm trong mục gập **Lời giải bổ sung**.
 
 Nếu chọn **chỉ dùng một lần**, các câu trong cùng nhóm phải có đáp án đúng khác nhau. Trong phòng thi, lựa chọn đã dùng ở câu khác sẽ bị khóa; thí sinh có thể **Xóa đáp án** ở câu cũ rồi chọn lại. Autosave, nộp bài và chấm điểm đều áp dụng cùng giới hạn. Với kéo thả, chuyển ô nguồn/đích được lưu trong một transaction; vẫn cần nghiệm thu drag/auto-scroll trên trình duyệt mục tiêu.
 
@@ -194,6 +195,7 @@ Reading có thể thay `[blank]`, `[blank_12]` hoặc chuỗi gạch dưới b�
 Một prompt nên có một ô trả lời. Nhiều token trong cùng prompt đang cùng dùng một answer ID.
 
 Listening standard với câu đơn hiện dùng prompt và input tách riêng. Với nội dung chung `question_content` có `[blank_N]`, cả Listening và Reading đều render ô nhập inline; mỗi token nối một câu số N.
+Sau khi nộp, trang kết quả hiển thị lại đề chung của từng nhóm Reading/Listening một lần: hướng dẫn, nội dung/bảng, hình ảnh và ngân hàng lựa chọn nếu có. Các ô `[blank_N]` được thay bằng câu số N, đáp án đã nhập và đáp án đúng nếu sai; phía dưới vẫn có thẻ đối chiếu từng câu. Bài Reading vẫn có khung xem lại Passage riêng; dạng bản đồ giữ sơ đồ và vị trí đáp án đúng.
 
 ### 8.2. Short Answer
 

@@ -394,6 +394,7 @@ Reading/Listening chỉ quy đổi band cho đề 40 câu, tra đúng skill + te
 `IeltsAudioService` hỗ trợ:
 
 - Upload MP3/WAV/OGG/M4A, kiểm tra MIME và dung lượng tối đa 50 MB.
+- Với Docker Compose trong WSL, service `app` mount `docker/php/uploads.ini` trực tiếp: `upload_max_filesize=50M`, `post_max_size=64M`. Cấu hình được nạp ở mỗi lần `docker compose up -d`, kể cả khi image PHP cũ chưa được build lại; không cần chạy lệnh chỉnh PHP thủ công sau khi khởi động.
 - Lưu trên disk `public`, đường dẫn `ielts/audio/<ULID>.<ext>`, URL `/storage/ielts/audio/...`.
 - Link trực tiếp HTTP(S): kiểm tra cấu trúc URL rồi lưu URL, không tải toàn bộ file về server hoặc xác nhận chắc chắn có thể phát.
 - Link Google Drive công khai: tải file về storage, kiểm tra host chuyển hướng, xác nhận tải file lớn, MIME/dung lượng; có giới hạn thời gian tải và số lần chuyển hướng.

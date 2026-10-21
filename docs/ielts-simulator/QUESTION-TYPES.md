@@ -23,7 +23,7 @@
 | Matching Headings | Type riêng, mặc định drag + once; chỉ dùng cho Reading | Bank dưới targets, key nối từng Paragraph | Một phần; đã hiển thị nội dung không có blank và chặn Matching Headings ở Listening; cần nghiệm thu |
 | Matching Information | Standard options theo câu hoặc bank drag chung; cấu hình once/repeat ở group | Chọn/kéo thả; giới hạn dùng lại ở admin, autosave, submit và scorer; lỗi lưu cũ không khôi phục đè lựa chọn mới | Có luồng cơ bản; thiếu nghiệm thu nhiều group và bàn phím |
 | Sentence Completion | `fill_in_blanks`, prompt và đáp án chữ | Reading có inline blank trong prompt; Listening câu đơn vẫn có input riêng | Một phần; renderer hai skill chưa đồng nhất; đã có rule từ/số/AND-OR; cần nghiệm thu đáp án biên |
-| Summary / Note / Form Completion | `question_content` + `[blank_N]`, mỗi blank một question row | Có typed blanks và drag blanks ở Reading/Listening | Có luồng cơ bản; thiếu preset/editor theo cấu trúc từng dạng |
+| Summary / Note / Form Completion | `question_content` + `[blank_N]`, mỗi blank một question row | Có typed blanks và drag blanks ở Reading/Listening; kết quả typed blanks hiển thị lại đề chung và đáp án ngay tại ô | Có luồng cơ bản; thiếu preset/editor theo cấu trúc từng dạng |
 | Table / Flow-chart Completion | HTML/ảnh + blanks dùng schema Completion; admin có công cụ chèn bảng vào rich editor | Đã render nội dung chung và ô trả lời, gồm bảng trong seeder Listening | Một phần; bảng phải xóa/chèn lại để đổi cấu trúc, chưa có editor flow-chart chuyên biệt |
 | Short Answer | Prompt, đáp án thay thế, word_limit | Input Reading/Listening, kiểm tra giới hạn ở server, chấm chữ | Có luồng cơ bản; đã có cấu hình giới hạn từ/số; cần nghiệm thu đáp án biên |
 | Plan / Map / Diagram — standard | Một nội dung câu hỏi và ảnh chung cho cả nhóm; mỗi row có số câu, đáp án, tọa độ | Select/input trên ảnh; kết quả đánh dấu vị trí đúng và đáp án trên ảnh | Có luồng cơ bản; câu thiếu vị trí ở danh sách, cần nghiệm thu trình duyệt |
@@ -33,6 +33,8 @@
 | Writing Task 1 | Group, một câu số 1, ảnh tùy chọn | Essay, đếm từ, autosave, AI tham khảo và giáo viên chính thức | Một phần; đã gửi ảnh/instruction, phân Academic/General và validate hai Task; cần nghiệm thu AI |
 | Writing Task 2 | Group, một câu số 2 | Essay, AI tham khảo; tổng AI trọng số Task 1:Task 2 = 1:2 | Một phần; đã có job/chấm lại và rubric giáo viên; cần nghiệm thu end-to-end |
 | Speaking Part 1/2/3 | Các group/prompt; không cần answer key | Một bản ghi cả section; nghe/xóa/thu lại; file private; AI từ audio; giáo viên nhập band | Một phần; chưa chia tiến trình Part/cue card/timing; đã thêm draft/checkpoint/retry và hạn chuyển file; cần nghiệm thu browser |
+
+Trang kết quả Reading/Listening hiển thị đề chung của mỗi nhóm cùng các câu/đáp án sau khi nộp; nội dung có ô trống được điền đáp án để đối chiếu, Matching Information/Headings đặt đáp án ngay cạnh từng dòng đề, nhóm có ngân hàng lựa chọn hiển thị cả ngân hàng. Khi đáp án đã có ngay trong đề, thẻ đối chiếu từng câu không lặp lại; lời giải riêng nằm trong mục gập. Passage Reading và bản đồ vẫn có vùng xem lại riêng.
 
 ## 3. Kéo thả là cách trả lời
 

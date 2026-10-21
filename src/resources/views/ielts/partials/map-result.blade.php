@@ -14,12 +14,14 @@
     </div>
 
     @if(filled($group->question_content))
-        <div class="prose max-w-none rounded-xl bg-slate-50 p-4 text-sm">{!! $group->question_content !!}</div>
+        <div class="prose max-w-none rounded-xl bg-slate-50 p-4 text-sm">{!! \App\Services\IeltsQuestionContentService::forDisplay($group->question_content) !!}</div>
     @endif
 
+    @include('ielts.partials.result-answer-bank', ['group' => $group])
+
     <figure>
-        <div class="relative mx-auto w-fit max-w-full">
-            <img src="{{ $group->image_url }}" alt="{{ $group->title }}" class="block max-h-[36rem] max-w-full rounded-xl border border-slate-200 object-contain">
+        <div class="relative mx-auto w-full max-w-4xl">
+            <img src="{{ $group->image_url }}" alt="{{ $group->title }}" class="block h-auto w-full rounded-xl border border-slate-200">
             @foreach($positionedQuestions as $question)
                 @php
                     $answer = trim((string) $question->correct_answer);

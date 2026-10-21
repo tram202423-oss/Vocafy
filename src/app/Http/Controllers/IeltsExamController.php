@@ -478,7 +478,7 @@ class IeltsExamController extends Controller
     public function result(string $submissionId)
     {
         $submission = IeltsSubmission::with([
-            'test', 'section.questionGroups.questions', 'userAnswers.question.questionGroup', 'user',
+            'test', 'section.questionGroups.questions', 'section.questionGroups.answerOptions', 'userAnswers.question.questionGroup', 'userAnswers.question.questionGroup.questions', 'userAnswers.question.questionGroup.answerOptions', 'user',
         ])->findOrFail($submissionId);
         $this->authorizeSubmission($submission);
         if ($submission->status === IeltsSubmissionStatusEnum::ABANDONED) abort(404);
@@ -495,7 +495,7 @@ class IeltsExamController extends Controller
                 }
             });
             $submission = IeltsSubmission::with([
-                'test', 'section.questionGroups.questions', 'userAnswers.question.questionGroup', 'user',
+                'test', 'section.questionGroups.questions', 'section.questionGroups.answerOptions', 'userAnswers.question.questionGroup', 'userAnswers.question.questionGroup.questions', 'userAnswers.question.questionGroup.answerOptions', 'user',
             ])->findOrFail($submissionId);
             app(\App\Services\IeltsExamSnapshotService::class)->apply($submission);
         }

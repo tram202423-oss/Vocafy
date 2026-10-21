@@ -86,15 +86,15 @@
         <p x-show="selectedQuestion" x-cloak style="font-size: 0.875rem; font-weight: 600; color: #1d4ed8;" x-text="selectedQuestion ? `Đang đặt: ${label(selectedQuestion)}` : ''"></p>
 
         <div style="max-width: 48rem; overflow: auto; border: 1px solid #cbd5e1; border-radius: 0.75rem; background: white; padding: 0.5rem;">
-            <div style="position: relative; width: fit-content; max-width: 100%;">
+            <div style="position: relative; width: 100%;">
                 <button
                     type="button"
                     @click="place($event)"
                     :disabled="selectedKey === null"
                     :aria-label="selectedQuestion ? `Đặt vị trí cho ${label(selectedQuestion)} trên ảnh` : 'Thêm câu hỏi trước khi đặt vị trí'"
-                    style="display: block; max-width: 100%; width: fit-content; padding: 0; border: 0; line-height: 0; cursor: crosshair;"
+                    style="display: block; width: 100%; padding: 0; border: 0; line-height: 0; cursor: crosshair;"
                 >
-                    <img :src="$wire.$get(imagePath)" alt="Ảnh bản đồ hoặc sơ đồ để đặt vị trí các câu hỏi" style="display: block; max-width: 100%; height: auto;">
+                    <img :src="$wire.$get(imagePath)" alt="Ảnh bản đồ hoặc sơ đồ để đặt vị trí các câu hỏi" style="display: block; width: 100%; height: auto;">
                 </button>
                 <template x-for="question in items.filter(item => hasPosition(item))" :key="question.key">
                     <button

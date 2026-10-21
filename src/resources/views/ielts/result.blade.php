@@ -372,8 +372,8 @@
                     <p class="text-sm text-slate-500">Không tìm thấy tệp ghi âm cho lượt thi này.</p>
                 @endif
 
-                <details class="rounded-xl border border-slate-200 p-4">
-                    <summary class="cursor-pointer text-xs font-bold text-slate-800">Câu hỏi trong phần thi</summary>
+                <details open class="rounded-xl border border-slate-200 p-4">
+                    <summary class="cursor-pointer text-xs font-bold text-slate-800">Đề bài và câu hỏi Speaking</summary>
                     <div class="mt-3 space-y-3">
                         @foreach($groups as $speakingGroup)
                             <div>
@@ -781,26 +781,66 @@
         @if(!$isSubjective)
             <div class="space-y-6">
                 <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 mb-4">
-                    <span>🔍</span> Giải thích chi tiết & trích dẫn từng câu hỏi
+                    <span>🔍</span> Đề bài, đáp án &amp; giải thích
                 </h2>
 
-                @php $renderedMapGroups = []; @endphp
+                @php $renderedReviewGroups = []; @endphp
                 @foreach($answers as $ans)
                     @php
                         $q = $ans->question;
                         $isCorrect = (bool) $ans->is_correct;
-                        $partNum = ceil($q->question_number / 10);
                         $mapGroup = $q->questionGroup;
-                        $showMap = $mapGroup?->question_type?->value === 'map_labeling'
-                            && filled($mapGroup->image_url)
-                            && ! in_array($mapGroup->id, $renderedMapGroups, true);
-                        if ($showMap) {
-                            $renderedMapGroups[] = $mapGroup->id;
+                        $reviewContent = $mapGroup?->question_content ?: ($isListening ? $mapGroup?->passage_content : null);
+                        $matchingInline = in_array($mapGroup?->question_type?->value, ['matching_information', 'matching_headings'], true);
+                        $blankInline = filled($reviewContent) && str_contains($reviewContent, '[blank_'.$q->question_number.']');
+                        $hasInlineResult = $matchingInline || $blankInline;
+                        $showGroupReview = $mapGroup && ! in_array($mapGroup->id, $renderedReviewGroups, true);
+                        if ($showGroupReview) {
+                            $renderedReviewGroups[] = $mapGroup->id;
+                            $groupAnswers = $answers->filter(fn ($item) => $item->question?->questionGroup?->id === $mapGroup->id);
+                            $groupHasCorrect = $groupAnswers->contains(fn ($item) => (bool) $item->is_correct);
+                            $groupHasIncorrect = $groupAnswers->contains(fn ($item) => ! $item->is_correct);
                         }
                     @endphp
-                    @if($showMap)
-                        @include('ielts.partials.map-result', ['group' => $mapGroup])
+                    @if($showGroupReview)
+                        <div x-show="filter === 'all' || (filter === 'correct' && {{ $groupHasCorrect ? 'true' : 'false' }}) || (filter === 'incorrect' && {{ $groupHasIncorrect ? 'true' : 'false' }})"
+                             x-cloak>
+                            @if($mapGroup->question_type?->value === 'map_labeling' && filled($mapGroup->image_url))
+                                @include('ielts.partials.map-result', ['group' => $mapGroup])
+                            @else
+                                <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-3">
+                                    <div>
+                                        <h3 class="text-sm font-black text-slate-900">Đề bài · {{ $mapGroup->title }}</h3>
+                                        @if($mapGroup->instruction)
+                                            <p class="mt-1 text-xs text-slate-600">{{ $mapGroup->instruction }}</p>
+                                        @endif
+                                    </div>
+                                    @if(filled($reviewContent))
+                                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 leading-loose overflow-x-auto prose max-w-none">
+                                            @if(preg_match('/\[blank_\d+\]/', $reviewContent))
+                                                @include('ielts.partials.result-shared-content', ['group' => $mapGroup, 'noteContent' => $reviewContent, 'answers' => $answers])
+                                            @else
+                                                {!! \App\Services\IeltsQuestionContentService::forDisplay($reviewContent) !!}
+                                            @endif
+                                        </div>
+                                    @endif
+                                    @if(filled($mapGroup->image_url))
+                                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                                            <img src="{{ $mapGroup->image_url }}" alt="{{ $mapGroup->title }}" class="mx-auto max-h-[36rem] max-w-full object-contain">
+                                        </div>
+                                    @endif
+                                    @if(in_array($mapGroup->question_type?->value, ['matching_information', 'matching_headings'], true))
+                                        @include('ielts.partials.result-matching-questions', ['group' => $mapGroup, 'groupAnswers' => $groupAnswers])
+                                    @endif
+                                    @include('ielts.partials.result-answer-bank', ['group' => $mapGroup])
+                                    @if($matchingInline || (filled($reviewContent) && preg_match('/\[blank_\d+\]/', $reviewContent)))
+                                        @include('ielts.partials.result-group-explanations', ['group' => $mapGroup])
+                                    @endif
+                                </section>
+                            @endif
+                        </div>
                     @endif
+                    @unless($hasInlineResult)
                     <div class="border rounded-2xl p-6 transition-all shadow-sm {{ $isCorrect ? 'bg-emerald-50/40 border-emerald-200' : 'bg-red-50/40 border-red-200' }}"
                          x-show="filter === 'all' || (filter === 'correct' && {{ $isCorrect ? 'true' : 'false' }}) || (filter === 'incorrect' && {{ !$isCorrect ? 'true' : 'false' }})"
                          x-cloak>
@@ -829,6 +869,8 @@
                         <div class="text-sm font-semibold text-slate-900 mb-4 pl-11 leading-loose">
                             @if($q->questionGroup?->question_type?->value === 'map_labeling' && filled($q->questionGroup?->image_url))
                                 Câu {{ $q->question_number }} · Xem vị trí trên sơ đồ phía trên.
+                            @elseif(blank($q->prompt) && filled($reviewContent))
+                                Câu {{ $q->question_number }} · Xem đề bài và ô trả lời phía trên.
                             @elseif(preg_match('/\[blank(_\d+)?\]|_{2,}/', $q->prompt))
                                 @php
                                     $userAns = $ans->user_answer ?: '(Bỏ trống)';
@@ -842,7 +884,7 @@
                             @else
                                 {{ $q->prompt }}
                             @endif
-                            @if(!empty($q->options))
+                            @if(!empty($q->options) && ! \App\Services\IeltsMultiSelectService::enabled($q->questionGroup))
                                 <div class="mt-3 space-y-1">
                                     @foreach($q->options as $option)
                                         <div>
@@ -883,6 +925,7 @@
                             @endif
                         </div>
                     </div>
+                    @endunless
                 @endforeach
             </div>
         @endif
