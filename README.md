@@ -26,6 +26,7 @@
 - **Theo dõi tiến độ học tập**: Đánh dấu từ đã thuộc (*Master*), cần ôn tập (*Review*), và đặt lại tiến độ (*Reset*).
 - **AI Writing Assistant**: Đánh giá, chấm điểm và góp ý bài viết tiếng Anh tức thì sử dụng sức mạnh của **Google Gemini API**.
 - **Hệ thống Quản trị Filament 3**: Giao diện Admin Panel hiện đại quản lý toàn bộ dữ liệu (Categories, Topics, Lessons, Quizzes, Vocabularies, Users, Roles & Permissions).
+- **IELTS Simulator System**: Quản trị đề và giả lập Reading/Listening, tích hợp chấm Writing bằng AI. Speaking chưa có luồng thi riêng; một số dạng câu và quy tắc chấm còn cần hoàn thiện. Xem [tài liệu module](docs/ielts-simulator/README.md), [hướng dẫn admin](docs/ielts-simulator/ADMIN-GUIDE.md) và [trạng thái các dạng câu hỏi](docs/ielts-simulator/QUESTION-TYPES.md).
 
 ---
 
@@ -57,6 +58,9 @@ Toàn bộ môi trường phát triển được đóng gói qua Docker Compose:
 > 📌 **Địa chỉ truy cập ứng dụng**: [http://localhost:8080](http://localhost:8080)  
 > 📌 **Admin Panel**: [http://localhost:8080/admin](http://localhost:8080/admin)  
 > 📌 **MySQL từ máy Host (DBeaver, TablePlus, Navicat)**: `127.0.0.1:3307`
+
+> **macOS:** dùng [Compose riêng và hướng dẫn chạy trên Mac](docs/docker-macos.md). File mặc định hiện cần các biến `UID`/`GID` từ shell.
+> **Sau khi clone hoặc pull code:** xem [checklist setup và cập nhật](docs/SETUP-AFTER-CLONE.md), đặc biệt các bước migrate, build frontend, storage link và queue.
 
 ---
 

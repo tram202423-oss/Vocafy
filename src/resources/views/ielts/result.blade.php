@@ -1,0 +1,978 @@
+@extends('layouts.app')
+
+@section('title', 'Kết Quả Bài Thi IELTS: ' . ($submission->test?->title ?? 'IELTS Test'))
+
+@php
+    $skill = $submission->skill ?? 'reading';
+    $isListening = ($skill === 'listening');
+    $isReading = ($skill === 'reading');
+    $isWriting = ($skill === 'writing');
+    $isSpeaking = ($skill === 'speaking');
+    $isSubjective = $isWriting || $isSpeaking;
+    $isGeneral = $submission->test_type->value === 'general_training';
+    $officialBand = $isSubjective ? $submission->teacher_band_score : $submission->band_score;
+    $groups = $submission->section?->questionGroups ?? collect();
+    $firstAudio = \App\Services\IeltsListeningMediaService::audioUrl($submission->section);
+    $fullTranscript = \App\Services\IeltsListeningMediaService::transcript($submission->section);
+@endphp
+
+@section('content')
+<div class="bg-gradient-to-b from-blue-50/70 via-white to-slate-50 py-12 px-4 sm:px-6 lg:px-8 min-h-screen text-slate-800"
+     x-data="{
+         filter: 'all',
+         activeWritingTask: 1,
+         writingTab: 'overview',
+         scrollToTranscriptQuestion(qNum) {
+             this.$nextTick(() => {
+                 const el = document.getElementById('transcript-target-q-' + qNum);
+                 if (el) {
+                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                     el.classList.add('ring-4', 'ring-blue-400', 'scale-110');
+                     setTimeout(() => {
+                         el.classList.remove('ring-4', 'ring-blue-400', 'scale-110');
+                     }, 3000);
+                 }
+             });
+         }
+     }">
+    <div class="max-w-6xl mx-auto space-y-8">
+
+        {{-- BREADCRUMB --}}
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+            <a href="{{ route('ielts.tests.index') }}" class="hover:text-blue-600 transition-colors">Danh sách đề thi</a>
+            <span>/</span>
+            <span class="text-slate-700">Báo cáo kết quả &amp; Giải thích chi tiết ({{ ucfirst($skill) }})</span>
+        </div>
+
+        {{-- ===================================================== --}}
+        {{-- HEADER SUMMARY CARD --}}
+        {{-- ===================================================== --}}
+        <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-sm">
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-3
+                        @if($isListening) bg-blue-50 text-blue-700 border border-blue-100
+                        @elseif($isWriting) bg-amber-50 text-amber-700 border border-amber-100
+                        @elseif($isSpeaking) bg-purple-50 text-purple-700 border border-purple-100
+                        @else bg-emerald-50 text-emerald-700 border border-emerald-100 @endif">
+                        @if($isSubjective && $submission->teacher_band_score === null)
+                            <span>Đã nộp · chờ giáo viên chấm Band chính thức</span>
+                        @elseif($isSubjective)
+                            <span>✓ Giáo viên đã chấm Band chính thức</span>
+                        @else
+                            <span>✓ Đã hoàn thành &amp; chấm điểm</span>
+                        @endif
+                        <span class="font-black">• {{ strtoupper($skill) }}</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                        {{ $submission->test?->title ?? ($submission->section?->title ?? 'Bài Thi IELTS') }}
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-2">
+                        Thí sinh: <strong class="text-slate-800">{{ $submission->user?->name ?? 'Candidate Guest' }}</strong> •
+                        Thời gian nộp: {{ $submission->completed_at ? $submission->completed_at->format('H:i d/m/Y') : now()->format('H:i d/m/Y') }}
+                    </p>
+                </div>
+
+                {{-- SCORE BADGE --}}
+                <div class="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex-shrink-0">
+                    <div class="text-center pr-6 border-r border-slate-200">
+                        <span class="text-xs font-bold text-slate-500 block">{{ $isSubjective ? 'Band chính thức · giáo viên' : 'IELTS Band' }}</span>
+                        <div class="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 my-1">
+                            {{ $officialBand !== null ? number_format($officialBand, 1) : '—' }}
+                        </div>
+                        <span class="text-[11px] font-semibold {{ $officialBand !== null ? 'text-emerald-600' : 'text-amber-700' }}">
+                            @if($officialBand === null)
+                                {{ $isSubjective ? 'Đang chờ giáo viên chấm' : 'Chưa có điểm' }}
+                            @elseif($officialBand >= 8.0) Very Good User
+                            @elseif($officialBand >= 7.0) Good User
+                            @elseif($officialBand >= 6.0) Competent User
+                            @elseif($officialBand >= 5.0) Modest User
+                            @else Limited User
+                            @endif
+                        </span>
+                    </div>
+
+                    <div class="text-center pl-2">
+                        @if($isSubjective)
+                            <span class="text-xs font-bold text-slate-500 block">Band AI tham khảo</span>
+                            <div class="text-3xl font-black text-slate-900 my-1">{{ $submission->ai_band_score !== null ? number_format($submission->ai_band_score, 1) : '—' }}</div>
+                            <span class="text-[11px] font-semibold text-amber-600">Không phải Band chính thức</span>
+                        @else
+                            <span class="text-xs font-bold text-slate-500 block">Điểm thô (Raw)</span>
+                            <div class="text-3xl font-black text-slate-900 my-1">
+                                {{ $correctCount }} <span class="text-slate-400 text-xl font-bold">/ {{ $totalQuestions }}</span>
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-500">Độ chính xác: {{ $percentage }}%</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- ACTION BUTTONS --}}
+            <div class="mt-8 pt-6 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+                @if($isWriting)
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="activeWritingTask = 1; writingTab = 'overview'"
+                                :class="activeWritingTask === 1 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border">
+                            📊 Task 1 (Report)
+                        </button>
+                        <button type="button" @click="activeWritingTask = 2; writingTab = 'overview'"
+                                :class="activeWritingTask === 2 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border">
+                            ✍️ Task 2 (Essay)
+                        </button>
+                    </div>
+                @elseif(!$isSpeaking)
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="filter = 'all'"
+                                :class="filter === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors border">
+                            Tất cả ({{ $answers->count() }})
+                        </button>
+                        <button type="button" @click="filter = 'correct'"
+                                :class="filter === 'correct' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors border flex items-center gap-1">
+                            <span>✓ Đúng</span> ({{ $answers->where('is_correct', true)->count() }})
+                        </button>
+                        <button type="button" @click="filter = 'incorrect'"
+                                :class="filter === 'incorrect' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors border flex items-center gap-1">
+                            <span>✗ Sai</span> ({{ $answers->where('is_correct', false)->count() }})
+                        </button>
+                    </div>
+                @endif
+
+                <div class="flex items-center gap-3">
+                    @if($submission->test)
+                        <a href="{{ route('ielts.tests.show', $submission->test->slug) }}"
+                           class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-blue-600/25 transition-all">
+                            Làm lại bài thi này
+                        </a>
+                    @endif
+                    <a href="{{ route('ielts.tests.index') }}"
+                       class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors">
+                        Về danh sách đề thi
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===================================================== --}}
+        {{-- LISTENING: AUDIO REVIEW PLAYER & TRANSCRIPT VIEWER --}}
+        {{-- ===================================================== --}}
+        @if($isListening)
+            @if($firstAudio)
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm"
+                 x-data="{
+                     audioEl: null,
+                     isPlaying: false,
+                     currentTime: '00:00',
+                     duration: '30:00',
+                     progress: 0,
+                     playbackRate: 1.0,
+                     volume: 85,
+                     init() {
+                         this.audioEl = this.$refs.reviewAudio;
+                         if (this.audioEl) this.audioEl.volume = this.volume / 100;
+                     },
+                     togglePlay() {
+                         if (!this.audioEl) return;
+                         if (this.isPlaying) { this.audioEl.pause(); this.isPlaying = false; }
+                         else { this.audioEl.play(); this.isPlaying = true; }
+                     },
+                     setRate(rate) { this.playbackRate = rate; if (this.audioEl) this.audioEl.playbackRate = rate; },
+                     seek(e) {
+                         if (!this.audioEl || !this.audioEl.duration) return;
+                         const rect = e.currentTarget.getBoundingClientRect();
+                         const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                         this.audioEl.currentTime = pos * this.audioEl.duration;
+                     },
+                     onTimeUpdate() {
+                         if (!this.audioEl) return;
+                         const cur = Math.floor(this.audioEl.currentTime);
+                         const dur = Math.floor(this.audioEl.duration || 1800);
+                         this.currentTime = String(Math.floor(cur/60)).padStart(2,'0') + ':' + String(cur%60).padStart(2,'0');
+                         this.duration = String(Math.floor(dur/60)).padStart(2,'0') + ':' + String(dur%60).padStart(2,'0');
+                         this.progress = dur > 0 ? (cur / dur) * 100 : 0;
+                     }
+                 }">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg border border-blue-100">🎧</div>
+                        <div>
+                            <h3 class="text-base font-black text-slate-900">Audio player luyện nghe &amp; rà soát</h3>
+                            <p class="text-xs text-slate-500">Phát lại, tua đến vị trí mong muốn và điều chỉnh tốc độ nghe</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                        <span class="text-[10px] font-bold text-slate-500 px-2">Tốc độ:</span>
+                        @foreach([0.8, 1.0, 1.25] as $rate)
+                            <button type="button" @click="setRate({{ $rate }})"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                                    :class="playbackRate === {{ $rate }} ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:text-slate-900'">
+                                {{ $rate }}x
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <button type="button" @click="togglePlay()"
+                            class="w-11 h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center justify-center text-lg font-bold shadow-lg shadow-blue-600/25 transition-all active:scale-95 flex-shrink-0">
+                        <span x-text="isPlaying ? '⏸' : '▶'">▶</span>
+                    </button>
+                    <span class="text-xs font-mono text-slate-600 w-12 text-center" x-text="currentTime">00:00</span>
+                    <div class="flex-grow bg-slate-200 rounded-full h-2.5 overflow-hidden cursor-pointer" @click="seek($event)">
+                        <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-100" :style="'width: ' + progress + '%'"></div>
+                    </div>
+                    <span class="text-xs font-mono text-slate-500 w-12 text-center" x-text="duration">30:00</span>
+                    <audio x-ref="reviewAudio" @timeupdate="onTimeUpdate()" @ended="isPlaying = false" src="{{ $firstAudio }}" preload="auto"></audio>
+                </div>
+            </div>
+            @else
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+                    Bộ đề này chưa có audio để phát lại. Transcript và đáp án vẫn hiển thị bên dưới nếu đã được nhập.
+                </div>
+            @endif
+
+            {{-- One transcript for the complete Listening section. --}}
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+                <div class="border-b border-slate-100 pb-4">
+                    <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <span>📜</span> Transcript toàn bài Listening
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Các mốc (Q1), (Q2)… liên kết với đáp án tương ứng.</p>
+                </div>
+                @php
+                    $formattedTranscript = preg_replace_callback('/\(Q(\d+)\)/', function ($match) use ($answers) {
+                        $number = (int) $match[1];
+                        $answer = $answers->firstWhere('question.question_number', $number);
+                        $correct = $answer?->question?->correct_answer ?? '';
+                        if (\App\Services\IeltsMultiSelectService::enabled($answer?->question?->questionGroup)) {
+                            $correct = implode(', ', \App\Services\IeltsMultiSelectService::correctKeys($answer->question->questionGroup)).' (any order)';
+                        }
+
+                        return '<span id="transcript-target-q-'.$number.'" class="inline-flex items-center gap-1 mx-1 px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-bold font-mono text-xs border border-amber-300 shadow-sm transition-all duration-300 cursor-pointer"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> [Q'.$number.': '.e($correct).']</span>';
+                    }, e($fullTranscript ?: 'Chưa có transcript cho bài Listening này.'));
+                @endphp
+                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-sm font-sans leading-relaxed text-slate-700 whitespace-pre-line custom-scroll max-h-[600px] overflow-y-auto">
+                    {!! $formattedTranscript !!}
+                </div>
+            </div>
+        @endif
+
+        {{-- ===================================================== --}}
+        {{-- READING: PASSAGES REVIEWER --}}
+        {{-- ===================================================== --}}
+        @if($isReading)
+            @php $readingPassages = $groups->filter(fn ($group) => filled($group->passage_content))->values(); @endphp
+            @if($readingPassages->isNotEmpty())
+                <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+                     x-data="{ activePassageTab: 1 }">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <span>📖</span> Toàn văn {{ $readingPassages->count() }} bài đọc (Reading Passages) & đối chiếu
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1">Đọc lại bài văn hoàn chỉnh và đối chiếu các câu hỏi của từng bài đọc</p>
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+                            @foreach($readingPassages as $pIdx => $pGroup)
+                                <button type="button" @click="activePassageTab = {{ $pIdx + 1 }}"
+                                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border"
+                                        :class="activePassageTab === {{ $pIdx + 1 }} ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'">
+                                    Passage {{ $pIdx + 1 }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    @foreach($readingPassages as $pIdx => $pGroup)
+                        <div x-show="activePassageTab === {{ $pIdx + 1 }}" x-cloak class="space-y-4">
+                            <div class="flex items-center justify-between text-xs text-slate-500 border-b border-slate-100 pb-2">
+                                <span class="font-bold uppercase text-blue-600">{{ $pGroup->title }}</span>
+                                <span class="font-mono text-[11px]">
+                                    @php
+                                        $passageQuestionNumbers = $groups->skipUntil(fn ($group) => $group->id === $pGroup->id)
+                                            ->takeUntil(fn ($group) => $group->id !== $pGroup->id && filled($group->passage_content))
+                                            ->flatMap(fn ($group) => $group->questions)->pluck('question_number');
+                                    @endphp
+                                    @if($passageQuestionNumbers->isNotEmpty())
+                                        Questions {{ $passageQuestionNumbers->min() }}–{{ $passageQuestionNumbers->max() }}
+                                    @endif
+                                </span>
+                            </div>
+                            <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-sm font-sans leading-relaxed text-slate-700 prose max-w-none custom-scroll max-h-[500px] overflow-y-auto">
+                                {!! $pGroup->passage_content !!}
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        @endif
+
+        @if($isSubjective && in_array(data_get($submission->metadata, 'ai_assessment.status'), ['pending', 'processing'], true))
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm" x-init="setTimeout(() => window.location.reload(), 10000)">
+                Bài đã nộp. AI đang xử lý đánh giá tham khảo; trang sẽ tự cập nhật. Giáo viên có thể chấm độc lập.
+            </div>
+        @endif
+        @if($isSubjective && $submission->teacher_criteria)
+            <section class="rounded-2xl border border-emerald-200 bg-white p-5">
+                <h2 class="font-bold text-emerald-800">Điểm tiêu chí của giáo viên</h2>
+                @foreach($submission->teacher_criteria as $rubric => $scores)
+                    @php $labels = $rubric === 'speaking'
+                        ? ['Fluency and Coherence', 'Lexical Resource', 'Grammatical Range and Accuracy', 'Pronunciation']
+                        : [$rubric === 'task1' ? 'Task Achievement' : 'Task Response', 'Coherence and Cohesion', 'Lexical Resource', 'Grammatical Range and Accuracy']; @endphp
+                    @if(collect($scores)->contains(fn ($score) => $score !== null && $score !== ''))
+                        <h3 class="mt-3 font-semibold">{{ ucfirst($rubric) }}</h3>
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mt-2">
+                            @foreach($labels as $index => $label)
+                                <div><dt class="inline text-slate-600">{{ $label }}:</dt>
+                                    <dd class="inline font-bold">{{ isset($scores[$index]) ? number_format((float) $scores[$index], 1) : '—' }}</dd></div>
+                            @endforeach
+                        </dl>
+                    @endif
+                @endforeach
+            </section>
+        @endif
+        @if(!$isSubjective && $submission->band_score === null)
+            <p class="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
+                {{ (int) $submission->total_questions !== 40 ? 'Bài luyện tập này hiển thị số câu đúng; không quy đổi band trên thang 40 câu.' : 'Chưa có bảng quy đổi band phù hợp cho kỹ năng và hệ thi này.' }}
+            </p>
+        @endif
+        @if($isSubjective && filled($submission->examiner_notes))
+            <section class="bg-white border border-emerald-200 rounded-2xl p-5 shadow-sm">
+                <h2 class="text-sm font-black text-emerald-800">Nhận xét của giáo viên</h2>
+                <p class="text-sm text-slate-700 mt-2 whitespace-pre-line">{{ $submission->examiner_notes }}</p>
+            </section>
+        @endif
+
+        {{-- ===================================================== --}}
+        {{-- SPEAKING: RECORDING AND ADVISORY AI EVALUATION --}}
+        {{-- ===================================================== --}}
+        @if($isSpeaking)
+            @php
+                $speakingEval = data_get($submission->metadata, 'speaking_evaluation', []);
+                $speakingRecording = data_get($submission->metadata, 'speaking_recording.path');
+            @endphp
+            <section class="bg-white border border-purple-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">Bài Speaking và đánh giá AI</h2>
+                        <p class="text-xs text-amber-700 mt-1">Điểm và nhận xét AI chỉ để tham khảo. Band chính thức do giáo viên cập nhật.</p>
+                    </div>
+                    <span class="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
+                        {{ data_get($submission->metadata, 'speaking_evaluation_status') === 'graded' ? 'AI đã đánh giá' : (data_get($submission->metadata, 'speaking_evaluation_status') === 'failed' ? 'AI chưa thể đánh giá' : 'Chưa có đánh giá AI') }}
+                    </span>
+                </div>
+
+                @if($speakingRecording)
+                    <audio controls preload="none" class="w-full" src="{{ route('ielts.exam.speaking-recording', $submission->id) }}"></audio>
+                @else
+                    <p class="text-sm text-slate-500">Không tìm thấy tệp ghi âm cho lượt thi này.</p>
+                @endif
+
+                <details open class="rounded-xl border border-slate-200 p-4">
+                    <summary class="cursor-pointer text-xs font-bold text-slate-800">Đề bài và câu hỏi Speaking</summary>
+                    <div class="mt-3 space-y-3">
+                        @foreach($groups as $speakingGroup)
+                            <div>
+                                <h3 class="text-xs font-bold text-purple-700">{{ $speakingGroup->title }}</h3>
+                                @if($speakingGroup->instruction)
+                                    <p class="text-xs text-slate-500 mt-1">{{ $speakingGroup->instruction }}</p>
+                                @endif
+                                @if($speakingGroup->image_url)<img src="{{ $speakingGroup->image_url }}" alt="{{ $speakingGroup->title }}" class="max-w-full max-h-80">@endif
+                                @foreach($speakingGroup->questions as $speakingQuestion)
+                                    <p class="text-xs text-slate-700 mt-1"><strong>{{ $speakingQuestion->question_number }}.</strong> {{ $speakingQuestion->prompt }}</p>
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+                </details>
+
+                @if($speakingEval && in_array(data_get($submission->metadata, 'speaking_evaluation_status'), ['graded', 'ungradable'], true))
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($speakingEval['criteria'] ?? [] as $criterion)
+                            <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h3 class="text-xs font-bold text-slate-800">{{ $criterion['name'] ?? 'Tiêu chí IELTS Speaking' }}</h3>
+                                    <strong class="text-purple-700">{{ isset($criterion['score']) ? number_format((float) $criterion['score'], 1) : '—' }}</strong>
+                                </div>
+                                <p class="text-xs text-slate-600 mt-2">{{ $criterion['comment'] ?? '' }}</p>
+                            </article>
+                        @endforeach
+                    </div>
+
+                    @if(filled($speakingEval['transcript'] ?? null))
+                        <div class="rounded-xl border border-slate-200 p-4">
+                            <h3 class="text-xs font-bold text-slate-800">Transcript AI tham khảo</h3>
+                            <p class="text-sm text-slate-700 mt-2 whitespace-pre-line">{{ $speakingEval['transcript'] }}</p>
+                        </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        @foreach(['strengths' => 'Điểm làm tốt', 'improvements' => 'Gợi ý cải thiện'] as $key => $label)
+                            @if(!empty($speakingEval[$key]))
+                                <div class="rounded-xl bg-slate-50 p-4">
+                                    <h3 class="text-xs font-bold text-slate-800 mb-2">{{ $label }}</h3>
+                                    <ul class="list-disc pl-5 space-y-1 text-xs text-slate-600">
+                                        @foreach($speakingEval[$key] as $item)<li>{{ $item }}</li>@endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    @if(filled($speakingEval['limitations'] ?? null))
+                        <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">{{ $speakingEval['limitations'] }}</p>
+                    @endif
+                @endif
+            </section>
+        @endif
+
+        {{-- ===================================================== --}}
+        {{-- WRITING: AI ADVISORY EVALUATION REPORT (GEMINI) --}}
+        {{-- ===================================================== --}}
+        @if($isWriting)
+            @php $writingEvals = $submission->metadata['writing_evaluations'] ?? []; @endphp
+
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-900">
+                Band và nhận xét dưới đây do AI tạo để tham khảo. Band chính thức của Writing là điểm giáo viên chấm ở phần tóm tắt.
+            </div>
+            <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+                {{-- Tab Bar --}}
+                <div class="flex border-b border-slate-200 overflow-x-auto">
+                    @foreach(['overview' => ['📊', 'Tổng quan & 4 tiêu chí'], 'feedback' => ['💡', 'Nhận xét & lỗi sai'], 'sample' => ['✨', 'Bài mẫu Band 8.0+'], 'submission' => ['📝', 'Bài làm của bạn']] as $tabKey => $tabInfo)
+                        <button type="button" @click="writingTab = '{{ $tabKey }}'"
+                                :class="writingTab === '{{ $tabKey }}' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'"
+                                class="px-5 py-4 text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+                            <span>{{ $tabInfo[0] }}</span> {{ $tabInfo[1] }}
+                        </button>
+                    @endforeach
+                </div>
+
+                <div class="p-6 sm:p-8">
+
+                    {{-- TAB: OVERVIEW + 4 CRITERIA --}}
+                    <div x-show="writingTab === 'overview'" x-cloak>
+                        @foreach($answers as $taskAns)
+                            @php
+                                $q = $taskAns->question;
+                                $taskNum = $q->question_number ?? 1;
+                                $evalData = json_decode($taskAns->notes ?? '{}', true) ?? [];
+                                $criteria = $evalData['criteria'] ?? [];
+                                $overallScore = $evalData['overallScore'] ?? null;
+                                $bandLevel = $evalData['bandLevel'] ?? null;
+                                $taskStatus = data_get($submission->metadata, 'writing_task_statuses.' . $taskNum, 'missing');
+                                $complexity = $evalData['complexity'] ?? 'B2 - C2';
+                                $minWords = $taskNum === 1 ? 150 : 250;
+                                $wordCount = str_word_count($taskAns->user_answer ?? '');
+                                $taskLabel = $taskNum === 1 ? ($isGeneral ? 'Task 1 (Letter)' : 'Task 1 (Academic Report)') : 'Task 2 (Discursive Essay)';
+                            @endphp
+                            <div x-show="activeWritingTask === {{ $taskNum }}" x-cloak>
+                                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 pb-6 border-b border-slate-100">
+                                    <div>
+                                        <div class="text-[11px] font-bold text-blue-600 mb-1">
+                                            IELTS {{ $isGeneral ? 'General Training' : 'Academic' }} Writing – {{ $taskLabel }}
+                                        </div>
+                                        @if($overallScore !== null)
+                                            <div class="flex items-baseline gap-3">
+                                                <span class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-600 to-cyan-500">
+                                                    {{ number_format((float)$overallScore, 1) }}
+                                                </span>
+                                                <div>
+                                                    <div class="text-lg font-black text-slate-900">/ 9.0</div>
+                                                    <div class="text-xs text-slate-500 mt-0.5">{{ $bandLevel }}</div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <p class="mt-3 max-w-md rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                                                @if($taskStatus === 'failed')
+                                                    AI không chấm được Task này. Hệ thống không gán band mặc định.
+                                                @else
+                                                    Chưa có bài viết cho Task này nên chưa thể tính band.
+                                                @endif
+                                            </p>
+                                        @endif
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-center px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200">
+                                            <div class="text-[10px] text-slate-500 font-bold mb-1">Số từ</div>
+                                            <div class="text-2xl font-black {{ $wordCount >= $minWords ? 'text-emerald-600' : 'text-red-500' }}">
+                                                {{ $wordCount }}
+                                                <span class="text-sm text-slate-400">/ {{ $minWords }}+</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-center px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200">
+                                            <div class="text-[10px] text-slate-500 font-bold mb-1">Trình độ</div>
+                                            <div class="text-sm font-black text-indigo-600">{{ $complexity }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if(!empty($criteria))
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                                        @foreach($criteria as $ci => $criterion)
+                                            @php
+                                                $score = (float)($criterion['score'] ?? 0);
+                                                $maxScore = (float)($criterion['maxScore'] ?? 9.0);
+                                                $pct = $maxScore > 0 ? round(($score / $maxScore) * 100) : 0;
+                                                $comment = $criterion['comment'] ?? '';
+                                                $name = $criterion['name'] ?? 'Criterion';
+                                                $gradients = [
+                                                    ['from-blue-500 to-cyan-500', 'text-blue-700', 'bg-blue-50 border-blue-100'],
+                                                    ['from-emerald-500 to-teal-500', 'text-emerald-700', 'bg-emerald-50 border-emerald-100'],
+                                                    ['from-violet-500 to-purple-500', 'text-violet-700', 'bg-violet-50 border-violet-100'],
+                                                    ['from-rose-500 to-pink-500', 'text-rose-700', 'bg-rose-50 border-rose-100'],
+                                                ];
+                                                $g = $gradients[$ci % count($gradients)];
+                                            @endphp
+                                            <div class="p-5 rounded-2xl border {{ $g[2] }} space-y-3">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-xs font-bold {{ $g[1] }} leading-tight max-w-[60%]">{{ $name }}</span>
+                                                    <span class="text-2xl font-black text-slate-900">
+                                                        {{ number_format($score, 1) }}
+                                                        <span class="text-sm text-slate-400 font-semibold">/ {{ number_format($maxScore, 1) }}</span>
+                                                    </span>
+                                                </div>
+                                                <div class="w-full bg-white rounded-full h-2.5 overflow-hidden border border-slate-100">
+                                                    <div class="h-full rounded-full bg-gradient-to-r {{ $g[0] }}" style="width: {{ $pct }}%"></div>
+                                                </div>
+                                                @if($comment)
+                                                    <p class="text-xs text-slate-600 leading-relaxed">{{ $comment }}</p>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center text-amber-700 text-sm mb-6">
+                                        <span class="text-3xl block mb-2">⚡</span>
+                                        <strong>{{ $taskStatus === 'failed' ? 'AI chưa chấm được Task này.' : 'Chưa có nội dung bài viết cho Task này.' }}</strong>
+                                        <p class="text-xs text-amber-600/80 mt-1">Không có điểm band mặc định được tạo.</p>
+                                    </div>
+                                @endif
+
+                                @if($taskNum === 2)
+                                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs text-slate-500">
+                                        <span class="font-bold text-slate-700 block mb-1">💡 Công thức tính Band IELTS Writing Overall:</span>
+                                        <span class="font-mono">Overall = (Task 1 × ⅓) + (Task 2 × ⅔) → Làm tròn về .0 hoặc .5 gần nhất</span>
+                                        <div class="mt-2 font-bold text-blue-600 text-base">
+                                            Band AI tham khảo:
+                                            <span class="text-slate-900">{{ $submission->ai_band_score !== null ? number_format($submission->ai_band_score, 1) : 'Chưa có điểm AI' }}</span>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- TAB: FEEDBACK --}}
+                    <div x-show="writingTab === 'feedback'" x-cloak>
+                        @foreach($answers as $taskAns)
+                            @php
+                                $q = $taskAns->question;
+                                $taskNum = $q->question_number ?? 1;
+                                $evalData = json_decode($taskAns->notes ?? '{}', true) ?? [];
+                                $strengths = $evalData['strengths'] ?? [];
+                                $improvements = $evalData['improvements'] ?? [];
+                                $corrections = $evalData['corrections'] ?? [];
+                            @endphp
+                            <div x-show="activeWritingTask === {{ $taskNum }}" x-cloak class="space-y-6">
+
+                                @if(!empty($strengths))
+                                    <div>
+                                        <h3 class="text-sm font-black text-emerald-700 flex items-center gap-2 mb-3">
+                                            <span class="w-7 h-7 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100 text-base">💪</span>
+                                            Điểm mạnh trong bài viết
+                                        </h3>
+                                        <div class="space-y-2">
+                                            @foreach($strengths as $s)
+                                                <div class="flex items-start gap-3 p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                                                    <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">✓</span>
+                                                    <p class="text-sm text-slate-700 leading-relaxed">{{ $s }}</p>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if(!empty($improvements))
+                                    <div>
+                                        <h3 class="text-sm font-black text-amber-700 flex items-center gap-2 mb-3">
+                                            <span class="w-7 h-7 bg-amber-50 rounded-xl flex items-center justify-center border border-amber-100 text-base">🎯</span>
+                                            Điểm cần cải thiện
+                                        </h3>
+                                        <div class="space-y-2">
+                                            @foreach($improvements as $imp)
+                                                <div class="flex items-start gap-3 p-3.5 bg-amber-50/60 rounded-xl border border-amber-100">
+                                                    <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">→</span>
+                                                    <p class="text-sm text-slate-700 leading-relaxed">{{ $imp }}</p>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if(!empty($corrections))
+                                    <div>
+                                        <h3 class="text-sm font-black text-red-600 flex items-center gap-2 mb-3">
+                                            <span class="w-7 h-7 bg-red-50 rounded-xl flex items-center justify-center border border-red-100 text-base">🔍</span>
+                                            Bảng sửa lỗi chi tiết (3–5 lỗi điển hình)
+                                        </h3>
+                                        <div class="rounded-2xl border border-slate-200 overflow-hidden">
+                                            <div class="grid grid-cols-12 bg-slate-50 px-4 py-2.5 text-[10px] font-bold text-slate-500 border-b border-slate-200">
+                                                <div class="col-span-1 text-center">#</div>
+                                                <div class="col-span-2">Loại lỗi</div>
+                                                <div class="col-span-4 pr-2">Câu gốc (sai)</div>
+                                                <div class="col-span-4">Gợi ý sửa (đúng)</div>
+                                                <div class="col-span-1 text-center">¶</div>
+                                            </div>
+                                            @foreach($corrections as $ci => $corr)
+                                                @php
+                                                    $type = $corr['type'] ?? 'grammar';
+                                                    $badge = $corr['badge'] ?? 'Ngữ pháp';
+                                                    $original = $corr['original'] ?? '';
+                                                    $suggestion = $corr['suggestion'] ?? '';
+                                                    $reason = $corr['reason'] ?? '';
+                                                    $para = $corr['paragraph'] ?? 1;
+                                                    $badgeClass = match($type) {
+                                                        'grammar' => 'bg-red-50 text-red-700 border-red-200',
+                                                        'vocab'   => 'bg-violet-50 text-violet-700 border-violet-200',
+                                                        default   => 'bg-blue-50 text-blue-700 border-blue-200',
+                                                    };
+                                                @endphp
+                                                <div class="grid grid-cols-12 px-4 py-3 text-xs items-start {{ $ci % 2 === 0 ? 'bg-white' : 'bg-slate-50/50' }} border-b border-slate-100 last:border-b-0">
+                                                    <div class="col-span-1 text-center">
+                                                        <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-[10px] mx-auto">{{ $ci + 1 }}</span>
+                                                    </div>
+                                                    <div class="col-span-2">
+                                                        <span class="px-1.5 py-0.5 rounded border text-[10px] font-bold {{ $badgeClass }}">{{ $badge }}</span>
+                                                    </div>
+                                                    <div class="col-span-4 pr-3">
+                                                        <p class="text-red-600 line-through font-mono leading-relaxed text-[11px]">"{{ $original }}"</p>
+                                                        @if($reason)
+                                                            <p class="text-slate-500 text-[10px] mt-1 leading-relaxed italic">{{ $reason }}</p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="col-span-4">
+                                                        <p class="text-emerald-700 font-mono font-bold leading-relaxed text-[11px]">"{{ $suggestion }}"</p>
+                                                    </div>
+                                                    <div class="col-span-1 text-center text-slate-400 text-[10px] font-mono">¶{{ $para }}</div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if(empty($strengths) && empty($improvements) && empty($corrections))
+                                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center">
+                                        <span class="text-3xl block mb-3">🤖</span>
+                                        <p class="text-slate-500 text-sm">Chưa có dữ liệu nhận xét từ Gemini AI cho Task {{ $taskNum }}.</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- TAB: SAMPLE ESSAY --}}
+                    <div x-show="writingTab === 'sample'" x-cloak>
+                        @foreach($answers as $taskAns)
+                            @php
+                                $q = $taskAns->question;
+                                $taskNum = $q->question_number ?? 1;
+                                $evalData = json_decode($taskAns->notes ?? '{}', true) ?? [];
+                                $sampleEssay = $evalData['sampleEssay'] ?? '';
+                                $taskLabel = $taskNum === 1 ? ($isGeneral ? 'Task 1 (Letter)' : 'Task 1 (Academic Report)') : 'Task 2 (Discursive Essay)';
+                            @endphp
+                            <div x-show="activeWritingTask === {{ $taskNum }}" x-cloak>
+                                @if($sampleEssay)
+                                    <div class="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
+                                        <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-600/25">✨</div>
+                                        <div>
+                                            <h3 class="text-base font-black text-slate-900">Bài viết mẫu đạt Band 8.0+</h3>
+                                            <p class="text-xs text-slate-500">{{ $taskLabel }} – Được tạo bởi Gemini AI</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-2xl p-6 border border-blue-100 text-sm text-slate-700 leading-8 font-sans whitespace-pre-line tracking-wide">
+                                        {{ $sampleEssay }}
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 italic mt-3 text-right">* Bài mẫu chỉ mang tính tham khảo. Band score thực tế phụ thuộc vào nhiều yếu tố.</p>
+                                @else
+                                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center">
+                                        <span class="text-3xl block mb-3">✨</span>
+                                        <p class="text-slate-500 text-sm">Bài mẫu Band 8.0+ chưa được tạo cho Task {{ $taskNum }}.</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- TAB: YOUR SUBMISSION --}}
+                    <div x-show="writingTab === 'submission'" x-cloak>
+                        @foreach($answers as $taskAns)
+                            @php
+                                $q = $taskAns->question;
+                                $taskNum = $q->question_number ?? 1;
+                                $essay = $taskAns->user_answer ?? '';
+                                $wordCount = str_word_count($essay);
+                                $minWords = $taskNum === 1 ? 150 : 250;
+                            @endphp
+                            <div x-show="activeWritingTask === {{ $taskNum }}" x-cloak>
+                                <div class="flex items-center gap-3 mb-4">
+                                    <span class="text-sm font-black text-slate-900">Task {{ $taskNum }} – Bài làm của bạn</span>
+                                    <span class="px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold border
+                                        {{ $wordCount >= $minWords ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200' }}">
+                                        {{ $wordCount }} từ / {{ $minWords }}+ yêu cầu
+                                    </span>
+                                </div>
+                                @if($essay)
+                                    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-sm text-slate-700 leading-8 font-sans whitespace-pre-line tracking-wide max-h-[600px] overflow-y-auto custom-scroll">
+                                        {{ $essay }}
+                                    </div>
+                                @else
+                                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center">
+                                        <span class="text-3xl block mb-3">📝</span>
+                                        <p class="text-slate-500 text-sm">Bạn chưa nộp bài viết cho Task {{ $taskNum }}.</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                </div>
+            </div>
+
+            {{-- Writing Task Prompt Recap --}}
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+                <h2 class="text-base font-black text-slate-900 mb-5 flex items-center gap-2">
+                    <span>📋</span> Đề bài Writing (Task Prompts)
+                </h2>
+                <div class="space-y-4">
+                    @foreach($groups as $idx => $taskGroup)
+                        @php
+                            $q = $taskGroup->questions->first();
+                            $taskNum = $q?->question_number ?? ($idx + 1);
+                            $minWords = $taskNum === 1 ? 150 : 250;
+                        @endphp
+                        <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-black text-blue-700">Writing Task {{ $taskNum }}</h3>
+                                <span class="text-xs px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 font-bold">
+                                    Min {{ $minWords }} words • {{ $taskNum === 1 ? '~20 phút' : '~40 phút' }}
+                                </span>
+                            </div>
+                            @if($taskGroup->instruction)
+                                <div class="text-xs text-slate-500 italic">{{ $taskGroup->instruction }}</div>
+                            @endif
+                            <p class="text-sm text-slate-700 leading-relaxed">{{ $q?->prompt }}</p>
+                            @if($taskGroup->image_url)
+                                <div class="border border-slate-200 rounded-xl overflow-hidden p-2 bg-white">
+                                    <img src="{{ $taskGroup->image_url }}" alt="Task {{ $taskNum }} Chart" class="max-h-64 mx-auto object-contain rounded-lg">
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        {{-- ===================================================== --}}
+        {{-- READING & LISTENING: DETAILED Q&A REVIEW --}}
+        {{-- ===================================================== --}}
+        @if(!$isSubjective)
+            <div class="space-y-6">
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 mb-4">
+                    <span>🔍</span> Đề bài, đáp án &amp; giải thích
+                </h2>
+
+                @php $renderedReviewGroups = []; @endphp
+                @foreach($answers as $ans)
+                    @php
+                        $q = $ans->question;
+                        $isCorrect = (bool) $ans->is_correct;
+                        $mapGroup = $q->questionGroup;
+                        $reviewContent = $mapGroup?->question_content ?: ($isListening ? $mapGroup?->passage_content : null);
+                        $matchingInline = in_array($mapGroup?->question_type?->value, ['matching_information', 'matching_headings'], true);
+                        $multiChoiceInline = \App\Services\IeltsMultiSelectService::enabled($mapGroup)
+                            && collect(\App\Services\IeltsMultiSelectService::options($mapGroup))->contains(fn ($option) => is_array($option) && filled($option['key'] ?? null));
+                        $singleChoiceInline = $mapGroup?->question_type?->value === 'multiple_choice'
+                            && ! $multiChoiceInline
+                            && collect($q->options ?? [])->contains(fn ($option) => is_array($option) && filled($option['key'] ?? null));
+                        $blankInline = filled($reviewContent) && str_contains($reviewContent, '[blank_'.$q->question_number.']');
+                        $mapInline = $mapGroup?->question_type?->value === 'map_labeling' && filled($mapGroup->image_url);
+                        $hasInlineResult = $matchingInline || $multiChoiceInline || $blankInline || $mapInline;
+                        $showGroupReview = $mapGroup && ! in_array($mapGroup->id, $renderedReviewGroups, true);
+                        if ($showGroupReview) {
+                            $renderedReviewGroups[] = $mapGroup->id;
+                            $groupAnswers = $answers->filter(fn ($item) => $item->question?->questionGroup?->id === $mapGroup->id);
+                            $groupHasCorrect = $groupAnswers->contains(fn ($item) => (bool) $item->is_correct);
+                            $groupHasIncorrect = $groupAnswers->contains(fn ($item) => ! $item->is_correct);
+                        }
+                    @endphp
+                    @if($showGroupReview)
+                        <div x-show="filter === 'all' || (filter === 'correct' && {{ $groupHasCorrect ? 'true' : 'false' }}) || (filter === 'incorrect' && {{ $groupHasIncorrect ? 'true' : 'false' }})"
+                             x-cloak>
+                            @if($mapGroup->question_type?->value === 'map_labeling' && filled($mapGroup->image_url))
+                                @include('ielts.partials.map-result', ['group' => $mapGroup, 'groupAnswers' => $groupAnswers])
+                            @else
+                                <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-3">
+                                    <div>
+                                        <h3 class="text-sm font-black text-slate-900">Đề bài · {{ $mapGroup->title }}</h3>
+                                        @if($mapGroup->instruction)
+                                            <p class="mt-1 text-xs text-slate-600">{{ $mapGroup->instruction }}</p>
+                                        @endif
+                                    </div>
+                                    @if(filled($reviewContent))
+                                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 leading-loose overflow-x-auto prose max-w-none">
+                                            @if(preg_match('/\[blank_\d+\]/', $reviewContent))
+                                                @include('ielts.partials.result-shared-content', ['group' => $mapGroup, 'noteContent' => $reviewContent, 'answers' => $answers])
+                                            @else
+                                                {!! \App\Services\IeltsQuestionContentService::forDisplay($reviewContent) !!}
+                                            @endif
+                                        </div>
+                                    @endif
+                                    @if(filled($mapGroup->image_url))
+                                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                                            <img src="{{ $mapGroup->image_url }}" alt="{{ $mapGroup->title }}" class="mx-auto max-h-[36rem] max-w-full object-contain">
+                                        </div>
+                                    @endif
+                                    @if(in_array($mapGroup->question_type?->value, ['matching_information', 'matching_headings'], true))
+                                        @include('ielts.partials.result-matching-questions', ['group' => $mapGroup, 'groupAnswers' => $groupAnswers])
+                                    @endif
+                                    @if($multiChoiceInline)
+                                        @include('ielts.partials.result-multi-choice', ['group' => $mapGroup, 'groupAnswers' => $groupAnswers])
+                                    @else
+                                        @include('ielts.partials.result-answer-bank', ['group' => $mapGroup])
+                                    @endif
+                                    @if($matchingInline || $multiChoiceInline || (filled($reviewContent) && preg_match('/\[blank_\d+\]/', $reviewContent)))
+                                        @include('ielts.partials.result-group-explanations', ['group' => $mapGroup])
+                                    @endif
+                                </section>
+                            @endif
+                        </div>
+                    @endif
+                    @unless($hasInlineResult)
+                    <div class="border rounded-2xl p-6 transition-all shadow-sm {{ $isCorrect ? 'bg-emerald-50/40 border-emerald-200' : 'bg-red-50/40 border-red-200' }}"
+                         x-show="filter === 'all' || (filter === 'correct' && {{ $isCorrect ? 'true' : 'false' }}) || (filter === 'incorrect' && {{ !$isCorrect ? 'true' : 'false' }})"
+                         x-cloak>
+
+                        <div class="flex items-start justify-between gap-4 mb-3">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs {{ $isCorrect ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white' }}">
+                                    {{ $q->question_number }}
+                                </span>
+                                <span class="px-2.5 py-0.5 rounded text-[11px] font-bold {{ $isCorrect ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200' }}">
+                                    {{ $isCorrect ? 'Chính xác' : 'Chưa đúng' }}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500 font-mono">{{ $q->questionGroup?->title }}</span>
+                                @if($isListening)
+                                    <button type="button"
+                                            @click="scrollToTranscriptQuestion({{ $q->question_number }})"
+                                            class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95">
+                                        <span>🎧 Xem trong Transcript</span>
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="text-sm font-semibold text-slate-900 mb-4 pl-11 leading-loose">
+                            @if($q->questionGroup?->question_type?->value === 'map_labeling' && filled($q->questionGroup?->image_url))
+                                Câu {{ $q->question_number }} · Xem vị trí trên sơ đồ phía trên.
+                            @elseif(blank($q->prompt) && filled($reviewContent))
+                                Câu {{ $q->question_number }} · Xem đề bài và ô trả lời phía trên.
+                            @elseif(preg_match('/\[blank(_\d+)?\]|_{2,}/', $q->prompt))
+                                @php
+                                    $userAns = $ans->user_answer ?: '(Bỏ trống)';
+                                    $badgeColor = $isCorrect
+                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                        : 'bg-red-100 text-red-700 border-red-300 line-through';
+                                    $replacement = '<span class="inline-block mx-1 px-3 py-0.5 rounded-lg border font-mono font-bold ' . $badgeColor . '">' . e($userAns) . '</span>';
+                                    $promptWithAnswer = preg_replace('/\[blank(_\d+)?\]|_{2,}/', $replacement, e($q->prompt));
+                                @endphp
+                                {!! $promptWithAnswer !!}
+                            @else
+                                {{ $q->prompt }}
+                            @endif
+                            @if($singleChoiceInline)
+                                @php
+                                    $selectedKey = \App\Services\IeltsMultiSelectService::normalize($ans->user_answer);
+                                    $correctKey = \App\Services\IeltsMultiSelectService::normalize($q->correct_answer);
+                                @endphp
+                                <div class="mt-3 space-y-2" aria-label="Các lựa chọn và kết quả câu {{ $q->question_number }}">
+                                    @foreach($q->options as $option)
+                                        @php
+                                            $optionKey = \App\Services\IeltsMultiSelectService::normalize($option['key'] ?? '');
+                                            $optionCorrect = $correctKey !== '' && $optionKey === $correctKey;
+                                            $optionSelected = $selectedKey !== '' && $optionKey === $selectedKey;
+                                        @endphp
+                                        <div class="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 {{ $optionCorrect ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : ($optionSelected ? 'border-red-300 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700') }}">
+                                            <span><strong>{{ $option['key'] ?? '' }}.</strong> {{ $option['text'] ?? '' }}</span>
+                                            @if($optionCorrect)
+                                                <span class="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">Đáp án đúng{{ $optionSelected ? ' · Bạn chọn' : '' }}</span>
+                                            @elseif($optionSelected)
+                                                <span class="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">Bạn chọn sai</span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @elseif(!empty($q->options) && ! \App\Services\IeltsMultiSelectService::enabled($q->questionGroup))
+                                <div class="mt-3 space-y-1">
+                                    @foreach($q->options as $option)
+                                        <div>
+                                            <span class="font-bold">{{ $option['key'] }}.</span>
+                                            {{ $option['text'] }}
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                        </div>
+
+                        @unless($singleChoiceInline)
+                        <div class="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            <div class="p-3 rounded-xl border {{ $isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700' }} text-xs">
+                                <span class="text-slate-500 text-[10px] font-bold block mb-1">Đáp án của bạn:</span>
+                                <strong class="text-sm font-mono">{{ $ans->user_answer ?: '(Bỏ trống)' }}</strong>
+                            </div>
+                            <div class="p-3 rounded-xl border bg-white border-slate-200 text-slate-700 text-xs">
+                                <span class="text-slate-500 text-[10px] font-bold block mb-1">Đáp án đúng chuẩn:</span>
+                                <strong class="text-sm font-mono text-emerald-600">{{ \App\Services\IeltsMultiSelectService::enabled($q->questionGroup) ? implode(', ', \App\Services\IeltsMultiSelectService::correctKeys($q->questionGroup)).' (không phân biệt thứ tự trong nhóm)' : $q->correct_answer }}</strong>
+                            </div>
+                        </div>
+
+                        @endunless
+
+                        <div class="ml-11 space-y-3">
+                            @if($q->quote_reference)
+                                <div class="p-3.5 bg-amber-50 border-l-4 border-amber-400 rounded-r-xl text-xs text-slate-700">
+                                    <span class="font-bold text-amber-700 block mb-1">
+                                        {{ $isListening ? '🎧 Trích dẫn phát biểu trong Audio (Transcript):' : '📖 Trích dẫn trong bài đọc:' }}
+                                    </span>
+                                    <em class="text-slate-800 font-serif leading-relaxed">"{{ $q->quote_reference }}"</em>
+                                </div>
+                            @endif
+                            @if($q->explanation)
+                                <div class="p-3.5 bg-white rounded-xl text-xs text-slate-600 leading-relaxed border border-slate-200">
+                                    <span class="font-bold text-blue-600 block mb-1">💡 Lời giải thích &amp; bẫy distractors:</span>
+                                    {{ $q->explanation }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endunless
+                @endforeach
+            </div>
+        @endif
+
+    </div>
+</div>
+
+<style>
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: rgba(148,163,184,0.15); }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.35); border-radius: 4px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+</style>
+@endsection

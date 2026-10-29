@@ -7,8 +7,11 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: vocafy_app
     working_dir: /var/www
+    user: "${UID}:${GID}"
     volumes:
       - ./src:/var/www
+      # Apply upload limits on every start, including when reusing an older PHP image.
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/zz-uploads.ini:ro
     ports:
       - "5173:5173"
     depends_on:
@@ -30,7 +33,34 @@ services:
     image: vocafy-app:latest
     container_name: vocafy_queue
     working_dir: /var/www
+    user: "${UID}:${GID}"
     command: php artisan queue:work --tries=3 --timeout=90
+    volumes:
+      - ./src:/var/www
+    depends_on:
+      - db
+      - app
+    restart: unless-stopped
+
+  ielts_queue:
+    image: vocafy-app:latest
+    container_name: vocafy_ielts_queue
+    working_dir: /var/www
+    user: "${UID}:${GID}"
+    command: php artisan queue:work ielts --queue=ielts --tries=2 --timeout=660
+    volumes:
+      - ./src:/var/www
+    depends_on:
+      - db
+      - app
+    restart: unless-stopped
+
+  scheduler:
+    image: vocafy-app:latest
+    container_name: vocafy_scheduler
+    working_dir: /var/www
+    user: "${UID}:${GID}"
+    command: php artisan schedule:work
     volumes:
       - ./src:/var/www
     depends_on:

@@ -25,6 +25,11 @@
                         <span class="text-sm">🎮</span> Minigame
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('ielts.tests.index') }}" class="hover:text-red-600 transition-colors flex items-center gap-1.5 {{ request()->is('ielts*') ? 'text-red-600 font-semibold' : '' }}">
+                        <span class="px-1.5 py-0.5 text-[10px] font-black bg-red-600 text-white rounded shadow-sm">IELTS</span> Giả lập thi
+                    </a>
+                </li>
 
                 @guest
                     <li>

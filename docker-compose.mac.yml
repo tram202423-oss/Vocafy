@@ -1,0 +1,100 @@
+name: vocafy
+
+# Run on macOS with: docker compose -f docker-compose.mac.yml up -d --build
+# The project name stays "vocafy" so the existing vocafy_dbdata volume is reused.
+x-php-service: &php-service
+  image: vocafy-app:mac
+  working_dir: /var/www
+  volumes:
+    - ./src:/var/www
+    - vendor:/var/www/vendor
+  environment:
+    DB_CONNECTION: mysql
+    DB_HOST: db
+    DB_PORT: 3306
+    DB_DATABASE: vocafy
+    DB_USERNAME: vocafy
+    DB_PASSWORD: secret
+
+services:
+  app:
+    <<: *php-service
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - ./src:/var/www
+      - vendor:/var/www/vendor
+      - node_modules:/var/www/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./src:/var/www:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+
+  queue:
+    <<: *php-service
+    command: php artisan queue:work --tries=3 --timeout=90
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ielts_queue:
+    <<: *php-service
+    command: php artisan queue:work ielts --queue=ielts --tries=2 --timeout=660
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scheduler:
+    <<: *php-service
+    command: php artisan schedule:work
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: vocafy
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: vocafy
+      MYSQL_PASSWORD: secret
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --protocol=TCP -h 127.0.0.1 -u $$MYSQL_USER -p$$MYSQL_PASSWORD -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  dbdata:
+  vendor:
+  node_modules:

@@ -39,5 +39,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/progress/topic/{topicId}', [VocabularyProgressController::class, 'topicProgress'])->name('progress.topic');
 });
 
-require __DIR__.'/auth.php';
 
+use App\Http\Controllers\IeltsExamController;
+
+// IELTS Computer-Delivered Test Simulator
+Route::prefix('ielts')->name('ielts.')->group(function () {
+    Route::get('/tests', [IeltsExamController::class, 'index'])->name('tests.index');
+    Route::get('/tests/{slug}', [IeltsExamController::class, 'show'])->name('tests.show');
+    Route::post('/tests/{slug}/start', [IeltsExamController::class, 'start'])->name('tests.start');
+
+    // Exam Room & Simulation Engine
+    Route::get('/exam/{submission}', [IeltsExamController::class, 'room'])->name('exam.room');
+    Route::post('/exam/{submission}/save', [IeltsExamController::class, 'saveAnswer'])->name('exam.save');
+    Route::post('/exam/{submission}/speaking-recording/start', [IeltsExamController::class, 'startSpeakingRecording'])->name('exam.speaking-recording.start');
+    Route::post('/exam/{submission}/speaking-recording/finalize', [IeltsExamController::class, 'finalizeSpeakingRecording'])->name('exam.speaking-recording.finalize');
+    Route::post('/exam/{submission}/speaking-recording', [IeltsExamController::class, 'uploadSpeakingRecording'])->name('exam.speaking-recording.upload');
+    Route::delete('/exam/{submission}/speaking-recording', [IeltsExamController::class, 'deleteSpeakingRecording'])->name('exam.speaking-recording.delete');
+    Route::get('/exam/{submission}/speaking-recording', [IeltsExamController::class, 'streamSpeakingRecording'])->name('exam.speaking-recording');
+    Route::post('/exam/{submission}/submit', [IeltsExamController::class, 'submit'])->name('exam.submit');
+    Route::get('/exam/{submission}/result', [IeltsExamController::class, 'result'])->name('exam.result');
+});
+
+require __DIR__.'/auth.php';
