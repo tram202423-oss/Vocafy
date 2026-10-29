@@ -89,7 +89,7 @@ flowchart TD
 | Views | `src/resources/views/ielts/{index,show,room,result}.blade.php` | Giao diện học viên |
 | Partial tương tác | `src/resources/views/ielts/partials/` | Multi-choice bank, drag bank, note, map, question targets |
 | Migrations | `src/database/migrations/*ielts*` | Schema của module |
-| Dữ liệu mẫu | `src/database/seeders/IeltsSeeder.php`, `IeltsReadingImportSeeder.php` | Bảng band, các bộ demo |
+| Dữ liệu đề IELTS | `src/database/seeders/IeltsReading02Seeder.php`, `IeltsListening02Seeder.php` | Hai bộ đề 02 hoàn chỉnh và bảng band tương ứng |
 | Test hiện có | `src/tests/Feature/IeltsReadingListeningTest.php` | Ba test về matching và luồng Reading/Listening |
 
 ## 3. Mô hình dữ liệu
@@ -455,23 +455,20 @@ docker compose exec -T app php artisan storage:link
 
 `migrate` cập nhật schema; `storage:link` phục vụ audio qua `/storage`. Nếu đã có symlink phù hợp thì không cần tạo lại. URL public của ứng dụng và quyền ghi storage cần khớp môi trường triển khai.
 
-### 10.2. Dữ liệu demo
+### 10.2. Bộ đề IELTS Reading 02 và Listening 02
 
 ```bash
-docker compose exec -T app php artisan db:seed --class=IeltsSeeder
-docker compose exec -T app php artisan db:seed --class=IeltsReadingImportSeeder
+docker compose exec -T app php artisan db:seed --class=IeltsReading02Seeder
+docker compose exec -T app php artisan db:seed --class=IeltsListening02Seeder
 ```
 
-- `DatabaseSeeder` mặc định hiện không gọi hai seeder IELTS này.
-- `IeltsSeeder` tạo bảng band và các đề demo, trong đó có slug `cambridge-ielts-18-academic-test-1` và `ielts-drag-and-drop-demo`.
-- `IeltsReadingImportSeeder` tạo slug `reading-multi-select-flood-gifted-museums-qa`, ba passage và 35 câu/55 phút.
-- `IeltsTeaTransportInnovationSeeder`: slug `academic-reading-tea-transport-innovation`, 3 passages/7 groups/40 câu/60 phút; nguồn JSON đi kèm.
-- `IeltsCallUnlimitedListeningSeeder`: slug `listening-call-unlimited-london-eye`, 4 Parts/9 groups/40 câu/30 phút; không ghi đè audio/transcript khi chạy lại.
-- `ReplaceIeltsWithTeaTransportInnovationSeeder` là công cụ thay thế có xóa toàn bộ đề/lượt thi IELTS sau backup; không phải bước cài đặt/cập nhật thông thường.
-- Seeder dùng `updateOrCreate`, và một số đoạn xóa/rebuild ngân hàng/câu không còn trong bộ mẫu. Chạy lại có thể ghi đè chỉnh sửa của các bản ghi mẫu tương ứng; chỉ chạy có chủ đích trên dữ liệu demo.
-- Không cần chạy lại seeder chỉ để bật renderer hoặc scorer mới cho dữ liệu đã tồn tại.
+- `IeltsReading02Seeder` tạo bộ đề `ielts-reading-02`: 3 passages, 7 nhóm, 40 câu, 60 phút; nội dung Tea and the Industrial Revolution, European Transport Systems 1990–2010 và The psychology of innovation.
+- `IeltsListening02Seeder` tạo bộ đề `ielts-listening-02`: 4 Parts, 9 nhóm, 40 câu, 30 phút; nội dung Call Unlimited, Hotel Jobs, Online Study và London Eye. Seeder không kèm audio, và không ghi đè audio/transcript đã tải lên khi chạy lại.
+- Hai seeder dùng lại fixture 40 câu đã có trong repository, đổi tên đề và slug thành “02”; không tạo nội dung mới chưa được cung cấp.
+- `DatabaseSeeder` mặc định không gọi seeder IELTS. Mỗi seeder 02 tạo bảng band tương ứng nếu chưa có.
+- Chạy lại seeder có thể cập nhật nội dung câu hỏi của chính bộ đề 02. Seeder không xóa những bộ đề/lượt thi khác trong database.
 
-Trang thử nội dung có dạng `/ielts/tests/<slug>` trên host của ứng dụng. Tài liệu không xác nhận những bản ghi mẫu này đã tồn tại trong database hiện tại.
+Trang thử nội dung có dạng `/ielts/tests/<slug>` trên host của ứng dụng.
 
 ### 10.3. Writing/Speaking AI và micro
 

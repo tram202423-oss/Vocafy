@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /** Import only this Reading test; rerunning does not delete unrelated tests. */
-class IeltsTeaTransportInnovationSeeder extends Seeder
+class IeltsReading02Seeder extends Seeder
 {
-    public const SLUG = 'academic-reading-tea-transport-innovation';
+    public const SLUG = 'ielts-reading-02';
 
     /** Parse and validate the complete fixture before making database changes. */
     public function definition(): array
     {
-        $data = json_decode(file_get_contents(database_path('seeders/data/ielts-reading-tea-transport-innovation.json')), true, 512, JSON_THROW_ON_ERROR);
+        $data = json_decode(file_get_contents(database_path('seeders/data/ielts-reading-02.json')), true, 512, JSON_THROW_ON_ERROR);
         if (($data['schema_version'] ?? null) !== 1 || ($data['slug'] ?? null) !== self::SLUG
             || count($data['passages'] ?? []) !== 3 || ($data['total_questions'] ?? null) !== 40) {
             throw new RuntimeException('Invalid complete Reading fixture.');
@@ -145,7 +145,7 @@ class IeltsTeaTransportInnovationSeeder extends Seeder
 
     private function ensureAcademicReadingBands(): void
     {
-        // Same default Academic Reading scale as IeltsSeeder. Preserve existing configured bands.
+        // Default Academic Reading scale. Preserve existing configured bands.
         $bands = [
             0 => 0.0, 1 => 1.0, 2 => 1.0, 3 => 2.0, 4 => 2.0, 5 => 2.5, 6 => 2.5,
             7 => 3.0, 8 => 3.0, 9 => 3.5, 10 => 3.5, 11 => 4.0, 12 => 4.0,

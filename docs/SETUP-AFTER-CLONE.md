@@ -73,11 +73,11 @@ docker compose -f docker-compose.mac.yml exec -T app php artisan db:seed --class
 
 `DatabaseSeeder` chỉ tạo role, tài khoản admin mẫu và dữ liệu từ vựng cơ bản; **không nạp đề IELTS**. Seeder tạo tài khoản local `admin@vocafy.com` với mật khẩu mẫu `12345678`. Chỉ dùng tài khoản này để khởi tạo môi trường local và đổi mật khẩu trước khi chia sẻ môi trường.
 
-Nếu cần hai bộ đề IELTS hiện có trong repository, chạy riêng:
+Nếu cần hai bộ đề IELTS 02 trong repository, chạy riêng:
 
 ```bash
-docker compose -f docker-compose.mac.yml exec -T app php artisan db:seed --class=IeltsTeaTransportInnovationSeeder --force
-docker compose -f docker-compose.mac.yml exec -T app php artisan db:seed --class=IeltsCallUnlimitedListeningSeeder --force
+docker compose -f docker-compose.mac.yml exec -T app php artisan db:seed --class=IeltsReading02Seeder --force
+docker compose -f docker-compose.mac.yml exec -T app php artisan db:seed --class=IeltsListening02Seeder --force
 ```
 
 Bộ Reading có 3 passages/40 câu. Bộ Listening có 4 Parts, 9 nhóm/40 câu. **Seeder Listening không kèm file audio**: admin cần tải audio lên hoặc nhập liên kết hợp lệ trong phần Listening. Nếu chuyển dữ liệu từ máy cũ, cần chuyển cả database lẫn media trong `src/storage/app`; chạy seeder không phục hồi các tệp đã upload.
@@ -112,7 +112,7 @@ docker compose -f docker-compose.mac.yml exec -T app php artisan queue:restart
 
 Nếu `public/storage` đã có, Artisan chỉ báo link đã tồn tại. Có thể bỏ qua `composer install` khi `composer.lock` không đổi và bỏ qua `npm ci` khi `package-lock.json` không đổi; vẫn chạy `npm run build` nếu JS/CSS/Blade có thay đổi liên quan frontend. Sau đó tải lại trang trình duyệt; trên Mac có thể dùng `Cmd + Shift + R` nếu tab cũ vẫn hiển thị giao diện cũ. Worker queue là tiến trình sống lâu, nên cần khởi động lại sau khi pull mã PHP mới.
 
-`migrate` chỉ cập nhật schema. Không tự chạy `db:seed` sau mọi lần pull: seeder là thao tác thay đổi nội dung dữ liệu. Chỉ chạy seeder IELTS cụ thể khi muốn tạo/cập nhật bộ đề tương ứng. **Không chạy** `ReplaceIeltsWithTeaTransportInnovationSeeder` như một bước setup thông thường: seeder này xóa dữ liệu đề và lượt thi IELTS trước khi nhập lại Reading. `migrate:fresh`, `db:wipe` và `docker compose down -v` cũng xóa dữ liệu, không thuộc quy trình cập nhật.
+`migrate` chỉ cập nhật schema. Không tự chạy `db:seed` sau mọi lần pull: seeder là thao tác thay đổi nội dung dữ liệu. Chỉ chạy seeder IELTS cụ thể khi muốn tạo/cập nhật bộ đề tương ứng. `migrate:fresh`, `db:wipe` và `docker compose down -v` cũng xóa dữ liệu, không thuộc quy trình cập nhật.
 
 ## 4. Các điểm dễ bị bỏ sót
 

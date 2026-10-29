@@ -792,8 +792,14 @@
                         $mapGroup = $q->questionGroup;
                         $reviewContent = $mapGroup?->question_content ?: ($isListening ? $mapGroup?->passage_content : null);
                         $matchingInline = in_array($mapGroup?->question_type?->value, ['matching_information', 'matching_headings'], true);
+                        $multiChoiceInline = \App\Services\IeltsMultiSelectService::enabled($mapGroup)
+                            && collect(\App\Services\IeltsMultiSelectService::options($mapGroup))->contains(fn ($option) => is_array($option) && filled($option['key'] ?? null));
+                        $singleChoiceInline = $mapGroup?->question_type?->value === 'multiple_choice'
+                            && ! $multiChoiceInline
+                            && collect($q->options ?? [])->contains(fn ($option) => is_array($option) && filled($option['key'] ?? null));
                         $blankInline = filled($reviewContent) && str_contains($reviewContent, '[blank_'.$q->question_number.']');
-                        $hasInlineResult = $matchingInline || $blankInline;
+                        $mapInline = $mapGroup?->question_type?->value === 'map_labeling' && filled($mapGroup->image_url);
+                        $hasInlineResult = $matchingInline || $multiChoiceInline || $blankInline || $mapInline;
                         $showGroupReview = $mapGroup && ! in_array($mapGroup->id, $renderedReviewGroups, true);
                         if ($showGroupReview) {
                             $renderedReviewGroups[] = $mapGroup->id;
@@ -806,7 +812,7 @@
                         <div x-show="filter === 'all' || (filter === 'correct' && {{ $groupHasCorrect ? 'true' : 'false' }}) || (filter === 'incorrect' && {{ $groupHasIncorrect ? 'true' : 'false' }})"
                              x-cloak>
                             @if($mapGroup->question_type?->value === 'map_labeling' && filled($mapGroup->image_url))
-                                @include('ielts.partials.map-result', ['group' => $mapGroup])
+                                @include('ielts.partials.map-result', ['group' => $mapGroup, 'groupAnswers' => $groupAnswers])
                             @else
                                 <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-3">
                                     <div>
@@ -832,8 +838,12 @@
                                     @if(in_array($mapGroup->question_type?->value, ['matching_information', 'matching_headings'], true))
                                         @include('ielts.partials.result-matching-questions', ['group' => $mapGroup, 'groupAnswers' => $groupAnswers])
                                     @endif
-                                    @include('ielts.partials.result-answer-bank', ['group' => $mapGroup])
-                                    @if($matchingInline || (filled($reviewContent) && preg_match('/\[blank_\d+\]/', $reviewContent)))
+                                    @if($multiChoiceInline)
+                                        @include('ielts.partials.result-multi-choice', ['group' => $mapGroup, 'groupAnswers' => $groupAnswers])
+                                    @else
+                                        @include('ielts.partials.result-answer-bank', ['group' => $mapGroup])
+                                    @endif
+                                    @if($matchingInline || $multiChoiceInline || (filled($reviewContent) && preg_match('/\[blank_\d+\]/', $reviewContent)))
                                         @include('ielts.partials.result-group-explanations', ['group' => $mapGroup])
                                     @endif
                                 </section>
@@ -884,7 +894,29 @@
                             @else
                                 {{ $q->prompt }}
                             @endif
-                            @if(!empty($q->options) && ! \App\Services\IeltsMultiSelectService::enabled($q->questionGroup))
+                            @if($singleChoiceInline)
+                                @php
+                                    $selectedKey = \App\Services\IeltsMultiSelectService::normalize($ans->user_answer);
+                                    $correctKey = \App\Services\IeltsMultiSelectService::normalize($q->correct_answer);
+                                @endphp
+                                <div class="mt-3 space-y-2" aria-label="Các lựa chọn và kết quả câu {{ $q->question_number }}">
+                                    @foreach($q->options as $option)
+                                        @php
+                                            $optionKey = \App\Services\IeltsMultiSelectService::normalize($option['key'] ?? '');
+                                            $optionCorrect = $correctKey !== '' && $optionKey === $correctKey;
+                                            $optionSelected = $selectedKey !== '' && $optionKey === $selectedKey;
+                                        @endphp
+                                        <div class="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 {{ $optionCorrect ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : ($optionSelected ? 'border-red-300 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700') }}">
+                                            <span><strong>{{ $option['key'] ?? '' }}.</strong> {{ $option['text'] ?? '' }}</span>
+                                            @if($optionCorrect)
+                                                <span class="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">Đáp án đúng{{ $optionSelected ? ' · Bạn chọn' : '' }}</span>
+                                            @elseif($optionSelected)
+                                                <span class="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">Bạn chọn sai</span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @elseif(!empty($q->options) && ! \App\Services\IeltsMultiSelectService::enabled($q->questionGroup))
                                 <div class="mt-3 space-y-1">
                                     @foreach($q->options as $option)
                                         <div>
@@ -897,6 +929,7 @@
 
                         </div>
 
+                        @unless($singleChoiceInline)
                         <div class="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                             <div class="p-3 rounded-xl border {{ $isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700' }} text-xs">
                                 <span class="text-slate-500 text-[10px] font-bold block mb-1">Đáp án của bạn:</span>
@@ -907,6 +940,8 @@
                                 <strong class="text-sm font-mono text-emerald-600">{{ \App\Services\IeltsMultiSelectService::enabled($q->questionGroup) ? implode(', ', \App\Services\IeltsMultiSelectService::correctKeys($q->questionGroup)).' (không phân biệt thứ tự trong nhóm)' : $q->correct_answer }}</strong>
                             </div>
                         </div>
+
+                        @endunless
 
                         <div class="ml-11 space-y-3">
                             @if($q->quote_reference)

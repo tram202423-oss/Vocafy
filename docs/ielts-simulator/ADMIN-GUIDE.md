@@ -84,6 +84,8 @@ Reading standard giữ bài đọc ở cột Passage và hiện question_content
 
 Mỗi row là một câu có một bộ lựa chọn riêng. Nếu các câu dùng chung một ngân hàng thì cân nhắc dạng matching với kéo thả.
 
+Trong **Kết quả bài thi**, trắc nghiệm chọn một hoặc chọn nhiều tô xanh đáp án đúng và tô đỏ lựa chọn sai đã chọn ngay trên danh sách lựa chọn; không lặp hai ô “Đáp án của bạn / Đáp án đúng chuẩn” bên dưới. Câu cũ thiếu danh sách lựa chọn vẫn dùng hai ô đối chiếu để không mất đáp án.
+
 ## 5. Multiple Choice — chọn nhiều đáp án
 
 ### 5.1. Ví dụ Questions 7–8, đúng B và D
@@ -259,7 +261,7 @@ Mỗi nhóm Map dùng **một nội dung câu hỏi chung** cho toàn bộ ảnh
 
 Ví dụ X = 25, Y = 60 đặt tâm ô ở vị trí 25% chiều ngang và 60% chiều cao ảnh. Tất cả marker của nhóm nằm trên cùng một ảnh; không cần nhập X/Y thủ công. Câu standard chưa chọn vị trí được hiển thị trong danh sách phía trên ảnh; câu kéo thả phải chọn vị trí trước khi lưu. Ảnh và đáp án đúng là bắt buộc với nhóm Map.
 
-Trong **Kết quả bài thi**, nhóm Map hiện lại ảnh chung và đánh dấu từng **vị trí đúng** bằng số câu cùng đáp án đúng. Chú giải bên dưới ảnh giải nghĩa nhãn đáp án. Câu chưa có tọa độ được liệt kê riêng, không đặt marker suy đoán trên ảnh. Kết quả từng câu vẫn hiển thị đáp án thí sinh và đáp án đúng.
+Trong **Kết quả bài thi**, nhóm Map hiện lại ảnh chung. Trên mỗi vị trí có đáp án đã chọn và đáp án đúng; số câu màu xanh khi làm đúng, màu đỏ khi làm sai hoặc bỏ trống. Ngân hàng từ phía trên ảnh giúp đối chiếu nhãn đáp án; trang không lặp danh sách đáp án hay thẻ kết quả từng câu bên dưới ảnh. Câu chưa có tọa độ không được đặt marker suy đoán trên ảnh.
 
 Các nhóm Map cũ đang nhập nhiều nội dung riêng cho từng câu có thể chuyển phần đề chung vào **Nội dung câu hỏi chung cho sơ đồ** khi chỉnh sửa; nội dung cũ của từng row vẫn được giữ trong dữ liệu. Nhóm cũ đã có hướng dẫn chung nhưng chưa có nội dung chung vẫn được sửa và lưu tọa độ. Khi chỉnh câu hỏi ở nhóm khác rồi lưu section, tọa độ Map đã đặt được giữ nguyên, kể cả khi trình duyệt gửi tọa độ rỗng của câu không thay đổi; không cần bấm lại từng vị trí. Nếu chủ động bấm × để xóa vị trí của câu kéo thả, phải đặt vị trí mới trước khi lưu. Các câu cũ có `correct_answer = NULL` cần nhập lại đáp án đúng vì hệ thống không thể suy ra đáp án từ X/Y.
 
@@ -330,35 +332,14 @@ Có thể dán hai cột ngăn bằng tab. Danh sách được thêm vào dữ l
 - Multi-select: nhập một lần tại **Lời giải chung**.
 - Kết quả hiển thị lời giải/trích dẫn từ các row tương ứng.
 
-## 14. Dữ liệu mẫu và bộ đề từ seeder
-
-### 14.1. Bộ ba passage luyện tương tác
-
-| Thuộc tính | Giá trị trong code |
-| --- | --- |
-| Seeder | `IeltsReadingImportSeeder` |
-| Slug | `reading-multi-select-flood-gifted-museums-qa` |
-| Passage 1 | Can We Hold Back the Flood? |
-| Passage 2 | Gifted children and learning |
-| Passage 3 | Museums of fine art and their public |
-| Tổng câu | 35 |
-| Thời gian | 55 phút |
-| Nhóm chọn hai | Questions 7–8; B và D |
-
-Đề này được tạo để thử tương tác kéo thả/chọn nhiều, với nhiều câu chuyển sang dạng kéo thả. Không dùng nó để kết luận mọi question type đã hoạt động đầy đủ. Band hiện vẫn tra raw trên thang 40, chưa điều chỉnh theo đề 35 câu.
-
-Seeder là công cụ nhập chuyên biệt, không phải tính năng import file tổng quát trong admin. Chạy lại có thể ghi đè nội dung demo; không cần chạy lại chỉ để dùng bản sửa multi-select.
-
-### 14.2. Các đề đầy đủ có trong mã nguồn
+## 14. Hai bộ đề IELTS 02 từ seeder
 
 | Seeder / slug | Nội dung |
 | --- | --- |
-| `IeltsTeaTransportInnovationSeeder` / `academic-reading-tea-transport-innovation` | Reading 3 passages, 7 groups, 40 câu, 60 phút: Tea and the Industrial Revolution; European Transport Systems 1990–2010; The psychology of innovation |
-| `IeltsCallUnlimitedListeningSeeder` / `listening-call-unlimited-london-eye` | Listening 4 Parts, 9 groups, 40 câu, 30 phút: Call Unlimited; Hotel Jobs; Online Study; London Eye |
+| `IeltsReading02Seeder` / `ielts-reading-02` | IELTS Reading 02: 3 passages, 7 nhóm, 40 câu, 60 phút. Tea and the Industrial Revolution; European Transport Systems 1990–2010; The psychology of innovation |
+| `IeltsListening02Seeder` / `ielts-listening-02` | IELTS Listening 02: 4 Parts, 9 nhóm, 40 câu, 30 phút. Call Unlimited; Hotel Jobs; Online Study; London Eye |
 
-Listening seeder không ghi đè audio/transcript khi chạy lại, để giữ file đã bổ sung từ admin. Các seeder vẫn có thể cập nhật nội dung câu hỏi; bảng trên mô tả code, không xác nhận đã chạy lại trong đợt docs này.
-
-`ReplaceIeltsWithTeaTransportInnovationSeeder` là công cụ thay thế dữ liệu có xóa toàn bộ bộ đề và lượt thi IELTS sau backup; không dùng làm bước cập nhật đề thông thường.
+Nội dung câu hỏi/đáp án lấy từ hai fixture 40 câu đã có trong repository và được đặt tên “02”. Chạy riêng từng seeder bằng `php artisan db:seed --class=IeltsReading02Seeder` hoặc `php artisan db:seed --class=IeltsListening02Seeder`. Chạy lại có thể cập nhật câu hỏi của chính bộ đề 02 nhưng không xóa bộ đề khác. Audio và transcript Listening không được seed; tải lên sau trong admin. Nếu đã tải lên, chạy lại seeder Listening giữ nguyên media đó.
 
 ## 15. Kiểm tra nội dung trước khi bàn giao đề
 

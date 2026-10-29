@@ -23,9 +23,10 @@ class IeltsReadingListeningTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\IeltsSeeder::class);
+        $this->seed(\Database\Seeders\IeltsReading02Seeder::class);
+        $this->seed(\Database\Seeders\IeltsListening02Seeder::class);
         $this->user = User::factory()->create();
-        $this->test = IeltsTest::where('slug', 'cambridge-ielts-18-academic-test-1')->firstOrFail();
+        $this->test = IeltsTest::where('slug', 'ielts-reading-02')->firstOrFail();
         $this->scoringService = app(IeltsScoringService::class);
     }
 
@@ -145,12 +146,13 @@ class IeltsReadingListeningTest extends TestCase
      */
     public function test_listening_exam_flow(): void
     {
-        $listeningSection = $this->test->sections()->where('ielts_sections.skill', 'listening')->firstOrFail();
+        $listeningTest = IeltsTest::where('slug', 'ielts-listening-02')->firstOrFail();
+        $listeningSection = $listeningTest->sections()->where('ielts_sections.skill', 'listening')->firstOrFail();
         $this->assertEquals(40, $listeningSection->questions()->count());
 
         // 1. Candidate starts listening test
         $response = $this->actingAs($this->user)->post(route('ielts.tests.start', [
-            'slug' => $this->test->slug,
+            'slug' => $listeningTest->slug,
             'section_id' => $listeningSection->id,
         ]));
         $response->assertRedirect();

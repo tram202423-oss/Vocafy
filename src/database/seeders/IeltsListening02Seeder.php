@@ -11,13 +11,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
-class IeltsCallUnlimitedListeningSeeder extends Seeder
+class IeltsListening02Seeder extends Seeder
 {
-    public const SLUG = 'listening-call-unlimited-london-eye';
+    public const SLUG = 'ielts-listening-02';
 
     public function definition(): array
     {
-        $data = json_decode(file_get_contents(database_path('seeders/data/ielts-listening-call-unlimited.json')), true, 512, JSON_THROW_ON_ERROR);
+        $data = json_decode(file_get_contents(database_path('seeders/data/ielts-listening-02.json')), true, 512, JSON_THROW_ON_ERROR);
         $groups = [];
         foreach ($data['groups'] as $index => $source) {
             $settings = ['source' => self::SLUG, 'part_number' => $source['part']];

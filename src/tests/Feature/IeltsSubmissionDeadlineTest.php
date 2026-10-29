@@ -14,9 +14,9 @@ class IeltsSubmissionDeadlineTest extends TestCase
 
     private function startReading(): array
     {
-        $this->seed(\Database\Seeders\IeltsSeeder::class);
+        $this->seed(\Database\Seeders\IeltsReading02Seeder::class);
         $user = User::factory()->create();
-        $test = IeltsTest::where('slug', 'cambridge-ielts-18-academic-test-1')->firstOrFail();
+        $test = IeltsTest::where('slug', 'ielts-reading-02')->firstOrFail();
         $section = $test->sections()->where('ielts_sections.skill', 'reading')->firstOrFail();
 
         $this->actingAs($user)->post(route('ielts.tests.start', [

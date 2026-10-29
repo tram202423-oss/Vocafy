@@ -14,8 +14,8 @@ class IeltsDraftPreviewTest extends TestCase
 
     public function test_only_authorized_staff_can_preview_a_draft_and_cannot_start_it(): void
     {
-        $this->seed(\Database\Seeders\IeltsSeeder::class);
-        $test = IeltsTest::where('slug', 'cambridge-ielts-18-academic-test-1')->firstOrFail();
+        $this->seed(\Database\Seeders\IeltsReading02Seeder::class);
+        $test = IeltsTest::where('slug', 'ielts-reading-02')->firstOrFail();
         $test->update(['is_published' => false]);
         $previewUrl = route('ielts.tests.show', ['slug' => $test->slug, 'preview' => 1]);
 

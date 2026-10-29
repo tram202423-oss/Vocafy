@@ -16,8 +16,8 @@
 
 | Dạng / kỹ năng | Admin và dữ liệu | Phòng thi, lưu và chấm | Trạng thái / phần còn thiếu |
 | --- | --- | --- | --- |
-| Multiple Choice chọn một | Options theo câu, một key đúng | Radio Reading/Listening, lưu key, chấm theo đáp án | Có luồng cơ bản; API đã kiểm tra key lựa chọn; cần nghiệm thu browser |
-| Multiple Choice chọn nhiều | Một prompt/options, N key đúng → N câu | Checkbox chung, lưu nhóm trong transaction; đúng mỗi key khác nhau được một điểm, không phụ thuộc thứ tự | Có luồng cơ bản; thiếu nghiệm thu editor, điểm từng phần và lưu/nộp đồng thời |
+| Multiple Choice chọn một | Options theo câu, một key đúng | Radio Reading/Listening, lưu key, chấm theo đáp án; kết quả tô xanh lựa chọn đúng, tô đỏ lựa chọn sai đã chọn ngay trên đề | Có luồng cơ bản; API đã kiểm tra key lựa chọn; cần nghiệm thu browser |
+| Multiple Choice chọn nhiều | Một prompt/options, N key đúng → N câu | Checkbox chung, lưu nhóm trong transaction; đúng mỗi key khác nhau được một điểm, không phụ thuộc thứ tự; kết quả tô màu trên danh sách lựa chọn chung | Có luồng cơ bản; thiếu nghiệm thu editor, điểm từng phần và lưu/nộp đồng thời |
 | True / False / Not Given | Ba lựa chọn cố định; chuẩn hóa alias cũ khi lưu | Chọn đáp án, scorer có T/F/NG | Có luồng cơ bản; dữ liệu legacy thiếu options cần rà renderer/lưu lại |
 | Yes / No / Not Given | Ba lựa chọn cố định | Chọn đáp án, scorer có Y/N/NG | Có luồng cơ bản; cần nghiệm thu cả dữ liệu legacy |
 | Matching Headings | Type riêng, mặc định drag + once; chỉ dùng cho Reading | Bank dưới targets, key nối từng Paragraph | Một phần; đã hiển thị nội dung không có blank và chặn Matching Headings ở Listening; cần nghiệm thu |
@@ -26,8 +26,8 @@
 | Summary / Note / Form Completion | `question_content` + `[blank_N]`, mỗi blank một question row | Có typed blanks và drag blanks ở Reading/Listening; kết quả typed blanks hiển thị lại đề chung và đáp án ngay tại ô | Có luồng cơ bản; thiếu preset/editor theo cấu trúc từng dạng |
 | Table / Flow-chart Completion | HTML/ảnh + blanks dùng schema Completion; admin có công cụ chèn bảng vào rich editor | Đã render nội dung chung và ô trả lời, gồm bảng trong seeder Listening | Một phần; bảng phải xóa/chèn lại để đổi cấu trúc, chưa có editor flow-chart chuyên biệt |
 | Short Answer | Prompt, đáp án thay thế, word_limit | Input Reading/Listening, kiểm tra giới hạn ở server, chấm chữ | Có luồng cơ bản; đã có cấu hình giới hạn từ/số; cần nghiệm thu đáp án biên |
-| Plan / Map / Diagram — standard | Một nội dung câu hỏi và ảnh chung cho cả nhóm; mỗi row có số câu, đáp án, tọa độ | Select/input trên ảnh; kết quả đánh dấu vị trí đúng và đáp án trên ảnh | Có luồng cơ bản; câu thiếu vị trí ở danh sách, cần nghiệm thu trình duyệt |
-| Plan / Map / Diagram — drag | Một nội dung câu hỏi và ảnh chung; bank chung, once/repeat; mỗi row có số câu, đáp án, tọa độ | Drop targets trên ảnh; kết quả đánh dấu vị trí đúng và giải nghĩa nhãn | Có luồng cơ bản; câu mới bắt buộc có vị trí, đã có Enter/Space/Delete; cần nghiệm thu kéo thả và bàn phím |
+| Plan / Map / Diagram — standard | Một nội dung câu hỏi và ảnh chung cho cả nhóm; mỗi row có số câu, đáp án, tọa độ | Select/input trên ảnh; kết quả hiện đáp án đã chọn, đáp án đúng và màu số câu theo đúng/sai trên ảnh | Có luồng cơ bản; câu thiếu vị trí ở danh sách, cần nghiệm thu trình duyệt |
+| Plan / Map / Diagram — drag | Một nội dung câu hỏi và ảnh chung; bank chung, once/repeat; mỗi row có số câu, đáp án, tọa độ | Drop targets trên ảnh; kết quả hiện đáp án đã chọn, đáp án đúng và màu số câu theo đúng/sai trên ảnh; ngân hàng từ ở phía trên ảnh | Có luồng cơ bản; câu mới bắt buộc có vị trí, đã có Enter/Space/Delete; cần nghiệm thu kéo thả và bàn phím |
 | Matching Features | Có thể dùng `matching_information` + bank, repeat khi đề cho phép | Tái sử dụng targets/scorer matching | Chưa có editor/preset chuyên biệt |
 | Matching Sentence Endings | Có thể nhập đầu câu ở prompt, cuối câu ở bank matching | Tái sử dụng chọn/kéo thả và chấm key | Chưa có editor/renderer chuyên biệt |
 | Writing Task 1 | Group, một câu số 1, ảnh tùy chọn | Essay, đếm từ, autosave, AI tham khảo và giáo viên chính thức | Một phần; đã gửi ảnh/instruction, phân Academic/General và validate hai Task; cần nghiệm thu AI |
@@ -92,10 +92,10 @@ Speaking lưu draft trên thiết bị, checkpoint server và file cuối khi d�
 ## 5. Listening và dữ liệu mẫu
 
 - Một audio và một transcript chung ở cấp section Listening cho cả 4 Part. Form có upload/link trực tiếp/Drive và ô transcript tại tab Audio & transcript của section.
-- Thiếu audio: room hiện thông báo, không dùng âm thanh demo làm fallback. Seeder demo cũ vẫn có thể cấu hình âm thanh môi trường như URL của chính đề.
+- Thiếu audio: room hiện thông báo, không dùng âm thanh demo làm fallback. IELTS Listening 02 chưa có file audio trong seeder; admin tải lên sau.
 - Tiến độ lưu khoảng 10 giây và khôi phục khi reload. Audio-end gửi về server, rút deadline còn tối đa 120 giây.
 - Part trong room lấy từ số câu theo từng khoảng 10; group không được trải qua hai Part. Chưa có mapping Part độc lập số câu.
-- Có seeder Reading Tea/Transport/Innovation 40 câu và Listening Call Unlimited/London Eye 40 câu; seeder cũ Flood/Gifted/Museums 35 câu chỉ là dữ liệu luyện tập.
+- Có hai seeder `IeltsReading02Seeder` và `IeltsListening02Seeder`, mỗi bộ 40 câu; các seeder bộ đề cũ đã được loại khỏi mã nguồn.
 - Seeder và việc có đủ câu không chứng minh tất cả tương tác đã nghiệm thu. Chi tiết nhập và lưu giữ media ở [ADMIN-GUIDE](ADMIN-GUIDE.md).
 
 ## 6. Ma trận nghiệm thu cần bổ sung
