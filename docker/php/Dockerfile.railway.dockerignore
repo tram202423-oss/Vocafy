@@ -1,0 +1,24 @@
+# Railway Dockerfile needs src/ for COPY src/ .
+# Keep only source and dependency manifests in the build context.
+.git/
+docs/
+README.md
+docker-compose*.yml
+
+# Dependencies and generated files are rebuilt inside the image.
+src/vendor/
+src/node_modules/
+src/public/build/
+src/public/hot
+src/public/storage
+src/bootstrap/cache/*.php
+
+# Never bake local secrets, uploads, sessions, or logs into the image.
+src/.env
+src/.env.*
+!src/.env.example
+src/storage/app/
+src/storage/logs/
+src/storage/framework/cache/
+src/storage/framework/sessions/
+src/storage/framework/views/
