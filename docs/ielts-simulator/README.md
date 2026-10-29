@@ -21,6 +21,7 @@ Tài liệu chức năng và kỹ thuật của module giả lập thi IELTS tro
 Tài liệu đi kèm:
 
 - **[Hướng dẫn admin](ADMIN-GUIDE.md):** tạo phần thi, nhập từng dạng, câu chọn nhiều, kéo thả, bản đồ, audio và xuất bản.
+- **[Triển khai Railway](RAILWAY.md):** chạy Queue Mail và Scheduler chung một service.
 - **[Trạng thái dạng câu hỏi](QUESTION-TYPES.md):** ma trận hỗ trợ và các kịch bản cần nghiệm thu.
 - **[Báo cáo rà soát](AUDIT.md):** lỗi đã xác nhận, phần nghiệp vụ còn thiếu, bằng chứng và thứ tự P1/P2/P3.
 
